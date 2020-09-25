@@ -1049,7 +1049,7 @@ type ErrExecution struct {
 
 // ExecutionError creates a ErrExecution error
 func ExecutionError(exitError error, msg ...interface{}) *ErrExecution {
-	r := newError(nil, nil, msg...)
+	r := newError(exitError, nil, msg...)
 	r.grpcCode = codes.Internal
 
 	retcode := int(-1)
@@ -1059,8 +1059,6 @@ func ExecutionError(exitError error, msg ...interface{}) *ErrExecution {
 			retcode = status.ExitStatus()
 		}
 		stderr = string(ee.Stderr)
-	} else {
-		r.cause = exitError
 	}
 	outErr := &ErrExecution{errorCore: r}
 	_ = outErr.Annotate("retcode", retcode).Annotate("stderr", stderr)
