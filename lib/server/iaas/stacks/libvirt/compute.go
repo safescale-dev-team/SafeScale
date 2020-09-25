@@ -37,22 +37,17 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"google.golang.org/appengine/log"
 
 	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/userdata"
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
-	"github.com/CS-SI/SafeScale/lib/server/resources/enums/hostproperty"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/hoststate"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/ipversion"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/converters"
 	propertiesv1 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v1"
 	"github.com/CS-SI/SafeScale/lib/utils"
-	"github.com/CS-SI/SafeScale/lib/utils/crypt"
-	"github.com/CS-SI/SafeScale/lib/utils/data"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 	"github.com/CS-SI/SafeScale/lib/utils/retry"
-	"github.com/CS-SI/SafeScale/lib/utils/serialize"
 	"github.com/CS-SI/SafeScale/lib/utils/temporal"
 )
 
@@ -163,7 +158,7 @@ func (s stack) GetImage(id string) (image *abstract.Image, xerr fail.Error) {
 	}
 	defer func() {
 		if err := jsonFile.Close(); err != nil {
-			log.Errorf("failed to close images file")
+			logrus.Errorf("failed to close images file")
 		}
 	}()
 
@@ -303,31 +298,18 @@ func (s stack) CreateKeyPair(name string) (*abstract.KeyPair, fail.Error) {
 		return nil, fail.InvalidInstanceError()
 	}
 
-	// privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	// publicKey := privateKey.PublicKey
-	// pub, _ := ssh.NewPublicKey(&publicKey)
-	// pubBytes := ssh.MarshalAuthorizedKey(pub)
-	// pubKey := string(pubBytes)
-
-	// priBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	// priKeyPem := pem.EncodeToMemory(
-	// 	&pem.Block{
-	// 		Type:  "RSA PRIVATE KEY",
-	// 		Bytes: priBytes,
-	// 	},
-	// )
-
-	// priKey := string(priKeyPem)
-
-	var err error
-	kp.PrivateKey, kp.PublicKey, err = crypt.GenerateRSAKeyPair(name)
+	kp, err := abstract.NewKeyPair(name)
 	if err != nil {
-		return nil, fail.Wrap(err, "failed to generate uuid key")
+		return nil, err
 	}
-	kp.ID, err = uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate uuid key : %s", err.Error())
+
+	kpid, kerr := uuid.NewV4()
+	if kerr != nil {
+		return nil, fail.NewError(fmt.Sprintf("failed to generate uuid key : %s", kerr.Error()), err)
 	}
+
+	kp.ID = string(kpid[:])
+
 	return kp, nil
 }
 
@@ -549,7 +531,7 @@ func getSizingV1FromDomain(domain *libvirt.Domain, libvirtService *libvirt.Conne
 
 	info, err := domain.GetInfo()
 	if err != nil {
-		return nil, fail.Wrap("failed to get infos from the domain")
+		return nil, fail.Wrap(err, "failed to get infos from the domain")
 	}
 
 	diskSize := 0
@@ -592,7 +574,7 @@ func (s stack) getNetworkV2FromDomain(domain *libvirt.Domain) (*propertiesv2.Hos
 			err = retry.WhileUnsuccessfulDelay5Seconds(
 				func() error {
 					for _, network := range networks {
-						name, err := network.Name()
+						name, err := network.GetName()
 						if err != nil {
 							return fail.Wrap(err, "failed to get network name")
 						}
@@ -636,7 +618,7 @@ func (s stack) getNetworkV2FromDomain(domain *libvirt.Domain) (*propertiesv2.Hos
 				temporal.GetHostTimeout(),
 			)
 			if err != nil {
-				return nil, err
+				return nil, fail.Wrap(err, "")
 			}
 		}
 	}
@@ -644,6 +626,8 @@ func (s stack) getNetworkV2FromDomain(domain *libvirt.Domain) (*propertiesv2.Hos
 }
 
 // getHostFromDomain build a abstract.Host struct representing a Domain
+func (s *Stack) getHostFromDomain(domain *libvirt.Domain) (_ *abstract.HostCore, xerr fail.Error) {
+	defer fail.OnPanic(&xerr)
 func (s stack) getHostFromDomain(domain *libvirt.Domain) (_ *abstract.Host, xerr fail.Error) {
 	defer fail.OnPanic(&err)
 
@@ -651,16 +635,16 @@ func (s stack) getHostFromDomain(domain *libvirt.Domain) (_ *abstract.Host, xerr
 	if err != nil {
 		return nil, fail.Wrap(err, "failed to fetch id from domain")
 	}
-	name, err := domain.Name()
+	name, err := domain.GetName()
 	if err != nil {
 		return nil, fail.Wrap(err, "failed to fetch name from domain")
 	}
-	state, _, err := domain.State()
+	state, _, err := domain.GetState()
 	if err != nil {
 		return nil, fail.Wrap(err, "failed to fetch state from domain")
 	}
 
-	host := abstract.NewHost()
+	host := abstract.NewHostCore()
 
 	host.ID = id
 	host.Name = name
@@ -743,13 +727,12 @@ func (s stack) complementHost(hostCore *abstract.HostCore, newHost *abstract.Hos
 		return fail.InvalidParameterError("newHost", "cannot be nil")
 	}
 
-	defer fail.OnPanic(&err)
+	defer fail.OnPanic(&xerr)
 
-	hostCore.ID = newHost.ID
+	hostCore.ID = newHost.GetID()
 	if hostCore.Name == "" {
-		hostCore.Name = newHost.Name
+		hostCore.Name = newHost.GetName()
 	}
-	hostCore.LastState = newHost.LastState
 
 	// FIXME: this code should have been moved to operations, check this
 	return hostCore.Alter(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
@@ -797,7 +780,7 @@ func verifyVirtResizeCanAccessKernel() (xerr fail.Error) {
 
 	cmdOutput := &bytes.Buffer{}
 	cmd.Stdout = cmdOutput
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return fail.NewError("command failed: '%s'\n%s", command, err.Error())
 	}
@@ -809,7 +792,7 @@ func verifyVirtResizeCanAccessKernel() (xerr fail.Error) {
 		return nil
 	}
 
-	return unix.Access(target, unix.R_OK)
+	return fail.Wrap(unix.Access(target, unix.R_OK), "")
 }
 
 // CreateHost creates an host satisfying request
@@ -818,7 +801,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		return nil, nil, nil, fail.InvalidInstanceError()
 	}
 
-	defer fail.OnPanic(&err)
+	defer fail.OnPanic(&xerr)
 
 	resourceName := request.ResourceName
 	hostName := request.HostName
@@ -827,7 +810,6 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 	templateID := request.TemplateID
 	imageID := request.ImageID
 	keyPair := request.KeyPair
-	defaultGateway := request.DefaultGateway
 
 	userData = userdata.NewContent()
 
@@ -841,17 +823,17 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 	if networks == nil || len(networks) == 0 {
 		return nil, nil, userData, fail.InvalidParameterError("request.Networks", "cannot be nil or an empty slice")
 	}
-	if defaultGateway == nil && !publicIP {
-		return nil, nil, userData, fail.InvalidRequestError("the host '%s' must have a gateway or be public", resourceName)
-	}
+
 	if templateID == "" {
 		return nil, nil, userData, fail.InvalidParameterError("request.templateID", "cannot be empty string")
 	}
 	if imageID == "" {
 		return nil, nil, userData, fail.InvalidParameterError("request.ImageID", "cannot be empty string")
 	}
-	host, _, err = s.getHostAndDomainFromRef(resourceName)
-	if err == nil && host != nil {
+	hostC, _, xerr := s.getHostAndDomainFromRef(resourceName)
+	host.Core = hostC
+
+	if xerr == nil && host != nil {
 		return nil, nil, userData, fail.DuplicateError("the host '%s' already exists", resourceName)
 	}
 
@@ -867,14 +849,14 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 	if request.Password == "" {
 		password, err := utils.GeneratePassword(16)
 		if err != nil {
-			return nil, userData, fail.Wrap(err, "failed to generate password")
+			return nil, nil, userData, fail.Wrap(err, "failed to generate password")
 		}
 		request.Password = password
 	}
 
-	template, err = s.InspectTemplate(templateID)
-	if err != nil {
-		return nil, nil, userData, fail.Wrap(err, "failed to get template infos")
+	template, xerr := s.InspectTemplate(templateID)
+	if xerr != nil {
+		return nil, nil, userData, fail.Wrap(xerr, "failed to get template infos")
 	}
 	imagePath, err := getImagePathFromID(s, imageID)
 	if err != nil {
@@ -905,7 +887,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 			networkDefault, err := s.InspectNetwork("default")
 			if err != nil {
 				switch err.(type) {
-				case fail.ErrNotFound:
+				case *fail.ErrNotFound:
 					networkDefault, err = s.CreateNetwork(
 						abstract.NetworkRequest{
 							Name:      "default",
@@ -926,8 +908,8 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		cmd := exec.Command("bash", "-c", command)
 		cmdOutput := &bytes.Buffer{}
 		cmd.Stdout = cmdOutput
-		err = cmd.Run()
-		if err != nil {
+		ferr := cmd.Run()
+		if ferr != nil {
 			return nil, nil, nil, fail.NewError("command failed: '%s'\n%s", command, err.Error())
 		}
 		ip := strings.Trim(fmt.Sprint(cmdOutput), "\n ")
@@ -938,7 +920,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 				return nil, nil, userData, fail.Wrap(err, "failed to get info waiter")
 			}
 
-			userData.AddInTag(string(userdata.PHASE2_NETWORK_AND_SECURITY), "insert_tag", fmt.Sprintf(`
+			userData.AddInTag(userdata.PHASE2_NETWORK_AND_SECURITY, "insert_tag", fmt.Sprintf(`
  LANIP=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
  echo -n "%s|$LANIP" > /dev/tcp/%s/%d`, hostName, ip, infoWaiter.port))
 
@@ -946,9 +928,9 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 			cmd = exec.Command("bash", "-c", command)
 			cmdOutput = &bytes.Buffer{}
 			cmd.Stdout = cmdOutput
-			err = cmd.Run()
-			if err != nil {
-				return nil, nil, userData, fail.Wrap(err, "command failed: '%s'\n", command)
+			ferr = cmd.Run()
+			if ferr != nil {
+				return nil, nil, userData, fail.Wrap(ferr, "command failed: '%s'\n", command)
 			}
 			lanIf := strings.Trim(fmt.Sprint(cmdOutput), "\n ")
 			networksCommandString += fmt.Sprintf(" --network type=direct,source=%s,source_mode=bridge", lanIf)
@@ -964,9 +946,9 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		return nil, nil, userData, err
 	}
 	userdataFileName := s.LibvirtConfig.LibvirtStorage + "/" + resourceName + "_userdata.sh"
-	err = ioutil.WriteFile(userdataFileName, userDataPhase1, 0644)
-	if err != nil {
-		return nil, nil, userData, fail.Wrap(err, "failed to write userData in %s_userdata.sh file", resourceName)
+	werr := ioutil.WriteFile(userdataFileName, userDataPhase1, 0644)
+	if werr != nil {
+		return nil, nil, userData, fail.Wrap(werr, "failed to write userData in %s_userdata.sh file", resourceName)
 	}
 
 	// without sudo rights /boot/vmlinuz/`uname -r` have to be readable by the user to execute virt-resize / virt-sysprep
@@ -998,10 +980,10 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		cmdError := &bytes.Buffer{}
 		cmd.Stdout = cmdOutput
 		cmd.Stderr = cmdError
-		err = cmd.Run()
-		if err != nil {
-			logrus.Errorf("Commands failed: [%s] with error [%s], stdOutput [%s] and stdError [%s]", command, err.Error(), cmdOutput.String(), cmdError.String())
-			return nil, nil, userData, fail.NewError("command failed: '%s'\n%s", command, err.Error())
+		ferr := cmd.Run()
+		if ferr != nil {
+			logrus.Errorf("Commands failed: [%s] with error [%s], stdOutput [%s] and stdError [%s]", command, ferr.Error(), cmdOutput.String(), cmdError.String())
+			return nil, nil, userData, fail.NewError("command failed: '%s'\n%s", command, ferr.Error())
 		}
 	}
 
@@ -1010,16 +992,15 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		if err != nil {
 			if derr := s.DeleteHost(resourceName); derr != nil {
 				fmt.Printf("failed to Remove the host %s: %s", resourceName, err.Error())
-				err = fail.AddConsequence(err, derr)
 			}
 		}
 	}()
 
 	// ----Generate abstract.Host----
 
-	domain, err := s.LibvirtService.LookupDomainByName(resourceName)
-	if err != nil {
-		return nil, nil, userData, fail.Wrap(err, "cannot find domain '%s'", resourceName)
+	domain, werr := s.LibvirtService.LookupDomainByName(resourceName)
+	if werr != nil {
+		return nil, nil, userData, fail.Wrap(werr, "cannot find domain '%s'", resourceName)
 	}
 
 	hostCore, err := s.getHostFromDomain(domain)
@@ -1035,7 +1016,6 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 		var vmInfo VMInfo
 		if publicIP {
 			vmInfo = <-vmInfoChannel
-			hnV1.PublicIPv4 = vmInfo.publicIP
 			userData.PublicIP = vmInfo.publicIP
 		}
 	}
@@ -1045,13 +1025,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 	if request.DefaultGateway != nil {
 		hostNetwork.DefaultGatewayID = request.DefaultGateway.ID
 
-		gateway, err := s.InspectHost(request.DefaultGateway)
-		if err != nil {
-			return nil, nil, nil, fail.Wrap(err, "failed to get gateway host")
-		}
-
-		hnV1.DefaultGatewayPrivateIP = gateway.PrivateIP()
-	}
+	// FIXME Get gateway info
 
 	host = abstract.NewHostFull()
 	host.Core = hostCore
@@ -1067,17 +1041,17 @@ func (s stack) InspectHost(hostParam stacks.HostParameter) (host *abstract.HostF
 	}
 	ahc, hostRef, err := stacks.ValidateHostParameter(hostParam)
 	if err != nil {
-		return err
+		return ahc, err
 	}
 
-	newHost, _, err := s.getHostAndDomainFromRef(ahc.ID)
+	newHost, _, err := s.getHostAndDomainFromRef(ahc.GetID())
 	if err != nil {
 		return nil, err
 	}
 
 	host = abstract.NewHostFull()
-	host.Core = ahc
-	if err = s.complementHost(host, newHost); err != nil {
+
+	if err = s.complementHost(newHost, host); err != nil {
 		return nil, fail.Wrap(err, "failed to complement the host")
 	}
 
@@ -1106,12 +1080,13 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 	if s.IsNull() {
 		return fail.InvalidInstanceError()
 	}
-	ahf, hostRef, xerr := stacks.ValidateHostParameter(hostParam)
+
+	ahf, _, xerr := stacks.ValidateHostParameter(hostParam)
 	if xerr != nil {
 		return xerr
 	}
 
-	_, domain, err := s.getHostAndDomainFromRef(id)
+	_, domain, err := s.getHostAndDomainFromRef(ahf.GetID())
 	if err != nil {
 		return err
 	}
@@ -1121,9 +1096,9 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 		return fail.Wrap(err, "failed to get the volumes from the domain")
 	}
 
-	isActive, err := domain.IsActive()
-	if err != nil {
-		return fail.Wrap(err, "failed to know if the domain is active")
+	isActive, ferr := domain.IsActive()
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to know if the domain is active")
 	}
 	if !isActive {
 		err := s.StartHost(ahf.Core.ID)
@@ -1132,20 +1107,20 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 		}
 	}
 
-	err = domain.Destroy()
-	if err != nil {
-		return fail.Wrap(err, "failed to destroy the domain")
+	ferr = domain.Destroy()
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to destroy the domain")
 	}
-	err = domain.Undefine()
-	if err != nil {
-		return fail.Wrap(err, "failed to undefine the domain")
+	ferr = domain.Undefine()
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to undefine the domain")
 	}
 
 	for _, volume := range volumes {
 		volumePath := volume.Key
 		pathSplitted := strings.Split(volumePath, "/")
 		volumeName := strings.Split(pathSplitted[len(pathSplitted)-1], ".")[0]
-		domainName, err := domain.Name()
+		domainName, err := domain.GetName()
 		if err != nil {
 			return fail.Wrap(err, "failed to get domain name")
 		}
@@ -1173,7 +1148,7 @@ func (s stack) ListHosts() ([]*abstract.Host, fail.Error) {
 
 	var hosts []*abstract.Host
 	if s == nil {
-		return hosts, fail.InvalidInstanceError()
+		return nullList, fail.InvalidInstanceError()
 	}
 
 	domains, err := s.LibvirtService.ListAllDomains(16383)
@@ -1181,10 +1156,13 @@ func (s stack) ListHosts() ([]*abstract.Host, fail.Error) {
 		return nil, fail.Wrap(err, "error listing domains")
 	}
 	for _, domain := range domains {
-		host, err := s.getHostFromDomain(&domain)
+		hostC, err := s.getHostFromDomain(&domain)
 		if err != nil {
 			return nil, fail.Wrap(err, "failed to get host from domain")
 		}
+
+		host := abstract.NewHostFull()
+		host.Core = hostC
 
 		hosts = append(hosts, host)
 	}
@@ -1203,14 +1181,14 @@ func (s stack) StopHost(hostParam stacks.HostParameter) fail.Error {
 		return xerr
 	}
 
-	_, domain, xerr := s.getHostAndDomainFromRef(id)
+	_, domain, xerr := s.getHostAndDomainFromRef(ahf.GetID())
 	if xerr != nil {
-		return fail.Wrap(err, "getHostAndDomainFromRef failed")
+		return fail.Wrap(xerr, "getHostAndDomainFromRef failed")
 	}
 
-	err = domain.Shutdown()
-	if err != nil {
-		return fail.Wrap(normalizeError(err), "failed to shutdown the host '%s'", hostRef)
+	ferr := domain.Shutdown()
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to shutdown the host '%s'", hostRef)
 	}
 
 	return nil
@@ -1231,9 +1209,9 @@ func (s stack) StartHost(hostParam stacks.HostParameter) fail.Error {
 		return fail.Wrap(err, "getHostAndDomainFromRef")
 	}
 
-	err = domain.Create()
-	if err != nil {
-		return fail.Wrap(normalizeError(err), "failed to launch the host '%s'", hostRef)
+	ferr := domain.Create()
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to launch the host '%s'", hostRef)
 	}
 
 	return nil
@@ -1250,14 +1228,14 @@ func (s stack) RebootHost(hostParam stacks.HostParameter) fail.Error {
 		return xerr
 	}
 
-	_, domain, err := s.getHostAndDomainFromRef(ahf.Core.id)
+	_, domain, err := s.getHostAndDomainFromRef(ahf.Core.GetID())
 	if err != nil {
 		return fail.Wrap(err, "getHostAndDomainFromRef failed")
 	}
 
-	err = domain.Reboot(0)
-	if err != nil {
-		return fail.Wrap(normalizeError(err), "failed to reboot the host '%s'", hostRef)
+	ferr := domain.Reboot(0)
+	if ferr != nil {
+		return fail.Wrap(ferr, "failed to reboot the host '%s'", hostRef)
 	}
 
 	return nil
@@ -1273,7 +1251,7 @@ func (s stack) GetHostState(hostParam stacks.HostParameter) (hoststate.Enum, fai
 	if err != nil {
 		return hoststate.ERROR, err
 	}
-	return host.LastState, nil
+	return host.CurrentState, nil
 }
 
 // -------------Provider Infos-------------------------------------------------------------------------------------------
@@ -1302,4 +1280,8 @@ func (s stack) BindSecurityGroupToHost(sgParam stacks.SecurityGroupParameter, ho
 // UnbindSecurityGroupFromHost ...
 func (s stack) UnbindSecurityGroupFromHost(sgParam stacks.SecurityGroupParameter, hostParam stacks.HostParameter) fail.Error {
 	return fail.NotImplementedError("not yet implemented")
+}
+
+func (s *Stack) InspectTemplate(id string) (*abstract.HostTemplate, fail.Error) {
+	return &abstract.HostTemplate{}, nil
 }

@@ -36,6 +36,50 @@ type provider struct {
 	tenantParameters map[string]interface{}
 }
 
+func (p *provider) InspectImage(id string) (*abstract.Image, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) InspectKeyPair(id string) (*abstract.KeyPair, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) ListNetworks() ([]*abstract.Network, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) BindHostToVIP(ip *abstract.VirtualIP, s string) fail.Error {
+	panic("implement me")
+}
+
+func (p *provider) UnbindHostFromVIP(ip *abstract.VirtualIP, s string) fail.Error {
+	panic("implement me")
+}
+
+func (p *provider) CreateHost(request abstract.HostRequest) (*abstract.HostFull, *userdata.Content, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) InspectHostByName(s string) (*abstract.HostCore, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) ListHosts(b bool) (abstract.HostList, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) WaitHostReady(hostParam stacks.HostParameter, timeout time.Duration) (*abstract.HostCore, fail.Error) {
+	panic("implement me")
+}
+
+func (p *provider) BindSecurityGroupToHost(hostParam stacks.HostParameter, sgParam stacks.SecurityGroupParameter) fail.Error {
+	panic("implement me")
+}
+
+func (p *provider) InspectVolumeAttachment(serverID, id string) (*abstract.VolumeAttachment, fail.Error) {
+	panic("implement me")
+}
+
 // New creates a new instance of local provider
 func New() providers.Provider {
 	return &provider{}
