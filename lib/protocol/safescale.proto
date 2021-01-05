@@ -20,6 +20,9 @@ option go_package = ".;protocol";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
+// for rest
+import "annotations.proto";
+
 // Common
 
 message Reference {
@@ -124,11 +127,17 @@ message TenantInspectResponse {
 
 service TenantService{
 	rpc Cleanup (TenantCleanupRequest) returns (google.protobuf.Empty){}
-	rpc Get (google.protobuf.Empty) returns (TenantName){}
+	rpc Get (google.protobuf.Empty) returns (TenantName){
+		option (google.api.http).get = "/v1/tenant";		
+	}
 	rpc Inspect (TenantName) returns (TenantInspectResponse){}
-	rpc List (google.protobuf.Empty) returns (TenantList){}
+	rpc List (google.protobuf.Empty) returns (TenantList){
+		option (google.api.http).get = "/v1/tenant/list";		
+	}
 	rpc Scan (google.protobuf.Empty) returns (google.protobuf.Empty){}
-	rpc Set (TenantName) returns (google.protobuf.Empty){}
+	rpc Set (TenantName) returns (google.protobuf.Empty) {
+		option (google.api.http).post = "/v1/tenant";		
+	}
 }
 
 // Image
@@ -148,7 +157,9 @@ message ImageListRequest{
 }
 
 service ImageService{
-	rpc List(ImageListRequest) returns (ImageList){}
+	rpc List(ImageListRequest) returns (ImageList){
+		option (google.api.http).get = "/v1/image/list";																
+	}
 	//rpc Create(ImageCreateRequest) returns (Image){}
 	//rpc Delete(Image) returns (google.protobuf.Empty){}
 }
@@ -202,10 +213,18 @@ message NetworkListRequest {
 }
 
 service NetworkService {
-	rpc Create(NetworkCreateRequest) returns (Network){}
-	rpc List(NetworkListRequest) returns (NetworkList){}
-	rpc Inspect(Reference) returns (Network) {}
-	rpc Delete(Reference) returns (google.protobuf.Empty){}
+	rpc Create(NetworkCreateRequest) returns (Network){
+		option (google.api.http).post = "/v1/network";														
+	}
+	rpc List(NetworkListRequest) returns (NetworkList){
+		option (google.api.http).get = "/v1/network/list";																
+	}
+	rpc Inspect(Reference) returns (Network) {
+		option (google.api.http).get = "/v1/network/{id}";																
+	}
+	rpc Delete(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/network/{id}";																
+	}
 }
 
 // safescale network subnet create --cidr="192.145.0.0/16" --cpu=2 --ram=7 --disk=100 --os="Ubuntu 16.04" net-1 subnet-1 (par défault "192.168.0.0/24", on crée une gateway sur chaque réseau: gw_net1)
@@ -284,10 +303,18 @@ message SubnetSecurityGroupBondsRequest {
 }
 
 service SubnetService {
-	rpc Create(SubnetCreateRequest) returns (Subnet){}
-	rpc List(SubnetListRequest) returns (SubnetList){}
-	rpc Inspect(SubnetInspectRequest) returns (Subnet) {}
-	rpc Delete(SubnetInspectRequest) returns (google.protobuf.Empty){}
+	rpc Create(SubnetCreateRequest) returns (Subnet){
+		option (google.api.http).post = "/v1/network/{network.id}/subnet";																
+	}
+	rpc List(SubnetListRequest) returns (SubnetList){
+		option (google.api.http).get = "/v1/{network.id}/subnet/list";																
+	}
+	rpc Inspect(SubnetInspectRequest) returns (Subnet) {
+		option (google.api.http).get = "/v1/{network.id}/subnet/{subnet.id}";																
+	}
+	rpc Delete(SubnetInspectRequest) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/network/{network.id}/subnet/{subnet.id}";																
+	}
 	rpc BindSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){}
 	rpc UnbindSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){}
 	rpc EnableSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){}
@@ -388,17 +415,37 @@ message HostListRequest {
 }
 
 service HostService {
-	rpc Create(HostDefinition) returns (Host){}
-	rpc Inspect(Reference) returns (Host){}
+	rpc Create(HostDefinition) returns (Host){
+		option (google.api.http).post = "/v1/host";		
+	}
+	rpc Inspect(Reference) returns (Host){
+		option (google.api.http).get = "/v1/host/{id}";						
+	}
 	rpc Status(Reference) returns (HostStatus){}
-	rpc List(HostListRequest) returns (HostList){}
-	rpc Delete(Reference) returns (google.protobuf.Empty){}
-	rpc Start(Reference) returns (google.protobuf.Empty){}
-	rpc Stop(Reference) returns (google.protobuf.Empty){}
-	rpc Reboot(Reference) returns (google.protobuf.Empty){}
-	rpc Resize(HostDefinition) returns (Host){}
-	rpc SSH(Reference) returns (SshConfig){}
-	rpc BindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){}
+	rpc List(HostListRequest) returns (HostList){
+		option (google.api.http).get = "/v1/host/list";		
+	}
+	rpc Delete(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/host/{id}";				
+	}
+	rpc Start(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/host/{id}/action/start";				
+	}
+	rpc Stop(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/host/{id}/action/stop";						
+	}
+	rpc Reboot(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/host/{id}/action/reboot";								
+	}
+	rpc Resize(HostDefinition) returns (Host){
+		option (google.api.http).post = "/v1/host/{name}/action/resize";										
+	}
+	rpc SSH(Reference) returns (SshConfig){
+		option (google.api.http).post = "/v1/host/{id}/action/ssh";												
+	}
+	rpc BindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
+// 		option (google.api.http).post = "/v1/host/{host}/security_group/{/ssh";														
+	}
 	rpc UnbindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){}
 	rpc EnableSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){}
 	rpc DisableSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){}
@@ -499,12 +546,20 @@ message VolumeListResponse {
 }
 
 service VolumeService {
-	rpc Create(VolumeCreateRequest) returns (VolumeInspectResponse) {}
+	rpc Create(VolumeCreateRequest) returns (VolumeInspectResponse) {
+		option (google.api.http).post = "/v1/volume";																		
+	}
 	rpc Attach(VolumeAttachmentRequest) returns (google.protobuf.Empty) {}
 	rpc Detach(VolumeDetachmentRequest) returns (google.protobuf.Empty){}
-	rpc Delete(Reference) returns (google.protobuf.Empty){}
-	rpc List(VolumeListRequest) returns (VolumeListResponse) {}
-	rpc Inspect(Reference) returns (VolumeInspectResponse){}
+	rpc Delete(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/volume/{id}";																		
+	}
+	rpc List(VolumeListRequest) returns (VolumeListResponse) {
+		option (google.api.http).post = "/v1/volume/list";																		
+	}
+	rpc Inspect(Reference) returns (VolumeInspectResponse){
+	option (google.api.http).delete = "/v1/volume/{id}";																		
+	}
 }
 
 // safescale bucket|container create c1
@@ -529,12 +584,20 @@ message BucketMountingPoint {
 }
 
 service BucketService {
-	rpc Create(Bucket) returns (google.protobuf.Empty){}
+	rpc Create(Bucket) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/bucket";																		
+	}
 	rpc Mount(BucketMountingPoint) returns (google.protobuf.Empty){}
 	rpc Unmount(BucketMountingPoint) returns (google.protobuf.Empty){}
-	rpc Delete(Bucket) returns (google.protobuf.Empty){}
-	rpc List(google.protobuf.Empty) returns (BucketList){}
-	rpc Inspect(Bucket) returns (BucketMountingPoint){}
+	rpc Delete(Bucket) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/bucket/{name}";																				
+	}
+	rpc List(google.protobuf.Empty) returns (BucketList){
+		option (google.api.http).get = "/v1/bucket/list";																				
+	}
+	rpc Inspect(Bucket) returns (BucketMountingPoint){
+		option (google.api.http).get = "/v1/bucket/{name}";																				
+	}
 }
 
 // SSH requests
@@ -611,7 +674,9 @@ message ShareMountList {
 }
 
 service ShareService {
-	rpc Create(ShareDefinition) returns (ShareDefinition){}
+	rpc Create(ShareDefinition) returns (ShareDefinition){
+		
+	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){}
 	rpc List(Reference) returns (ShareList){}     // Here, Reference is used to carry tenant
 	rpc Mount(ShareMountDefinition) returns (ShareMountDefinition){}

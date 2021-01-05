@@ -1,0 +1,1062 @@
+openapi: 3.0.1
+info:
+  title: safescale.proto
+  version: version not set
+servers:
+- url: /
+tags:
+- name: TenantService
+- name: ImageService
+- name: NetworkService
+- name: SubnetService
+- name: HostService
+- name: TemplateService
+- name: VolumeService
+- name: BucketService
+- name: SshService
+- name: ShareService
+- name: JobService
+- name: ClusterService
+- name: FeatureService
+- name: SecurityGroupService
+- name: PublicIPService
+paths:
+  /v1/host:
+    post:
+      operationId: host_service_create
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/list:
+    get:
+      operationId: host_service_list
+      parameters:
+      - in: query
+        name: all
+        schema:
+          type: boolean
+      - in: query
+        name: tenantId
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{id}:
+    delete:
+      operationId: host_service_delete
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: tenantId
+        schema:
+          type: string
+      - in: query
+        name: name
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/tenant:
+    get:
+      operationId: tenant_service_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantName'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - TenantService
+      x-openapi-router-controller: rest.controllers.tenant_service_controller
+    post:
+      operationId: tenant_service_set
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - TenantService
+      x-openapi-router-controller: rest.controllers.tenant_service_controller
+  /v1/tenant/list:
+    get:
+      operationId: tenant_service_list
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - TenantService
+      x-openapi-router-controller: rest.controllers.tenant_service_controller
+components:
+  schemas:
+    Bucket:
+      properties:
+        name:
+          type: string
+      type: object
+    BucketList:
+      properties:
+        buckets:
+          items:
+            $ref: '#/components/schemas/Bucket'
+          type: array
+      type: object
+    BucketMountingPoint:
+      properties:
+        bucket:
+          type: string
+        host:
+          $ref: '#/components/schemas/Reference'
+        path:
+          type: string
+      type: object
+    ClusterComplexity:
+      default: CC_UNKNOWN
+      enum:
+      - CC_UNKNOWN
+      - CC_SMALL
+      - CC_NORMAL
+      - CC_LARGE
+      type: string
+    ClusterComposite:
+      properties:
+        tenants:
+          items:
+            type: string
+          type: array
+      type: object
+    ClusterControlplane:
+      properties:
+        vip:
+          $ref: '#/components/schemas/VirtualIp'
+      type: object
+    ClusterDefaults:
+      properties:
+        gatewaySizing:
+          $ref: '#/components/schemas/HostSizing'
+        masterSizing:
+          $ref: '#/components/schemas/HostSizing'
+        nodeSizing:
+          $ref: '#/components/schemas/HostSizing'
+        Image:
+          type: string
+      type: object
+    ClusterFlavor:
+      default: CF_UNKNOWN
+      enum:
+      - CF_UNKNOWN
+      - CF_BOH
+      - CF_K8S
+      type: string
+    ClusterIdentity:
+      properties:
+        name:
+          type: string
+        complexity:
+          $ref: '#/components/schemas/ClusterComplexity'
+        flavor:
+          $ref: '#/components/schemas/ClusterFlavor'
+        adminPassword:
+          type: string
+        privateKey:
+          title: SshConfig ssh_config = 4;
+          type: string
+      type: object
+    ClusterListResponse:
+      properties:
+        clusters:
+          items:
+            $ref: '#/components/schemas/ClusterResponse'
+          type: array
+      type: object
+    ClusterNetwork:
+      properties:
+        networkId:
+          type: string
+        cidr:
+          type: string
+        domain:
+          type: string
+        gatewayId:
+          type: string
+        gatewayIp:
+          type: string
+        secondaryGatewayId:
+          type: string
+        secondaryGatewayIp:
+          type: string
+        defaultRouteIp:
+          type: string
+        primaryPublicIp:
+          type: string
+        secondaryPublicIp:
+          type: string
+        endpointIp:
+          type: string
+      type: object
+    ClusterNodeListResponse:
+      properties:
+        nodes:
+          items:
+            $ref: '#/components/schemas/Host'
+          type: array
+      type: object
+    ClusterResponse:
+      properties:
+        identity:
+          $ref: '#/components/schemas/ClusterIdentity'
+        network:
+          $ref: '#/components/schemas/ClusterNetwork'
+        masters:
+          items:
+            $ref: '#/components/schemas/Host'
+          type: array
+        nodes:
+          items:
+            $ref: '#/components/schemas/Host'
+          type: array
+        disabledFeatures:
+          $ref: '#/components/schemas/FeatureListResponse'
+        installedFeatures:
+          $ref: '#/components/schemas/FeatureListResponse'
+        defaults:
+          $ref: '#/components/schemas/ClusterDefaults'
+        state:
+          $ref: '#/components/schemas/ClusterState'
+        composite:
+          $ref: '#/components/schemas/ClusterComposite'
+        controlplane:
+          $ref: '#/components/schemas/ClusterControlplane'
+      type: object
+    ClusterState:
+      default: CS_UNKNOWN
+      enum:
+      - CS_UNKNOWN
+      - CS_NOMINAL
+      - CS_DEGRADED
+      - CS_STOPPED
+      - CS_INITIALIZING
+      - CS_CREATED
+      - CS_CREATING
+      - CS_ERROR
+      - CS_REMOVED
+      - CS_STOPPING
+      - CS_STARTING
+      type: string
+    ClusterStateResponse:
+      properties:
+        state:
+          $ref: '#/components/schemas/ClusterState'
+      type: object
+    FeatureListResponse:
+      properties:
+        features:
+          items:
+            $ref: '#/components/schemas/FeatureResponse'
+          type: array
+      type: object
+    FeatureResponse:
+      properties:
+        name:
+          type: string
+      type: object
+    FeatureSettings:
+      properties:
+        skipProxy:
+          type: boolean
+        serialize:
+          type: boolean
+        ignoreFeatureRequirements:
+          type: boolean
+        ignoreSizingRequirements:
+          type: boolean
+        addUnconditionally:
+          type: boolean
+      type: object
+    FeatureTargetType:
+      default: FT_ALL
+      enum:
+      - FT_ALL
+      - FT_HOST
+      - FT_CLUSTER
+      type: string
+    GatewayDefinition:
+      properties:
+        cpu:
+          format: int32
+          type: integer
+        ram:
+          format: float
+          type: number
+        disk:
+          format: int32
+          type: integer
+        imageId:
+          type: string
+        name:
+          type: string
+        gpuCount:
+          format: int32
+          type: integer
+        gpuType:
+          type: string
+        sizing:
+          $ref: '#/components/schemas/HostSizing'
+        sizingAsString:
+          type: string
+      type: object
+    Host:
+      example:
+        privateIp: privateIp
+        cpu: 0
+        publicIp: publicIp
+        privateKey: privateKey
+        disk: 1
+        password: password
+        attachedVolumeNames:
+        - attachedVolumeNames
+        - attachedVolumeNames
+        name: name
+        osKind: osKind
+        id: id
+        gatewayId: gatewayId
+        ram: 6.0274563
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cpu:
+          format: int32
+          type: integer
+        ram:
+          format: float
+          type: number
+        disk:
+          format: int32
+          type: integer
+        publicIp:
+          type: string
+        privateIp:
+          type: string
+        state:
+          $ref: '#/components/schemas/HostState'
+        privateKey:
+          type: string
+        gatewayId:
+          type: string
+        osKind:
+          type: string
+        attachedVolumeNames:
+          items:
+            type: string
+          type: array
+        password:
+          type: string
+      type: object
+    HostList:
+      example:
+        hosts:
+        - privateIp: privateIp
+          cpu: 0
+          publicIp: publicIp
+          privateKey: privateKey
+          disk: 1
+          password: password
+          attachedVolumeNames:
+          - attachedVolumeNames
+          - attachedVolumeNames
+          name: name
+          osKind: osKind
+          id: id
+          gatewayId: gatewayId
+          ram: 6.0274563
+        - privateIp: privateIp
+          cpu: 0
+          publicIp: publicIp
+          privateKey: privateKey
+          disk: 1
+          password: password
+          attachedVolumeNames:
+          - attachedVolumeNames
+          - attachedVolumeNames
+          name: name
+          osKind: osKind
+          id: id
+          gatewayId: gatewayId
+          ram: 6.0274563
+      properties:
+        hosts:
+          items:
+            $ref: '#/components/schemas/Host'
+          type: array
+      type: object
+    HostSizing:
+      properties:
+        minCpuCount:
+          format: int32
+          type: integer
+        maxCpuCount:
+          format: int32
+          type: integer
+        minRamSize:
+          format: float
+          type: number
+        maxRamSize:
+          format: float
+          type: number
+        minDiskSize:
+          format: int32
+          type: integer
+        gpuCount:
+          format: int32
+          type: integer
+        minCpuFreq:
+          format: float
+          type: number
+      type: object
+    HostState:
+      default: HS_STOPPED
+      enum:
+      - HS_STOPPED
+      - HS_STARTING
+      - HS_STARTED
+      - HS_STOPPING
+      - HS_ERROR
+      - HS_TERMINATED
+      - HS_UNKNOWN
+      title: |-
+        - HS_STOPPED: STOPPED host is stopped
+         - HS_STARTING: STARTING host is starting
+         - HS_STARTED: STARTED host is started
+         - HS_STOPPING: STOPPING host is stopping
+         - HS_ERROR: ERROR host is in error state
+         - HS_TERMINATED: TERMINATED host is terminated (in AWS, it's like DELETED)
+         - HS_UNKNOWN: UNKNOWN is unknown
+      type: string
+    HostStatus:
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+      type: object
+    HostTemplate:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cores:
+          format: int32
+          type: integer
+        ram:
+          format: int32
+          type: integer
+        disk:
+          format: int32
+          type: integer
+        gpuCount:
+          format: int32
+          type: integer
+        gpuType:
+          type: string
+      type: object
+    Image:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      type: object
+    ImageList:
+      properties:
+        images:
+          items:
+            $ref: '#/components/schemas/Image'
+          type: array
+      type: object
+    JobDefinition:
+      properties:
+        uuid:
+          type: string
+        info:
+          type: string
+      type: object
+    JobList:
+      properties:
+        list:
+          items:
+            $ref: '#/components/schemas/JobDefinition'
+          type: array
+      type: object
+    KeyValue:
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      type: object
+    NFSExportOptions:
+      properties:
+        readOnly:
+          type: boolean
+        rootSquash:
+          type: boolean
+        secure:
+          type: boolean
+        async:
+          type: boolean
+        noHide:
+          type: boolean
+        crossMount:
+          type: boolean
+        subtreeCheck:
+          type: boolean
+      type: object
+    Network:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cidr:
+          type: string
+        gatewayId:
+          type: string
+        secondaryGatewayId:
+          type: string
+        virtualIp:
+          $ref: '#/components/schemas/VirtualIp'
+        failover:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/NetworkState'
+        subnets:
+          items:
+            type: string
+          type: array
+        dnsServers:
+          items:
+            type: string
+          type: array
+      type: object
+    NetworkList:
+      properties:
+        networks:
+          items:
+            $ref: '#/components/schemas/Network'
+          type: array
+      type: object
+    NetworkState:
+      default: NS_UNKNOWNSTATE
+      enum:
+      - NS_UNKNOWNSTATE
+      - NS_PHASE1
+      - NS_PHASE2
+      - NS_READY
+      - NS_NETWORKERROR
+      type: string
+    PublicIPListResponse:
+      properties:
+        publicIps:
+          items:
+            $ref: '#/components/schemas/PublicIPResponse'
+          type: array
+      type: object
+    PublicIPResponse:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        ipAddress:
+          type: string
+        macAddress:
+          type: string
+      type: object
+    Reference:
+      properties:
+        tenantId:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      type: object
+    SecurityGroupBond:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        disabled:
+          type: boolean
+      type: object
+    SecurityGroupBondsResponse:
+      properties:
+        hosts:
+          items:
+            $ref: '#/components/schemas/SecurityGroupBond'
+          type: array
+        subnets:
+          items:
+            $ref: '#/components/schemas/SecurityGroupBond'
+          type: array
+      type: object
+    SecurityGroupListResponse:
+      properties:
+        securityGroups:
+          items:
+            $ref: '#/components/schemas/SecurityGroupResponse'
+          type: array
+      type: object
+    SecurityGroupResponse:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        rules:
+          items:
+            $ref: '#/components/schemas/SecurityGroupRule'
+          type: array
+      type: object
+    SecurityGroupRule:
+      properties:
+        ids:
+          items:
+            type: string
+          type: array
+        description:
+          type: string
+        etherType:
+          $ref: '#/components/schemas/SecurityGroupRuleEtherType'
+        direction:
+          $ref: '#/components/schemas/SecurityGroupRuleDirection'
+        protocol:
+          type: string
+        portFrom:
+          format: int32
+          type: integer
+        portTo:
+          format: int32
+          type: integer
+        involved:
+          items:
+            type: string
+          type: array
+      type: object
+    SecurityGroupRuleDirection:
+      default: SGRD_UNKNOWN
+      enum:
+      - SGRD_UNKNOWN
+      - SGRD_INGRESS
+      - SGRD_EGRESS
+      type: string
+    SecurityGroupRuleEtherType:
+      default: SGRET_UNKNOWN
+      enum:
+      - SGRET_UNKNOWN
+      - SGRET_IPV4
+      - SGRET_IPV6
+      type: string
+    SecurityGroupState:
+      default: SGS_ALL
+      enum:
+      - SGS_ALL
+      - SGS_ENABLED
+      - SGS_DISABLED
+      type: string
+    ShareDefinition:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        host:
+          $ref: '#/components/schemas/Reference'
+        path:
+          type: string
+        type:
+          type: string
+        options:
+          $ref: '#/components/schemas/NFSExportOptions'
+        securityModes:
+          items:
+            type: string
+          type: array
+        optionsAsString:
+          type: string
+      type: object
+    ShareList:
+      properties:
+        shareList:
+          items:
+            $ref: '#/components/schemas/ShareDefinition'
+          type: array
+      type: object
+    ShareMountDefinition:
+      properties:
+        host:
+          $ref: '#/components/schemas/Reference'
+        share:
+          $ref: '#/components/schemas/Reference'
+        path:
+          type: string
+        type:
+          type: string
+        options:
+          type: string
+        withCache:
+          type: boolean
+      type: object
+    ShareMountList:
+      properties:
+        share:
+          $ref: '#/components/schemas/ShareDefinition'
+        mountList:
+          items:
+            $ref: '#/components/schemas/ShareMountDefinition'
+          type: array
+      type: object
+    SshConfig:
+      properties:
+        user:
+          type: string
+        host:
+          type: string
+        privateKey:
+          type: string
+        port:
+          format: int32
+          type: integer
+        gateway:
+          $ref: '#/components/schemas/SshConfig'
+        secondaryGateway:
+          $ref: '#/components/schemas/SshConfig'
+        hostName:
+          type: string
+      type: object
+    SshResponse:
+      properties:
+        outputStd:
+          type: string
+        outputErr:
+          type: string
+        status:
+          format: int32
+          type: integer
+      type: object
+    Subnet:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cidr:
+          type: string
+        gatewayIds:
+          items:
+            type: string
+          type: array
+        virtualIp:
+          $ref: '#/components/schemas/VirtualIp'
+        failover:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/SubnetState'
+        networkId:
+          type: string
+      type: object
+    SubnetList:
+      properties:
+        subnets:
+          items:
+            $ref: '#/components/schemas/Subnet'
+          type: array
+      type: object
+    SubnetState:
+      default: SS_UNKNOWNSTATE
+      enum:
+      - SS_UNKNOWNSTATE
+      - SS_PHASE1
+      - SS_PHASE2
+      - SS_READY
+      - SS_NETWORKERROR
+      type: string
+    TemplateList:
+      properties:
+        templates:
+          items:
+            $ref: '#/components/schemas/HostTemplate'
+          type: array
+      type: object
+    Tenant:
+      example:
+        provider: provider
+        name: name
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+      type: object
+    TenantCompute:
+      properties:
+        region:
+          type: string
+        subRegion:
+          type: string
+        availabilityZone:
+          type: string
+        context:
+          $ref: '#/components/schemas/KeyValue'
+        apiKey:
+          $ref: '#/components/schemas/KeyValue'
+        whitelistTemplateRegex:
+          type: string
+        blacklistTemplateRegex:
+          type: string
+        defaultImage:
+          type: string
+        defaultVolumeSpeed:
+          type: string
+        dnsList:
+          items:
+            type: string
+          type: array
+        operatorUsername:
+          type: string
+      type: object
+    TenantIdentity:
+      properties:
+        user:
+          $ref: '#/components/schemas/KeyValue'
+        appKey:
+          $ref: '#/components/schemas/KeyValue'
+        domain:
+          $ref: '#/components/schemas/KeyValue'
+      type: object
+    TenantInspectResponse:
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+        identity:
+          $ref: '#/components/schemas/TenantIdentity'
+        compute:
+          $ref: '#/components/schemas/TenantCompute'
+        objectStorage:
+          $ref: '#/components/schemas/TenantObjectStorage'
+        metadata:
+          $ref: '#/components/schemas/TenantMetadata'
+      type: object
+    TenantList:
+      example:
+        tenants:
+        - provider: provider
+          name: name
+        - provider: provider
+          name: name
+      properties:
+        tenants:
+          items:
+            $ref: '#/components/schemas/Tenant'
+          type: array
+      type: object
+    TenantMetadata:
+      properties:
+        storage:
+          $ref: '#/components/schemas/TenantObjectStorage'
+        bucketName:
+          type: string
+        crypt:
+          type: boolean
+      type: object
+    TenantName:
+      example:
+        name: name
+      properties:
+        name:
+          type: string
+      type: object
+    TenantObjectStorage:
+      properties:
+        type:
+          type: string
+        endpoint:
+          type: string
+        authUrl:
+          type: string
+        accessKey:
+          type: string
+        region:
+          type: string
+      type: object
+    VirtualIp:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        networkId:
+          type: string
+        privateIp:
+          type: string
+        publicIp:
+          type: string
+        hosts:
+          items:
+            $ref: '#/components/schemas/Host'
+          type: array
+      type: object
+    VolumeAttachmentResponse:
+      properties:
+        host:
+          $ref: '#/components/schemas/Reference'
+        mountPath:
+          type: string
+        format:
+          type: string
+        device:
+          type: string
+        doNotFormat:
+          type: boolean
+      type: object
+    VolumeInspectResponse:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        speed:
+          $ref: '#/components/schemas/VolumeSpeed'
+        size:
+          format: int32
+          type: integer
+        host:
+          $ref: '#/components/schemas/Reference'
+        mountPath:
+          type: string
+        format:
+          type: string
+        device:
+          type: string
+        attachments:
+          items:
+            $ref: '#/components/schemas/VolumeAttachmentResponse'
+          type: array
+      type: object
+    VolumeListResponse:
+      properties:
+        volumes:
+          items:
+            $ref: '#/components/schemas/VolumeInspectResponse'
+          type: array
+      type: object
+    VolumeSpeed:
+      default: VS_COLD
+      enum:
+      - VS_COLD
+      - VS_HDD
+      - VS_SSD
+      type: string
+    protobufAny:
+      properties:
+        typeUrl:
+          type: string
+        value:
+          format: byte
+          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+          type: string
+      type: object
+    rpcStatus:
+      properties:
+        code:
+          format: int32
+          type: integer
+        message:
+          type: string
+        details:
+          items:
+            $ref: '#/components/schemas/protobufAny'
+          type: array
+      type: object

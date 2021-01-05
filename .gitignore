@@ -85,6 +85,8 @@ cli/safescale/safescale
 cli/safescale/safescale-cover
 cli/safescaled/safescaled
 cli/safescaled/safescaled-cover
+cli/gateway/gateway
+cli/gateway/gateway-cover
 cli/perform/perform
 cli/perform/perform-cover
 cli/scanner/scanner

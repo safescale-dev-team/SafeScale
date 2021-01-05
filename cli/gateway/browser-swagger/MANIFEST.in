@@ -1,0 +1,3 @@
+graft rest
+include *.rst
+include *.md
