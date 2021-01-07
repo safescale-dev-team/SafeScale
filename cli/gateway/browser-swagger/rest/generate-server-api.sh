@@ -29,11 +29,23 @@ mkdir -p ${output_path}
 cd ${xpl_path}/../model/api
 
 # generate python rest server
+# java -jar ${codegen} generate \
+#   -i safescale.swagger.json \
+#   -g python-flask \
+#   -o ${output_path}
+  
+# generate python rest server
 java -jar ${codegen} generate \
-  -i safescale.swagger.json \
+  -i openapi.yaml \
   -g python-flask \
   -o ${output_path}
-  
+
+mkdir -p ${output_path}html_
+java -jar ${codegen} generate \
+  -i safescale.swagger.json \
+  -g html \
+  -o ${output_path}html_
+
 # copy server inside backend
 if [ ! -d ${project_path}/controllers ]
 then

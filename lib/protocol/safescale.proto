@@ -675,13 +675,19 @@ message ShareMountList {
 
 service ShareService {
 	rpc Create(ShareDefinition) returns (ShareDefinition){
-		
+		option (google.api.http).post = "/v1/share";																						
 	}
-	rpc Delete(Reference) returns (google.protobuf.Empty){}
-	rpc List(Reference) returns (ShareList){}     // Here, Reference is used to carry tenant
+	rpc Delete(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/share/{id}";																								
+	}
+	rpc List(Reference) returns (ShareList){
+		option (google.api.http).post = "/v1/share/list";																								
+	}     // Here, Reference is used to carry tenant
 	rpc Mount(ShareMountDefinition) returns (ShareMountDefinition){}
 	rpc Unmount(ShareMountDefinition) returns (google.protobuf.Empty){}
-	rpc Inspect(Reference) returns (ShareMountList){}
+	rpc Inspect(Reference) returns (ShareMountList){
+		option (google.api.http).get = "/v1/share/{id}";																								
+	}
 }
 
 // Job Management
@@ -831,24 +837,60 @@ message ClusterNodeRequest {
 }
 
 service ClusterService {
-	rpc List(Reference) returns (ClusterListResponse){}
-	rpc Inspect(Reference) returns (ClusterResponse){}
-	rpc Create(ClusterCreateRequest) returns (ClusterResponse){}
-	rpc Delete(ClusterDeleteRequest) returns (google.protobuf.Empty){}
-	rpc Start(Reference) returns (google.protobuf.Empty){}
-	rpc Stop(Reference) returns (google.protobuf.Empty){}
-	rpc State(Reference) returns (ClusterStateResponse){}
-	rpc Expand(ClusterResizeRequest) returns (ClusterNodeListResponse){}
-	rpc Shrink(ClusterResizeRequest) returns (ClusterNodeListResponse){}
-	rpc ListNodes(Reference) returns (ClusterNodeListResponse){}
-	rpc InspectNode(ClusterNodeRequest) returns (Host){}
-	rpc DeleteNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
-	rpc StopNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
-	rpc StartNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
-	rpc StateNode(ClusterNodeRequest) returns (ClusterStateResponse){}
-	rpc ListMasters(Reference) returns (ClusterNodeListResponse){}
-	rpc FindAvailableMaster(Reference) returns (Host){}
-	rpc InspectMaster(ClusterNodeRequest) returns (Host){}
+	rpc List(Reference) returns (ClusterListResponse){
+		option (google.api.http).get = "/v1/cluster/list";																								
+	}
+	rpc Inspect(Reference) returns (ClusterResponse){
+		option (google.api.http).get = "/v1/cluster/{id}";																								
+	}
+	rpc Create(ClusterCreateRequest) returns (ClusterResponse){
+		option (google.api.http).post = "/v1/cluster";																								
+	}
+	rpc Delete(ClusterDeleteRequest) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/cluster/{name}";																								
+	}
+	rpc Start(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/cluster/{id}/start";																								
+	}
+	rpc Stop(Reference) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/cluster/{id}/stop";																								
+	}
+	rpc State(Reference) returns (ClusterStateResponse){
+		option (google.api.http).get = "/v1/cluster/{id}/state";																								
+	}
+	rpc Expand(ClusterResizeRequest) returns (ClusterNodeListResponse){
+		option (google.api.http).post = "/v1/cluster/{name}/expand";																										
+	}
+	rpc Shrink(ClusterResizeRequest) returns (ClusterNodeListResponse){
+		option (google.api.http).post = "/v1/cluster/{name}/shrink";																												
+	}
+	rpc ListNodes(Reference) returns (ClusterNodeListResponse){
+		option (google.api.http).get = "/v1/cluster/{id}/node/list";																												
+	}
+	rpc InspectNode(ClusterNodeRequest) returns (Host){
+		option (google.api.http).get = "/v1/cluster/{name}/node/{host.id}";																												
+	}
+	rpc DeleteNode(ClusterNodeRequest) returns (google.protobuf.Empty){
+		option (google.api.http).delete = "/v1/cluster/{name}/node/{host.id}";																												
+	}
+	rpc StopNode(ClusterNodeRequest) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/cluster/{name}/node/{host.id}/stop";																												
+	}
+	rpc StartNode(ClusterNodeRequest) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/cluster/{name}/node/{host.id}/start";																												
+	}
+	rpc StateNode(ClusterNodeRequest) returns (ClusterStateResponse){
+		option (google.api.http).get = "/v1/cluster/{name}/node/{host.id}/state";																												
+	}
+	rpc ListMasters(Reference) returns (ClusterNodeListResponse){
+		option (google.api.http).get = "/v1/cluster/{name}/master/list";																														
+	}
+	rpc FindAvailableMaster(Reference) returns (Host){
+		option (google.api.http).get = "/v1/cluster/{name}/master/find";																																
+	}
+	rpc InspectMaster(ClusterNodeRequest) returns (Host){
+		option (google.api.http).get = "/v1/cluster/{name}/master/{host.id}";																																
+	}
 }
 
 // Feature services

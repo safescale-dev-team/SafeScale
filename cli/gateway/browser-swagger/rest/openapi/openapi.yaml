@@ -3,7 +3,7 @@ info:
   title: safescale.proto
   version: version not set
 servers:
-- url: /
+- url: http://localhost:8080/
 tags:
 - name: TenantService
 - name: ImageService
@@ -21,6 +21,97 @@ tags:
 - name: SecurityGroupService
 - name: PublicIPService
 paths:
+  /v1/bucket:
+    post:
+      operationId: bucket_service_create
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - BucketService
+      x-openapi-router-controller: rest.controllers.bucket_service_controller
+  /v1/bucket/list:
+    get:
+      operationId: bucket_service_list
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BucketList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - BucketService
+      x-openapi-router-controller: rest.controllers.bucket_service_controller
+  /v1/bucket/{name}:
+    delete:
+      operationId: bucket_service_delete
+      parameters:
+      - explode: false
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - BucketService
+      x-openapi-router-controller: rest.controllers.bucket_service_controller
+    get:
+      operationId: bucket_service_inspect
+      parameters:
+      - explode: false
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BucketMountingPoint'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - BucketService
+      x-openapi-router-controller: rest.controllers.bucket_service_controller
   /v1/host:
     post:
       operationId: host_service_create
@@ -44,14 +135,20 @@ paths:
     get:
       operationId: host_service_list
       parameters:
-      - in: query
+      - explode: true
+        in: query
         name: all
+        required: false
         schema:
           type: boolean
-      - in: query
+        style: form
+      - explode: true
+        in: query
         name: tenantId
+        required: false
         schema:
           type: string
+        style: form
       responses:
         "200":
           content:
@@ -72,19 +169,27 @@ paths:
     delete:
       operationId: host_service_delete
       parameters:
-      - in: path
+      - explode: false
+        in: path
         name: id
         required: true
         schema:
           type: string
-      - in: query
+        style: simple
+      - explode: true
+        in: query
         name: tenantId
+        required: false
         schema:
           type: string
-      - in: query
+        style: form
+      - explode: true
+        in: query
         name: name
+        required: false
         schema:
           type: string
+        style: form
       responses:
         "200":
           content:
@@ -101,6 +206,438 @@ paths:
       tags:
       - HostService
       x-openapi-router-controller: rest.controllers.host_service_controller
+    get:
+      operationId: host_service_inspect
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{id}/action/reboot:
+    post:
+      operationId: host_service_reboot
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{id}/action/ssh:
+    post:
+      operationId: host_service_ssh
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SshConfig'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{id}/action/start:
+    post:
+      operationId: host_service_start
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{id}/action/stop:
+    post:
+      operationId: host_service_stop
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/host/{name}/action/resize:
+    post:
+      operationId: host_service_resize
+      parameters:
+      - explode: false
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - HostService
+      x-openapi-router-controller: rest.controllers.host_service_controller
+  /v1/image/list:
+    get:
+      operationId: image_service_list
+      parameters:
+      - explode: true
+        in: query
+        name: all
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - ImageService
+      x-openapi-router-controller: rest.controllers.image_service_controller
+  /v1/network:
+    post:
+      operationId: network_service_create
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Network'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - NetworkService
+      x-openapi-router-controller: rest.controllers.network_service_controller
+  /v1/network/list:
+    get:
+      operationId: network_service_list
+      parameters:
+      - explode: true
+        in: query
+        name: all
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - NetworkService
+      x-openapi-router-controller: rest.controllers.network_service_controller
+  /v1/network/{id}:
+    delete:
+      operationId: network_service_delete
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - NetworkService
+      x-openapi-router-controller: rest.controllers.network_service_controller
+    get:
+      operationId: network_service_inspect
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Network'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - NetworkService
+      x-openapi-router-controller: rest.controllers.network_service_controller
+  /v1/network/{network_id}/subnet:
+    post:
+      operationId: subnet_service_create
+      parameters:
+      - explode: false
+        in: path
+        name: network_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subnet'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - SubnetService
+      x-openapi-router-controller: rest.controllers.subnet_service_controller
+  /v1/network/{network_id}/subnet/{subnet_id}:
+    delete:
+      operationId: subnet_service_delete
+      parameters:
+      - explode: false
+        in: path
+        name: network_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: subnet_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: network_tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: network_name
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: subnet_tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: subnet_name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - SubnetService
+      x-openapi-router-controller: rest.controllers.subnet_service_controller
   /v1/tenant:
     get:
       operationId: tenant_service_get
@@ -157,14 +694,209 @@ paths:
       tags:
       - TenantService
       x-openapi-router-controller: rest.controllers.tenant_service_controller
+  /v1/volume:
+    post:
+      operationId: volume_service_create
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeInspectResponse'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - VolumeService
+      x-openapi-router-controller: rest.controllers.volume_service_controller
+  /v1/volume/list:
+    post:
+      operationId: volume_service_list
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeListResponse'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - VolumeService
+      x-openapi-router-controller: rest.controllers.volume_service_controller
+  /v1/volume/{id}:
+    delete:
+      operationId: volume_service_inspect
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeInspectResponse'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - VolumeService
+      x-openapi-router-controller: rest.controllers.volume_service_controller
+  /v1/{network_id}/subnet/list:
+    get:
+      operationId: subnet_service_list
+      parameters:
+      - explode: false
+        in: path
+        name: network_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: network_tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: network_name
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: all
+        required: false
+        schema:
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubnetList'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - SubnetService
+      x-openapi-router-controller: rest.controllers.subnet_service_controller
+  /v1/{network_id}/subnet/{subnet_id}:
+    get:
+      operationId: subnet_service_inspect
+      parameters:
+      - explode: false
+        in: path
+        name: network_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: subnet_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: network_tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: network_name
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: subnet_tenantId
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: subnet_name
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subnet'
+          description: A successful response.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpcStatus'
+          description: An unexpected error response.
+      tags:
+      - SubnetService
+      x-openapi-router-controller: rest.controllers.subnet_service_controller
 components:
   schemas:
     Bucket:
+      example:
+        name: name
       properties:
         name:
           type: string
       type: object
     BucketList:
+      example:
+        buckets:
+        - name: name
+        - name: name
       properties:
         buckets:
           items:
@@ -172,6 +904,13 @@ components:
           type: array
       type: object
     BucketMountingPoint:
+      example:
+        bucket: bucket
+        path: path
+        host:
+          tenantId: tenantId
+          name: name
+          id: id
       properties:
         bucket:
           type: string
@@ -533,6 +1272,9 @@ components:
           type: string
       type: object
     Image:
+      example:
+        name: name
+        id: id
       properties:
         id:
           type: string
@@ -540,6 +1282,12 @@ components:
           type: string
       type: object
     ImageList:
+      example:
+        images:
+        - name: name
+          id: id
+        - name: name
+          id: id
       properties:
         images:
           items:
@@ -585,6 +1333,54 @@ components:
           type: boolean
       type: object
     Network:
+      example:
+        failover: true
+        name: name
+        cidr: cidr
+        subnets:
+        - subnets
+        - subnets
+        id: id
+        dnsServers:
+        - dnsServers
+        - dnsServers
+        gatewayId: gatewayId
+        secondaryGatewayId: secondaryGatewayId
+        virtualIp:
+          hosts:
+          - privateIp: privateIp
+            cpu: 0
+            publicIp: publicIp
+            privateKey: privateKey
+            disk: 1
+            password: password
+            attachedVolumeNames:
+            - attachedVolumeNames
+            - attachedVolumeNames
+            name: name
+            osKind: osKind
+            id: id
+            gatewayId: gatewayId
+            ram: 6.0274563
+          - privateIp: privateIp
+            cpu: 0
+            publicIp: publicIp
+            privateKey: privateKey
+            disk: 1
+            password: password
+            attachedVolumeNames:
+            - attachedVolumeNames
+            - attachedVolumeNames
+            name: name
+            osKind: osKind
+            id: id
+            gatewayId: gatewayId
+            ram: 6.0274563
+          privateIp: privateIp
+          name: name
+          networkId: networkId
+          publicIp: publicIp
+          id: id
       properties:
         id:
           type: string
@@ -612,6 +1408,102 @@ components:
           type: array
       type: object
     NetworkList:
+      example:
+        networks:
+        - failover: true
+          name: name
+          cidr: cidr
+          subnets:
+          - subnets
+          - subnets
+          id: id
+          dnsServers:
+          - dnsServers
+          - dnsServers
+          gatewayId: gatewayId
+          secondaryGatewayId: secondaryGatewayId
+          virtualIp:
+            hosts:
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            privateIp: privateIp
+            name: name
+            networkId: networkId
+            publicIp: publicIp
+            id: id
+        - failover: true
+          name: name
+          cidr: cidr
+          subnets:
+          - subnets
+          - subnets
+          id: id
+          dnsServers:
+          - dnsServers
+          - dnsServers
+          gatewayId: gatewayId
+          secondaryGatewayId: secondaryGatewayId
+          virtualIp:
+            hosts:
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            privateIp: privateIp
+            name: name
+            networkId: networkId
+            publicIp: publicIp
+            id: id
       properties:
         networks:
           items:
@@ -650,6 +1542,10 @@ components:
           type: string
       type: object
     Reference:
+      example:
+        tenantId: tenantId
+        name: name
+        id: id
       properties:
         tenantId:
           type: string
@@ -797,6 +1693,12 @@ components:
           type: array
       type: object
     SshConfig:
+      example:
+        privateKey: privateKey
+        hostName: hostName
+        port: 0
+        host: host
+        user: user
       properties:
         user:
           type: string
@@ -825,6 +1727,50 @@ components:
           type: integer
       type: object
     Subnet:
+      example:
+        failover: true
+        name: name
+        cidr: cidr
+        networkId: networkId
+        id: id
+        gatewayIds:
+        - gatewayIds
+        - gatewayIds
+        virtualIp:
+          hosts:
+          - privateIp: privateIp
+            cpu: 0
+            publicIp: publicIp
+            privateKey: privateKey
+            disk: 1
+            password: password
+            attachedVolumeNames:
+            - attachedVolumeNames
+            - attachedVolumeNames
+            name: name
+            osKind: osKind
+            id: id
+            gatewayId: gatewayId
+            ram: 6.0274563
+          - privateIp: privateIp
+            cpu: 0
+            publicIp: publicIp
+            privateKey: privateKey
+            disk: 1
+            password: password
+            attachedVolumeNames:
+            - attachedVolumeNames
+            - attachedVolumeNames
+            name: name
+            osKind: osKind
+            id: id
+            gatewayId: gatewayId
+            ram: 6.0274563
+          privateIp: privateIp
+          name: name
+          networkId: networkId
+          publicIp: publicIp
+          id: id
       properties:
         id:
           type: string
@@ -846,6 +1792,94 @@ components:
           type: string
       type: object
     SubnetList:
+      example:
+        subnets:
+        - failover: true
+          name: name
+          cidr: cidr
+          networkId: networkId
+          id: id
+          gatewayIds:
+          - gatewayIds
+          - gatewayIds
+          virtualIp:
+            hosts:
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            privateIp: privateIp
+            name: name
+            networkId: networkId
+            publicIp: publicIp
+            id: id
+        - failover: true
+          name: name
+          cidr: cidr
+          networkId: networkId
+          id: id
+          gatewayIds:
+          - gatewayIds
+          - gatewayIds
+          virtualIp:
+            hosts:
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            - privateIp: privateIp
+              cpu: 0
+              publicIp: publicIp
+              privateKey: privateKey
+              disk: 1
+              password: password
+              attachedVolumeNames:
+              - attachedVolumeNames
+              - attachedVolumeNames
+              name: name
+              osKind: osKind
+              id: id
+              gatewayId: gatewayId
+              ram: 6.0274563
+            privateIp: privateIp
+            name: name
+            networkId: networkId
+            publicIp: publicIp
+            id: id
       properties:
         subnets:
           items:
@@ -972,6 +2006,41 @@ components:
           type: string
       type: object
     VirtualIp:
+      example:
+        hosts:
+        - privateIp: privateIp
+          cpu: 0
+          publicIp: publicIp
+          privateKey: privateKey
+          disk: 1
+          password: password
+          attachedVolumeNames:
+          - attachedVolumeNames
+          - attachedVolumeNames
+          name: name
+          osKind: osKind
+          id: id
+          gatewayId: gatewayId
+          ram: 6.0274563
+        - privateIp: privateIp
+          cpu: 0
+          publicIp: publicIp
+          privateKey: privateKey
+          disk: 1
+          password: password
+          attachedVolumeNames:
+          - attachedVolumeNames
+          - attachedVolumeNames
+          name: name
+          osKind: osKind
+          id: id
+          gatewayId: gatewayId
+          ram: 6.0274563
+        privateIp: privateIp
+        name: name
+        networkId: networkId
+        publicIp: publicIp
+        id: id
       properties:
         id:
           type: string
@@ -989,6 +2058,15 @@ components:
           type: array
       type: object
     VolumeAttachmentResponse:
+      example:
+        mountPath: mountPath
+        host:
+          tenantId: tenantId
+          name: name
+          id: id
+        format: format
+        device: device
+        doNotFormat: true
       properties:
         host:
           $ref: '#/components/schemas/Reference'
@@ -1002,6 +2080,34 @@ components:
           type: boolean
       type: object
     VolumeInspectResponse:
+      example:
+        mountPath: mountPath
+        attachments:
+        - mountPath: mountPath
+          host:
+            tenantId: tenantId
+            name: name
+            id: id
+          format: format
+          device: device
+          doNotFormat: true
+        - mountPath: mountPath
+          host:
+            tenantId: tenantId
+            name: name
+            id: id
+          format: format
+          device: device
+          doNotFormat: true
+        size: 0
+        name: name
+        host:
+          tenantId: tenantId
+          name: name
+          id: id
+        format: format
+        id: id
+        device: device
       properties:
         id:
           type: string
@@ -1026,6 +2132,62 @@ components:
           type: array
       type: object
     VolumeListResponse:
+      example:
+        volumes:
+        - mountPath: mountPath
+          attachments:
+          - mountPath: mountPath
+            host:
+              tenantId: tenantId
+              name: name
+              id: id
+            format: format
+            device: device
+            doNotFormat: true
+          - mountPath: mountPath
+            host:
+              tenantId: tenantId
+              name: name
+              id: id
+            format: format
+            device: device
+            doNotFormat: true
+          size: 0
+          name: name
+          host:
+            tenantId: tenantId
+            name: name
+            id: id
+          format: format
+          id: id
+          device: device
+        - mountPath: mountPath
+          attachments:
+          - mountPath: mountPath
+            host:
+              tenantId: tenantId
+              name: name
+              id: id
+            format: format
+            device: device
+            doNotFormat: true
+          - mountPath: mountPath
+            host:
+              tenantId: tenantId
+              name: name
+              id: id
+            format: format
+            device: device
+            doNotFormat: true
+          size: 0
+          name: name
+          host:
+            tenantId: tenantId
+            name: name
+            id: id
+          format: format
+          id: id
+          device: device
       properties:
         volumes:
           items:

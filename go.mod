@@ -25,6 +25,7 @@ require (
 	github.com/dlespiau/covertool v0.0.0-20180314162135-b0c4c6d0583a
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/gin-gonic/gin v1.6.3
 	github.com/go-critic/go-critic v0.4.3 // indirect
 	github.com/gofrs/flock v0.0.0-20190320160742-5135e617513b // indirect
 	github.com/gogo/protobuf v1.3.1
