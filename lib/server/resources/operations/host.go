@@ -97,12 +97,13 @@ func LoadHost(task concurrency.Task, svc iaas.Service, ref string) (_ resources.
 	if task.IsNull() {
 		return nullHost(), fail.InvalidParameterError("task", "cannot be null value of 'concurrency.Task'")
 	}
-	if svc == nil {
-		return nullHost(), fail.InvalidParameterError("svc", "cannot be nil")
+	if svc.IsNull() {
+		return nullHost(), fail.InvalidParameterError("svc", "cannot be null value of 'iaas.Service'")
 	}
 	if ref == "" {
 		return nullHost(), fail.InvalidParameterError("ref", "cannot be empty string")
 	}
+
 	defer fail.OnPanic(&xerr)
 
 	rh, xerr := NewHost(svc)
@@ -521,7 +522,7 @@ func (rh *host) Create(task concurrency.Task, hostReq abstract.HostRequest, host
 			return nil
 		})
 		if xerr != nil {
-			return nil, xerr
+			return nil, fail.Wrap(xerr, "failed to consult details of Subnet '%s'", defaultSubnet.GetName())
 		}
 	}
 
@@ -530,6 +531,36 @@ func (rh *host) Create(task concurrency.Task, hostReq abstract.HostRequest, host
 		hostReq.ImageID, xerr = rh.findImageID(&hostDef)
 		if xerr != nil {
 			return nil, fail.Wrap(xerr, "failed to find image to use on compute resource")
+		}
+	}
+
+	// list IDs of Security Groups to apply to host
+	if len(hostReq.SecurityGroupIDs) == 0 {
+		hostReq.SecurityGroupIDs = make(map[string]struct{}, len(hostReq.Subnets)+1)
+		for _, v := range hostReq.Subnets {
+			hostReq.SecurityGroupIDs[v.InternalSecurityGroupID] = struct{}{}
+		}
+
+		opts, xerr := svc.GetConfigurationOptions()
+		if xerr != nil {
+			return nil, xerr
+		}
+		anon, ok := opts.Get("UseNATService")
+		useNATService := ok && anon.(bool)
+		if hostReq.PublicIP || useNATService {
+			xerr = defaultSubnet.LazyInspect(task, func(clonable data.Clonable, _ *serialize.JSONProperties) fail.Error {
+				as, ok := clonable.(*abstract.Subnet)
+				if !ok {
+					return fail.InconsistentError("*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
+				}
+				if as.PublicIPSecurityGroupID != "" {
+					hostReq.SecurityGroupIDs[as.PublicIPSecurityGroupID] = struct{}{}
+				}
+				return nil
+			})
+			if xerr != nil {
+				return nil, fail.Wrap(xerr, "failed to consult details of Subnet '%s'", defaultSubnet.GetName())
+			}
 		}
 	}
 
@@ -557,8 +588,7 @@ func (rh *host) Create(task concurrency.Task, hostReq abstract.HostRequest, host
 
 	defer func() {
 		if xerr != nil && !hostReq.KeepOnFailure {
-			derr := rh.core.Delete(task)
-			if derr != nil {
+			if derr := rh.core.Delete(task); derr != nil {
 				logrus.Errorf("cleaning up after failure, failed to delete host '%s' metadata: %v", ahf.Core.Name, derr)
 				_ = xerr.AddConsequence(derr)
 			}
@@ -1049,8 +1079,7 @@ func (rh host) runInstallPhase(task concurrency.Task, phase userdata.Phase, user
 func (rh *host) waitInstallPhase(task concurrency.Task, phase userdata.Phase, timeout time.Duration) (string, fail.Error) {
 	sshDefaultTimeout := int(temporal.GetHostTimeout().Minutes())
 	if sshDefaultTimeoutCandidate := os.Getenv("SSH_TIMEOUT"); sshDefaultTimeoutCandidate != "" {
-		num, err := strconv.Atoi(sshDefaultTimeoutCandidate)
-		if err == nil {
+		if num, err := strconv.Atoi(sshDefaultTimeoutCandidate); err == nil {
 			logrus.Debugf("Using custom timeout of %d minutes", num)
 			sshDefaultTimeout = num
 		}
@@ -1058,18 +1087,19 @@ func (rh *host) waitInstallPhase(task concurrency.Task, phase userdata.Phase, ti
 	sshCfg := rh.getSSHConfig(task)
 
 	// TODO: configurable timeout here
+	duration := time.Duration(sshDefaultTimeout) * time.Minute
 	status, xerr := sshCfg.WaitServerReady(task, string(phase), time.Duration(sshDefaultTimeout)*time.Minute)
 	if xerr != nil {
-		if _, ok := xerr.(*fail.ErrTimeout); ok {
-			return status, fail.Wrap(xerr, "timeout creating a host")
+		switch xerr.(type) {
+		case *fail.ErrTimeout:
+			return status, fail.Wrap(xerr.Cause(), "failed to wait for SSH on Host '%s' to be ready after %s (phase %s): %s", rh.GetName(), temporal.FormatDuration(duration), phase, status)
 		}
 		if abstract.IsProvisioningError(xerr) {
 			logrus.Errorf("%+v", xerr)
-			return status, fail.Wrap(xerr, "error creating host '%s': error provisioning the new host, please check safescaled logs", rh.GetName())
+			return status, fail.Wrap(xerr, "error provisioning Host '%s', please check safescaled logs", rh.GetName())
 		}
-		return status, xerr
 	}
-	return status, nil
+	return status, xerr
 }
 
 // updateSubnets updates subnets on which host is attached and host property HostNetworkV2
@@ -1177,6 +1207,10 @@ func (rh *host) finalizeProvisioning(task concurrency.Task, req abstract.HostReq
 		return xerr
 	}
 
+	if _, xerr := rh.waitInstallPhase(task, userdata.PHASE2_NETWORK_AND_SECURITY, 0); xerr != nil {
+		return xerr
+	}
+
 	// if host is not a gateway, executes userdata.PHASE4 and 5 script to configure subnet and security
 	// For a gateway, userdata.PHASE3 to 5 have to be run explicitly (cf. operations/subnet.go)
 	if !req.IsGateway {
@@ -1188,6 +1222,10 @@ func (rh *host) finalizeProvisioning(task concurrency.Task, req abstract.HostReq
 		// Reboot host
 		command = "sudo systemctl reboot"
 		if _, _, _, xerr := rh.Run(task, command, outputs.COLLECT, 0, 0); xerr != nil {
+			return xerr
+		}
+
+		if _, xerr := rh.waitInstallPhase(task, userdata.PHASE4_SYSTEM_FIXES, 0); xerr != nil {
 			return xerr
 		}
 
@@ -1679,9 +1717,10 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 	if executionTimeout < temporal.GetHostTimeout() {
 		executionTimeout = temporal.GetHostTimeout()
 	}
-	if connectionTimeout < temporal.DefaultConnectionTimeout {
-		connectionTimeout = temporal.DefaultConnectionTimeout
+	if connectionTimeout < temporal.GetConnectSSHTimeout() {
+		connectionTimeout = temporal.GetConnectSSHTimeout()
 	}
+	// FIXME: Whaaaaat ?
 	if connectionTimeout > executionTimeout {
 		connectionTimeout = executionTimeout + temporal.GetContextTimeout()
 	}
@@ -1694,22 +1733,31 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 			if innerXErr != nil {
 				switch innerXErr.(type) {
 				case *fail.ErrTimeout:
-					innerXErr = fail.Wrap(innerXErr.Cause(), "failed to run command in %v delay", executionTimeout)
+					innerXErr = fail.Wrap(innerXErr.Cause(), "failed to run command in %s", executionTimeout)
+				case *fail.ErrExecution:
+					innerXErr = retry.StopRetryError(innerXErr)
 				}
 			}
 			return innerXErr
 		},
-		connectionTimeout,
+		connectionTimeout*2, // VPL: insufficient delay ?
 		func(t retry.Try, v verdict.Enum) {
 			if v == verdict.Retry {
-				logrus.Printf("Remote SSH service on host '%s' isn't ready, retrying...", hostName)
+				logrus.Warnf("Remote SSH service on Host '%s' is not ready, retrying...", hostName)
 			}
 		},
 	)
 	if xerr != nil {
 		switch xerr.(type) {
+		case *retry.ErrStopRetry:
+			xerr = fail.ToError(xerr.Cause())
 		case *fail.ErrTimeout:
-			xerr = fail.Wrap(xerr.Cause(), "timeout occurred")
+			switch rerr := xerr.Cause().(type) {
+			case *fail.ErrTimeout:
+				xerr = fail.Wrap(rerr, "failed to execute command on Host '%s'", hostName)
+			default:
+				xerr = fail.Wrap(xerr.Cause(), "failed to connect by SSH to Host '%s' after %s", hostName, temporal.FormatDuration(connectionTimeout))
+			}
 		}
 	}
 	return retCode, stdOut, stdErr, xerr
@@ -1724,18 +1772,37 @@ func run(task concurrency.Task, ssh *system.SSHConfig, cmd string, outs outputs.
 		return 0, "", "", xerr
 	}
 
-	retcode, stdout, stderr, xerr := sshCmd.RunWithTimeout(task, outs, timeout)
+	var (
+		retcode        int
+		stdout, stderr string
+	)
+	xerr = retry.WhileUnsuccessfulDelay5Seconds(
+		func() error {
+			var innerXErr fail.Error
+			retcode = -1
+			if retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(task, outs, timeout); innerXErr != nil {
+				switch innerXErr.(type) {
+				case *fail.ErrExecution:
+					// Adds stdout annotation to xerr
+					_ = innerXErr.Annotate("stdout", stdout)
+				}
+				return innerXErr
+			}
+			// If retcode == 255, ssh connection failed
+			if retcode == 255 {
+				return fail.NotAvailableError("failed to connect")
+			}
+			return nil
+		},
+		timeout,
+	)
 	if xerr != nil {
 		switch xerr.(type) {
-		case *fail.ErrExecution:
-			// Adds stdout annotation to xerr
-			_ = xerr.Annotate("stdout", stdout)
+		case *retry.ErrTimeout:
+			xerr = fail.Wrap(xerr.Cause(), "failed to execute command after %s", temporal.FormatDuration(timeout))
+		case *retry.ErrStopRetry:
+			xerr = fail.ToError(xerr.Cause())
 		}
-		return -1, "", "", xerr
-	}
-	// If retcode == 255, ssh connection failed
-	if retcode == 255 {
-		return -1, "", "", fail.NotAvailableError("failed to connect")
 	}
 	return retcode, stdout, stderr, xerr
 }
@@ -2378,7 +2445,7 @@ func (rh host) ComplementFeatureParameters(task concurrency.Task, v data.Map) fa
 	v["Hostname"] = rh.GetName() + domain
 
 	v["HostIP"] = rh.getPrivateIP(task)
-	v["getPublicIP"] = rh.getPublicIP(task)
+	v["PublicIP"] = rh.getPublicIP(task)
 
 	if _, ok := v["Username"]; !ok {
 		v["Username"] = abstract.DefaultUser
@@ -2411,12 +2478,12 @@ func (rh host) ComplementFeatureParameters(task concurrency.Task, v data.Map) fa
 		v["SecondaryPublicIP"] = rgwi.getPublicIP(task)
 	}
 
-	if v["getEndpointIP"], xerr = rs.GetEndpointIP(task); xerr != nil {
+	if v["EndpointIP"], xerr = rs.GetEndpointIP(task); xerr != nil {
 		return xerr
 	}
 
-	v["getPublicIP"] = v["getEndpointIP"]
-	if v["getDefaultRouteIP"], xerr = rs.GetDefaultRouteIP(task); xerr != nil {
+	v["PublicIP"] = v["EndpointIP"]
+	if v["DefaultRouteIP"], xerr = rs.GetDefaultRouteIP(task); xerr != nil {
 		return xerr
 	}
 
@@ -2493,19 +2560,15 @@ func (rh host) PushStringToFile(task concurrency.Task, content string, filename 
 	deleted := false
 	retryErr := retry.WhileUnsuccessful(
 		func() error {
-			var (
-				retcode   int
-				innerXErr error
-			)
-			retcode, _, _, innerXErr = rh.Push(task, f.Name(), filename, owner, mode, temporal.GetExecutionTimeout())
+			retcode, _, _, innerXErr := rh.Push(task, f.Name(), filename, owner, mode, temporal.GetExecutionTimeout())
 			if innerXErr != nil {
 				return innerXErr
 			}
 			if retcode != 0 {
-				// If retcode == 1 (general copy error), retry. It may be a temporary subnet incident
+				// If retcode == 1 (general copy error), retry. It may be a temporary network incident
 				if retcode == 1 && !deleted {
 					// File may exist on target, try to remove it
-					if _, _, _, innerXErr = rh.Run(task, "sudo rm -f "+filename, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetExecutionTimeout()); innerXErr == nil {
+					if _, _, _, innerXErr = rh.Run(task, "sudo rm -f "+filename, outputs.COLLECT, temporal.GetConnectSSHTimeout(), temporal.GetExecutionTimeout()); innerXErr == nil {
 						deleted = true
 					}
 					return fail.NewError("file may have existing on remote with inappropriate access rights, deleted it and now retrying")

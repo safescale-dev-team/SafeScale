@@ -31,6 +31,7 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/concurrency"
 	"github.com/CS-SI/SafeScale/lib/utils/data"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
+	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 	"github.com/CS-SI/SafeScale/lib/utils/temporal"
 )
@@ -140,7 +141,7 @@ func NewFeature(task concurrency.Task, name string) (_ resources.Feature, xerr f
 		return nullFeature(), fail.InvalidParameterError("name", "cannot be empty string")
 	}
 
-	tracer := debug.NewTracer(task, true, "").WithStopwatch().Entering()
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.features")).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
 
@@ -193,7 +194,7 @@ func NewEmbeddedFeature(task concurrency.Task, name string) (_ resources.Feature
 		return nullFeature(), fail.InvalidParameterError("name", "cannot be empty string")
 	}
 
-	tracer := debug.NewTracer(task, true, "").WithStopwatch().Entering()
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.features")).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
 
@@ -320,9 +321,9 @@ func (f feature) Check(target resources.Targetable, v data.Map, s resources.Feat
 
 	featureName := f.GetName()
 	targetName := target.GetName()
-	targetType := target.TargetType().String()
+	targetType := strings.ToLower(target.TargetType().String())
 
-	tracer := debug.NewTracer(f.task, true, "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
+	tracer := debug.NewTracer(f.task, tracing.ShouldTrace("resources.features"), "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
 
@@ -400,10 +401,15 @@ func (f feature) Add(target resources.Targetable, v data.Map, s resources.Featur
 	targetName := target.GetName()
 	targetType := target.TargetType().String()
 
-	tracer := debug.NewTracer(f.task, true, "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
+	tracer := debug.NewTracer(f.task, tracing.ShouldTrace("resources.features"), "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
 	defer tracer.Exiting()
-	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
+	defer fail.OnExitLogError(&xerr, tracer.TraceMessage())
+	defer temporal.NewStopwatch().OnExitLogInfo(
+		fmt.Sprintf("Starting addition of feature '%s' on %s '%s'...", featureName, targetType, targetName),
+		fmt.Sprintf("Ending addition of feature '%s' on %s '%s'", featureName, targetType, targetName),
+	)()
 
+	// FIXME: change code to make sure this block is called once during all the life of the feature
 	methods := target.InstallMethods(f.task)
 	var (
 		installer Installer
@@ -421,11 +427,6 @@ func (f feature) Add(target resources.Targetable, v data.Map, s resources.Featur
 	if installer == nil {
 		return nil, fail.NotAvailableError("failed to find a way to install '%s'", featureName)
 	}
-
-	defer temporal.NewStopwatch().OnExitLogInfo(
-		fmt.Sprintf("Starting addition of feature '%s' on %s '%s'...", featureName, targetType, targetName),
-		fmt.Sprintf("Ending addition of feature '%s' on %s '%s'", featureName, targetType, targetName),
-	)()
 
 	// 'v' may be updated by parallel tasks, so use copy of it
 	// myV := make(data.Map, len(v))
@@ -481,7 +482,7 @@ func (f feature) Remove(target resources.Targetable, v data.Map, s resources.Fea
 	targetName := target.GetName()
 	targetType := target.TargetType().String()
 
-	tracer := debug.NewTracer(f.task, true, "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
+	tracer := debug.NewTracer(f.task, tracing.ShouldTrace("resources.features"), "(): '%s' on %s '%s'", featureName, targetType, targetName).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
 

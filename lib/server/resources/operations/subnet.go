@@ -196,12 +196,14 @@ func LoadSubnet(task concurrency.Task, svc iaas.Service, networkRef, subnetRef s
 	if svc.IsNull() {
 		return nullSubnet(), fail.InvalidParameterError("svc", "cannot be null value")
 	}
-	if subnetRef == "" {
+	if subnetRef = strings.TrimSpace(subnetRef); subnetRef == "" {
 		return nullSubnet(), fail.InvalidParameterError("subnetRef", "cannot be empty string")
 	}
+	networkRef = strings.TrimSpace(networkRef)
 
-	rs = nil
-	var subnetID string
+	var (
+		subnetID string
+	)
 	switch networkRef {
 	case "":
 		// If networkRef is empty, subnetRef must be subnetID
@@ -278,8 +280,11 @@ func LoadSubnet(task concurrency.Task, svc iaas.Service, networkRef, subnetRef s
 	if xerr != nil {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
-			// rewrite NotFoundError, user does not bother about metadata stuff
-			return nullSubnet(), fail.NotFoundError("failed to find a Subnet '%s' in Network '%s'", subnetRef, networkRef)
+			if networkRef != "" {
+				// rewrite NotFoundError, user does not bother about metadata stuff
+				return nullSubnet(), fail.NotFoundError("failed to find a Subnet '%s' in Network '%s'", subnetRef, networkRef)
+			}
+			return nullSubnet(), fail.NotFoundError("failed to find a Subnet referenced by '%s'", subnetRef)
 		default:
 			return nullSubnet(), xerr
 		}
@@ -309,7 +314,7 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 		"('%s', '%s', %s, <sizing>, '%s', %v)", req.Name, req.CIDR, req.IPVersion.String(), req.Image, req.HA,
 	).WithStopwatch().Entering()
 	defer tracer.Exiting()
-	defer fail.OnExitLogError(&xerr)
+	// defer fail.OnExitLogError(&xerr)
 	defer fail.OnPanic(&xerr)
 
 	rn, an, xerr := rs.validateNetwork(task, &req)
@@ -403,10 +408,10 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 	}()
 
 	// IDs of Security Groups to attach to IPAddress used as gateway
-	sgs := []string{
-		subnetGWSG.GetID(),
-		subnetInternalSG.GetID(),
-		subnetPublicIPSG.GetID(),
+	sgs := map[string]struct{}{
+		subnetGWSG.GetID():       struct{}{},
+		subnetInternalSG.GetID(): struct{}{},
+		subnetPublicIPSG.GetID(): struct{}{},
 	}
 
 	caps := svc.GetCapabilities()
@@ -950,8 +955,7 @@ func (rs subnet) createGWSecurityGroup(task concurrency.Task, req abstract.Subne
 		return nil, xerr
 	}
 	description := fmt.Sprintf(subnetGWSecurityGroupDescriptionPattern, req.Name, network.Name)
-	xerr = sg.Create(task, network.ID, sgName, description, nil)
-	if xerr != nil {
+	if xerr = sg.Create(task, network.ID, sgName, description, nil); xerr != nil {
 		return nil, xerr
 	}
 

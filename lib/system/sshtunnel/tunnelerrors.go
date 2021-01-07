@@ -14,7 +14,26 @@
  * limitations under the License.
  */
 
-package stacks
+package sshtunnel
 
-// DefaultSecurityGroupName is the name of the default security group used by SafeScale
-const DefaultSecurityGroupName = "sg-safescale"
+type tunnelError struct {
+	error
+	isTimeout   bool
+	isTemporary bool
+}
+
+func (e tunnelError) Unwrap() error {
+	return e.error
+}
+
+func (e tunnelError) Timeout() bool {
+	return e.isTimeout
+}
+
+func (e tunnelError) Temporary() bool {
+	return e.isTemporary
+}
+
+func (e tunnelError) Error() string {
+	return e.error.Error()
+}

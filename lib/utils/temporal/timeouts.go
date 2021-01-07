@@ -40,7 +40,7 @@ const (
 	HostCleanupTimeout = 3 * time.Minute
 
 	// DefaultConnectionTimeout is the default connection timeout
-	DefaultConnectionTimeout = 30 * time.Second
+	DefaultConnectionTimeout = 1 * time.Minute
 
 	// defaultCommunicationTimeout is the default timeout for HTTP communication with Provider
 	defaultCommunicationTimeout = 3 * time.Minute
@@ -49,7 +49,7 @@ const (
 	DefaultExecutionTimeout = 5 * time.Minute
 
 	// DefaultMetadataReadAfterWriteTimeout is the default timeout applied to validate metadata write is effective
-	DefaultMetadataReadAfterWriteTimeout = 2 * time.Minute
+	DefaultMetadataReadAfterWriteTimeout = 5 * time.Minute
 
 	// SmallDelay is the predefined small delay
 	SmallDelay = 1 * time.Second

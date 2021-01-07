@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -45,21 +46,24 @@ import (
 
 var profileCloseFunc = func() {}
 
-func cleanup(clientSession *client.Session, onAbort bool) {
-	if onAbort {
-		fmt.Println("\nBe careful stopping safescale will not stop the job on safescaled, but will try to go back to the previous state as much as possible!")
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Do you really want to stop the command ? [y]es [n]o: ")
-		text, err := reader.ReadString('\n')
+func cleanup(clientSession *client.Session, onAbort *uint32) {
+	if atomic.CompareAndSwapUint32(onAbort, 0, 0) {
+		profileCloseFunc()
+		os.Exit(0)
+	}
+
+	fmt.Println("\nBe careful stopping safescale will not stop the job on safescaled, but will try to go back to the previous state as much as possible!")
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Do you really want to stop the command ? [y]es [n]o: ")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("failed to read the input : ", err.Error())
+		text = "y"
+	}
+	if strings.TrimRight(text, "\n") == "y" {
+		err = clientSession.JobManager.Stop(utils.GetUUID(), temporal.GetExecutionTimeout())
 		if err != nil {
-			fmt.Println("failed to read the input : ", err.Error())
-			text = "y"
-		}
-		if strings.TrimRight(text, "\n") == "y" {
-			err = clientSession.JobManager.Stop(utils.GetUUID(), temporal.GetExecutionTimeout())
-			if err != nil {
-				fmt.Printf("failed to stop the process %v\n", err)
-			}
+			fmt.Printf("failed to stop the process %v\n", err)
 		}
 	}
 	profileCloseFunc()
@@ -70,7 +74,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	var (
-		onAbort       bool
+		onAbort       uint32
 		clientSession *client.Session
 	)
 
@@ -108,9 +112,13 @@ func main() {
 			Usage:   "Show debug information",
 		},
 		&cli.StringFlag{
-			Name:  "profile",
-			Usage: "Profiles binary; can contain 'cpu', 'ram', 'web' and a combination of them (ie 'cpu,ram')",
-			// TODO: extends profile to accept <what>:params, for example cpu:$HOME/safescale.cpu.pprof, or web:192.168.2.1:1666
+			Name: "profile",
+			Usage: `Profiles binary
+            value is a comma-separated list of <keyword> (ie '<keyword>[:<params>][,<keyword>[:<params>]...]) where <keyword>
+            can be 'cpu', 'ram', 'trace', and 'web'.
+            <params> may contain :
+                for 'ram', 'cpu' and 'trace': optional destination folder of output file (default: current working directory)
+                for 'web': [<listen addr>][:<listen port>] (default: 'localhost:6060')`,
 		},
 		&cli.StringFlag{
 			Name:    "server",
@@ -165,7 +173,7 @@ func main() {
 	}
 
 	app.After = func(c *cli.Context) error {
-		cleanup(clientSession, onAbort)
+		cleanup(clientSession, &onAbort)
 		return nil
 	}
 
@@ -207,7 +215,7 @@ func main() {
 	go func() {
 		for {
 			<-c
-			onAbort = true
+			atomic.StoreUint32(&onAbort, 1)
 			cancelfunc()
 		}
 	}()

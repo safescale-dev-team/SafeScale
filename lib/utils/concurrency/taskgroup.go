@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
@@ -50,12 +49,11 @@ type TaskGroup interface {
 
 // task is a structure allowing to identify (indirectly) goroutines
 type taskGroup struct {
-	groupLock sync.Mutex // FIXME This breaks the world
-	last      uint
+	last uint
 	*task
 	result TaskGroupResult
 
-	subtasksLock sync.RWMutex
+	subtasksLock TaskedLock
 	subtasks     []Task
 }
 
@@ -93,7 +91,11 @@ func newTaskGroup(ctx context.Context, parentTask Task) (tg *taskGroup, err fail
 			t, err = NewTaskWithParent(p.task)
 		}
 	}
-	return &taskGroup{task: t.(*task)}, err
+	tg = &taskGroup{
+		task:         t.(*task),
+		subtasksLock: NewTaskedLock(),
+	}
+	return tg, err
 }
 
 // IsNull ...
@@ -149,9 +151,6 @@ func (tg *taskGroup) SetID(id string) fail.Error {
 		return fail.InvalidInstanceError()
 	}
 
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
-
 	return tg.task.SetID(id)
 }
 
@@ -170,9 +169,6 @@ func (tg *taskGroup) Start(action TaskAction, params TaskParameters) (Task, fail
 		return tg, fail.InvalidInstanceError()
 	}
 
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
-
 	status, err := tg.task.GetStatus()
 	if err != nil {
 		return tg, err
@@ -183,17 +179,17 @@ func (tg *taskGroup) Start(action TaskAction, params TaskParameters) (Task, fail
 	if err != nil {
 		return tg, err
 	}
-	err = subtask.SetID(tg.task.id + "-" + strconv.Itoa(int(tg.last)))
-	if err != nil {
-		return tg, err
-	}
-	subtask, err = subtask.Start(action, params)
-	if err != nil {
+
+	if err = subtask.SetID(tg.task.id + "-" + strconv.Itoa(int(tg.last))); err != nil {
 		return tg, err
 	}
 
-	tg.subtasksLock.Lock()
-	defer tg.subtasksLock.Unlock()
+	if subtask, err = subtask.Start(action, params); err != nil {
+		return tg, err
+	}
+
+	tg.subtasksLock.SafeLock(tg.task)
+	defer tg.subtasksLock.SafeUnlock(tg.task)
 
 	tg.subtasks = append(tg.subtasks, subtask)
 	if status != RUNNING {
@@ -213,13 +209,15 @@ func (tg *taskGroup) Wait() (TaskResult, fail.Error) {
 }
 
 // WaitGroup waits for the task to end, and returns the error (or nil) of the execution
+// Note: this function may lead to go routine leaks, because we do not want a taskgroup to be locked because of
+//       a subtask not responding; if a subtask is designed to run forever, it will never end.
+//       It's highly recommended to use task.Aborted() in the body of a task to check
+//       for abortion signal and quit the go routine accordingly to reduce the risk (a taskgroup remains abortable with
+//       this recommandation).
 func (tg *taskGroup) WaitGroup() (map[string]TaskResult, fail.Error) {
 	if tg.IsNull() {
 		return nil, fail.InvalidInstanceError()
 	}
-
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
 
 	tid, err := tg.GetID()
 	if err != nil {
@@ -237,14 +235,21 @@ func (tg *taskGroup) WaitGroup() (map[string]TaskResult, fail.Error) {
 	if taskStatus == DONE {
 		tg.task.mu.Lock()
 		defer tg.task.mu.Unlock()
+
 		results[tid] = tg.result
 		return results, tg.task.err
 	}
 	if taskStatus == ABORTED {
 		var errors []error
+
+		tg.task.mu.Lock()
 		if tg.task.err != nil {
 			errors = append(errors, tg.task.err)
 		}
+		tg.task.mu.Unlock()
+
+		tg.subtasksLock.SafeLock(tg.task)
+		defer tg.subtasksLock.SafeUnlock(tg.task)
 
 		for _, s := range tg.subtasks {
 			lerr, _ := s.GetLastError()
@@ -258,18 +263,50 @@ func (tg *taskGroup) WaitGroup() (map[string]TaskResult, fail.Error) {
 		return nil, fail.ForbiddenError("cannot wait task group '%s': not running", tid)
 	}
 
-	for _, s := range tg.subtasks {
-		sid, err := s.GetID()
-		if err != nil {
-			continue
+	tg.subtasksLock.SafeLock(tg.task)
+	defer tg.subtasksLock.SafeUnlock(tg.task)
+
+	doneWaitSize := len(tg.subtasks)
+	doneWaitStates := make(map[int]bool, doneWaitSize)
+	for k := range tg.subtasks {
+		doneWaitStates[k] = false
+	}
+	doneWaitCount := 0
+
+	for {
+		stop := false
+		for k, s := range tg.subtasks {
+			if tg.Aborted() {
+				stop = true
+				break
+			}
+
+			if doneWaitStates[k] {
+				continue
+			}
+
+			sid, err := s.GetID()
+			if err != nil {
+				continue
+			}
+
+			done, result, err := s.TryWait()
+			if done {
+				if err != nil {
+					errs[sid] = err.Error()
+				}
+
+				results[sid] = result
+				doneWaitStates[k] = true
+				doneWaitCount++
+			}
 		}
 
-		result, err := s.Wait()
-		if err != nil {
-			errs[sid] = err.Error()
+		if stop || doneWaitCount >= doneWaitSize {
+			break
 		}
 
-		results[sid] = result
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	var errors []string
@@ -287,7 +324,9 @@ func (tg *taskGroup) WaitGroup() (map[string]TaskResult, fail.Error) {
 		tg.task.err = nil
 	}
 
-	tg.task.status = DONE
+	if tg.task.status != ABORTED {
+		tg.task.status = DONE
+	}
 	tg.result = results
 	return results, tg.task.err
 }
@@ -307,9 +346,6 @@ func (tg *taskGroup) TryWaitGroup() (bool, map[string]TaskResult, fail.Error) {
 		return false, nil, fail.InvalidInstanceError()
 	}
 
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
-
 	tid, err := tg.GetID()
 	if err != nil {
 		return false, nil, err
@@ -324,6 +360,10 @@ func (tg *taskGroup) TryWaitGroup() (bool, map[string]TaskResult, fail.Error) {
 	if taskStatus != RUNNING {
 		return false, nil, fail.NewError("cannot wait task group '%s': not running", tid)
 	}
+
+	tg.subtasksLock.SafeLock(tg.task)
+	defer tg.subtasksLock.SafeUnlock(tg.task)
+
 	for _, s := range tg.subtasks {
 		ok, _, _ := s.TryWait()
 		if !ok {
@@ -352,9 +392,6 @@ func (tg *taskGroup) WaitGroupFor(duration time.Duration) (bool, map[string]Task
 		return false, nil, fail.InvalidInstanceError()
 	}
 
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
-
 	tid, err := tg.GetID()
 	if err != nil {
 		return false, nil, err
@@ -370,6 +407,7 @@ func (tg *taskGroup) WaitGroupFor(duration time.Duration) (bool, map[string]Task
 		return false, nil, fail.InvalidRequestError("cannot wait task '%s': not running", tid)
 	}
 
+	// FIXME: go routine never ends if timeout occurs!
 	c := make(chan struct{})
 	go func() {
 		results, err = tg.WaitGroup()
@@ -391,24 +429,34 @@ func (tg *taskGroup) Abort() fail.Error {
 		return fail.InvalidInstanceError()
 	}
 
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
-
 	var errors []error
 
+	// Send abort signal to subtasks
+	tg.subtasksLock.SafeLock(tg.task)
 	for _, st := range tg.subtasks {
-		subErr := st.Abort()
-		if subErr != nil {
-			errors = append(errors, subErr)
+		if xerr := st.Abort(); xerr != nil {
+			errors = append(errors, xerr)
 		}
 	}
+	tg.subtasksLock.SafeUnlock(tg.task)
 
-	err := tg.task.Abort()
-	if err != nil {
-		errors = append(errors, err)
+	// Send abort signal to subtask parent task
+	if xerr := tg.task.Abort(); xerr != nil {
+		errors = append(errors, xerr)
 	}
 
-	return fail.NewErrorList(errors)
+	if len(errors) > 0 {
+		return fail.NewErrorList(errors)
+	}
+	return nil
+}
+
+// Aborted tells if the task group is aborted
+func (tg *taskGroup) Aborted() bool {
+	if tg.IsNull() || tg.task.IsNull() {
+		return false
+	}
+	return tg.task.Aborted()
 }
 
 // New creates a subtask from current task
@@ -416,9 +464,6 @@ func (tg *taskGroup) New() (Task, fail.Error) {
 	if tg.IsNull() {
 		return nil, fail.InvalidInstanceError()
 	}
-
-	tg.groupLock.Lock()
-	defer tg.groupLock.Unlock()
 
 	return newTask(context.TODO(), tg.task)
 }
@@ -428,8 +473,8 @@ func (tg *taskGroup) Stats() (map[TaskStatus][]string, fail.Error) {
 		return nil, fail.InvalidInstanceError()
 	}
 
-	tg.subtasksLock.RLock()
-	defer tg.subtasksLock.RUnlock()
+	tg.subtasksLock.SafeLock(tg.task)
+	defer tg.subtasksLock.SafeUnlock(tg.task)
 
 	status := make(map[TaskStatus][]string)
 	for _, sub := range tg.subtasks {

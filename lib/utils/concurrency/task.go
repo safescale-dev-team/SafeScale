@@ -219,6 +219,7 @@ func newTask(ctx context.Context, parentTask Task) (*task, fail.Error) {
 	return &t, nil
 }
 
+// IsNull ...
 func (t *task) IsNull() bool {
 	return t == nil || t.id == ""
 }
@@ -260,8 +261,19 @@ func (t *task) GetID() (string, fail.Error) {
 // GetSignature builds the "signature" of the task passed as parameter,
 // ie a string representation of the task ID in the format "{task <id>}".
 func (t *task) GetSignature() string {
-	if sig, xerr := t.GetID(); xerr == nil {
-		return `{task ` + sig + "}"
+	if t.IsNull() {
+		return ""
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.getSignature()
+}
+
+func (t *task) getSignature() string {
+	if t.id != "" {
+		return `{task ` + t.id + `}`
 	}
 	return ""
 }
@@ -274,6 +286,7 @@ func (t *task) GetStatus() (TaskStatus, fail.Error) {
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	return t.status, nil
 }
 
@@ -285,6 +298,7 @@ func (t *task) GetContext() (context.Context, fail.Error) {
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	return t.ctx, nil
 }
 
@@ -583,9 +597,13 @@ func (t *task) TryWait() (bool, TaskResult, fail.Error) {
 	}
 
 	if status == DONE {
+		t.mu.Lock()
+		defer t.mu.Unlock()
 		return true, t.result, t.err
 	}
 	if status == ABORTED {
+		t.mu.Lock()
+		defer t.mu.Unlock()
 		return true, nil, t.err
 	}
 	if status != RUNNING {
@@ -681,7 +699,7 @@ func (t *task) Abort() (err fail.Error) {
 		t.err = fail.AbortedError(t.err)
 	}
 
-	logrus.Debugf("task %s aborted", t.GetSignature())
+	logrus.Debugf("task %s aborted", t.getSignature())
 
 	if previousErr != nil && previousStatus != TIMEOUT {
 		return fail.AbortedError(previousErr)
@@ -692,11 +710,13 @@ func (t *task) Abort() (err fail.Error) {
 
 // Aborted tells if the task is aborted
 func (t *task) Aborted() bool {
-	if !t.IsNull() {
+	if t.IsNull() {
 		return false
 	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	return t.status == ABORTED
 }
 
@@ -708,6 +728,7 @@ func (t *task) Abortable() (bool, fail.Error) {
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	return !t.abortDisengaged, nil
 }
 

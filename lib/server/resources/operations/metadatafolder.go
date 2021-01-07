@@ -19,6 +19,8 @@ package operations
 import (
 	"bytes"
 	"github.com/CS-SI/SafeScale/lib/utils/retry"
+	"github.com/CS-SI/SafeScale/lib/utils/retry/enums/verdict"
+
 	"strings"
 	"time"
 
@@ -164,7 +166,7 @@ func (f folder) Read(path string, name string, callback func([]byte) fail.Error)
 	if f.IsNull() {
 		return fail.InvalidInstanceError()
 	}
-	if name == "" {
+	if name = strings.TrimSpace(name); name == "" {
 		return fail.InvalidParameterError("name", "cannot be empty string")
 	}
 	if callback == nil {
@@ -183,7 +185,8 @@ func (f folder) Read(path string, name string, callback func([]byte) fail.Error)
 	var buffer bytes.Buffer
 	xerr := netretry.WhileCommunicationUnsuccessfulDelay1Second(
 		func() error {
-			return f.service.ReadObject(f.getBucket().Name, f.absolutePath(path, name), &buffer, 0, 0)
+			innerErr := f.service.ReadObject(f.getBucket().Name, f.absolutePath(path, name), &buffer, 0, 0)
+			return innerErr
 		},
 		temporal.GetCommunicationTimeout(),
 	)
@@ -236,7 +239,8 @@ func (f folder) Write(path string, name string, content []byte) fail.Error {
 	}
 
 	// Read after write until the data is up-to-date (or timeout reached, considering the write as failed)
-	return retry.Action(
+	timeout := temporal.GetMetadataReadAfterWriteTimeout()
+	xerr := retry.Action(
 		func() error {
 			var target bytes.Buffer
 			if innerErr := f.service.ReadObject(bucketName, absolutePath, &target, 0, 0); innerErr != nil {
@@ -245,17 +249,29 @@ func (f folder) Write(path string, name string, content []byte) fail.Error {
 
 			check := target.Bytes()
 			if !bytes.Equal(data, check) {
-				return fail.NewError("remote content is different from source")
+				return fail.NewError("remote content is different from local reference")
 			}
 
 			return nil
 		},
-		retry.PrevailDone(retry.Unsuccessful(), retry.Timeout(temporal.GetMetadataReadAfterWriteTimeout())),
+		retry.PrevailDone(retry.Unsuccessful(), retry.Timeout(timeout)),
 		retry.Fibonacci(1*time.Second),
 		nil,
 		nil,
-		nil,
+		func(t retry.Try, v verdict.Enum) {
+			switch v {
+			case verdict.Retry:
+				logrus.Warnf("metadata '%s:%s' write not yet acknowledged: %s; retrying...", bucketName, absolutePath, t.Err.Error())
+			}
+		},
 	)
+	if xerr != nil {
+		switch xerr.(type) {
+		case *retry.ErrTimeout:
+			return fail.Wrap(xerr.Cause(), "failed to acknowledge metadata '%s:%s' write after %s", bucketName, absolutePath, temporal.FormatDuration(timeout))
+		}
+	}
+	return xerr
 }
 
 // Browse browses the content of a specific path in Metadata and executes 'callback' on each entry

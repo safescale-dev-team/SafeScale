@@ -129,30 +129,18 @@ func ToGRPCStatus(err error) error {
 	return grpcstatus.Errorf(codes.Unknown, err.Error())
 }
 
-// prependMessage prepends a message to an existing error, trying to keep error type when possible
-func prependMessage(err error, msg ...interface{}) Error {
-	if coreErr, ok := err.(*errorCore); ok {
-		coreErr.message = strprocess.FormatStrings(msg...) + ": " + coreErr.message
-		return err.(Error)
-	}
-
-	return NewError("%s: %s", strprocess.FormatStrings(msg...), err.Error())
-}
-
 // Wrap creates a new error with a message 'msg' and a causer error 'cause'
 func Wrap(cause error, msg ...interface{}) Error {
-	switch cause.(type) {
+	if cause == nil {
+		return newError(nil, nil, msg...)
+	}
+
+	switch rerr := cause.(type) {
 	case Error:
-		return prependMessage(cause, msg...)
+		rerr.prependToMessage(strprocess.FormatStrings(msg...))
+		return rerr
 	default:
-		newErr := newError(cause, nil, msg...)
-		if cause != nil {
-			switch v := cause.(type) {
-			case Error:
-				newErr.grpcCode = v.GRPCCode()
-			}
-		}
-		return newErr
+		return newError(cause, nil, msg...)
 	}
 }
 

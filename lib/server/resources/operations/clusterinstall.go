@@ -19,12 +19,14 @@ package operations
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/sirupsen/logrus"
@@ -36,7 +38,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/clusterproperty"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/featuretargettype"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/installmethod"
-	flavors "github.com/CS-SI/SafeScale/lib/server/resources/operations/clusterflavors"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/remotefile"
 	propertiesv1 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v1"
 	"github.com/CS-SI/SafeScale/lib/system"
@@ -151,18 +152,21 @@ func (c *cluster) ComplementFeatureParameters(task concurrency.Task, v data.Map)
 		return xerr
 	}
 	v["PrimaryGatewayIP"] = networkCfg.GatewayIP
-	v["getDefaultRouteIP"] = networkCfg.DefaultRouteIP
-	v["GatewayIP"] = v["getDefaultRouteIP"] // legacy ...
+	v["DefaultRouteIP"] = networkCfg.DefaultRouteIP
+	v["GatewayIP"] = v["DefaultRouteIP"] // legacy ...
 	v["PrimaryPublicIP"] = networkCfg.PrimaryPublicIP
+	v["NetworkUsesVIP"] = networkCfg.SecondaryGatewayIP != ""
 	if networkCfg.SecondaryGatewayIP != "" {
 		v["SecondaryGatewayIP"] = networkCfg.SecondaryGatewayIP
 		v["SecondaryPublicIP"] = networkCfg.SecondaryPublicIP
 	}
-	v["getEndpointIP"] = networkCfg.EndpointIP
-	v["getPublicIP"] = v["getEndpointIP"] // legacy ...
+	v["EndpointIP"] = networkCfg.EndpointIP
+	v["PublicIP"] = v["EndpointIP"] // legacy ...
 	if _, ok := v["IPRanges"]; !ok {
 		v["IPRanges"] = networkCfg.CIDR
 	}
+	v["CIDR"] = networkCfg.CIDR
+
 	var controlPlaneV1 *propertiesv1.ClusterControlplane
 	xerr = c.Inspect(task, func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
 		return props.Inspect(task, clusterproperty.ControlPlaneV1, func(clonable data.Clonable) fail.Error {
@@ -178,18 +182,18 @@ func (c *cluster) ComplementFeatureParameters(task concurrency.Task, v data.Map)
 		return xerr
 	}
 	if controlPlaneV1.VirtualIP != nil && controlPlaneV1.VirtualIP.PrivateIP != "" {
-		v["ClusterControlPlaneUsesVIP"] = true
-		v["ClusterControlPlaneEndpointIP"] = controlPlaneV1.VirtualIP.PrivateIP
+		v["ClusterControlplaneUsesVIP"] = true
+		v["ClusterControlplaneEndpointIP"] = controlPlaneV1.VirtualIP.PrivateIP
 	} else {
-		// Don't set ControlplaneUsesVIP if there is no VIP... use IP of first available master instead
+		// Don't set ClusterControlplaneUsesVIP if there is no VIP... use IP of first available master instead
 		master, xerr := c.FindAvailableMaster(task)
 		if xerr != nil {
 			return xerr
 		}
-		if v["ClusterControlPlaneEndpointIP"], xerr = master.GetPrivateIP(task); xerr != nil {
+		if v["ClusterControlplaneEndpointIP"], xerr = master.GetPrivateIP(task); xerr != nil {
 			return xerr
 		}
-		v["ClusterControlPlaneUsesVIP"] = false
+		v["ClusterControlplaneUsesVIP"] = false
 	}
 	if v["ClusterMasters"], xerr = c.ListMasters(task); xerr != nil {
 		return xerr
@@ -285,12 +289,8 @@ func (c *cluster) RemoveFeature(task concurrency.Task, name string, vars data.Ma
 }
 
 // ExecuteScript executes the script template with the parameters on target IPAddress
-func (c *cluster) ExecuteScript(
-	task concurrency.Task, funcMap map[string]interface{}, tmplName string, data map[string]interface{},
-	host resources.Host,
-) (_ int, _ string, _ string, xerr fail.Error) {
-
-	if c == nil {
+func (c *cluster) ExecuteScript(task concurrency.Task, tmplName string, data map[string]interface{}, host resources.Host) (_ int, _ string, _ string, xerr fail.Error) {
+	if c.IsNull() {
 		return -1, "", "", fail.InvalidInstanceError()
 	}
 	if task.IsNull() {
@@ -300,10 +300,10 @@ func (c *cluster) ExecuteScript(
 		return -1, "", "", fail.InvalidParameterError("tmplName", "cannot be empty string")
 	}
 	if host.IsNull() {
-		return -1, "", "", fail.InvalidParameterError("host", "cannot be null value")
+		return -1, "", "", fail.InvalidParameterError("host", "cannot be null value of 'resources.Host'")
 	}
 
-	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "("+host.GetName()+")").Entering()
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "('%s')", host.GetName()).Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage(""))
 
@@ -319,9 +319,21 @@ func (c *cluster) ExecuteScript(
 	}
 	data["reserved_BashLibrary"] = bashLibrary
 
+	// Sets delays and timeouts for script
+	data["reserved_DefaultDelay"] = uint(math.Ceil(2 * temporal.GetDefaultDelay().Seconds()))
+	data["reserved_DefaultTimeout"] = strings.Replace(
+		(temporal.GetHostTimeout() / 2).Truncate(time.Minute).String(), "0s", "", -1,
+	)
+	data["reserved_LongTimeout"] = strings.Replace(
+		temporal.GetHostTimeout().Truncate(time.Minute).String(), "0s", "", -1,
+	)
+	data["reserved_DockerImagePullTimeout"] = strings.Replace(
+		(2 * temporal.GetHostTimeout()).Truncate(time.Minute).String(), "0s", "", -1,
+	)
+
 	script, path, xerr := realizeTemplate(box, tmplName, data, tmplName)
 	if xerr != nil {
-		return -1, "", "", xerr
+		return -1, "", "", fail.Wrap(xerr, "failed to realize template '%s'", tmplName)
 	}
 
 	hidesOutput := strings.Contains(script, "set +x\n")
@@ -332,7 +344,7 @@ func (c *cluster) ExecuteScript(
 		}
 	}
 
-	// err = UploadStringToRemoteFile(script, host, path, "", "")
+	// Uploads the script into remote file
 	rfcItem := remotefile.Item{Remote: path}
 	xerr = rfcItem.UploadString(task, script, host)
 	_ = os.Remove(rfcItem.Local)
@@ -340,11 +352,16 @@ func (c *cluster) ExecuteScript(
 		return -1, "", "", xerr
 	}
 
-	cmd := fmt.Sprintf("sudo chmod u+rx %s;sudo bash %s;exit ${PIPESTATUS}", path, path)
+	// executes remote file
+	var cmd string
 	if hidesOutput {
-		cmd = fmt.Sprintf("sudo chmod u+rx %s;sudo bash -c \"BASH_XTRACEFD=7 %s 7> /tmp/captured 2>&7\";echo ${PIPESTATUS} > /tmp/errc;cat /tmp/captured; sudo rm /tmp/captured;exit `cat /tmp/errc`", path, path)
-	}
+		// cmd = fmt.Sprintf("sudo chmod u+rx %s;sudo bash -c \"BASH_XTRACEFD=7 %s 7> /tmp/captured 2>&7\";echo ${PIPESTATUS} > /tmp/errc;cat /tmp/captured; sudo rm /tmp/captured;exit `cat /tmp/errc`", path, path)
+		cmd = fmt.Sprintf("sudo bash -c \"BASH_XTRACEFD=7 %s 7>/tmp/captured 2>&7\";echo ${PIPESTATUS} > /tmp/errc;cat /tmp/captured; sudo rm /tmp/captured;exit `cat /tmp/errc`", path)
+	} else {
+		// cmd := fmt.Sprintf("sudo chmod u+rx %s;sudo bash %s;exit ${PIPESTATUS}", path, path)
+		cmd = fmt.Sprintf("sudo bash %s;exit ${PIPESTATUS}", path)
 
+	}
 	return host.Run(task, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), 2*temporal.GetLongOperationTimeout())
 }
 
@@ -366,19 +383,12 @@ func (c *cluster) installNodeRequirements(task concurrency.Task, nodeType cluste
 		return xerr
 	}
 
-	// VPL: this part also will be removed
-	// Get installation script based on node type; if == "", do nothing
-	script, params := c.getNodeInstallationScript(task, nodeType)
-	if script == "" {
-		return nil
-	}
-	// ENDVPL
+	// script, xerr := flavors.GetGlobalSystemRequirements(task, c)
+	// if xerr != nil {
+	// 	return xerr
+	// }
 
-	params["reserved_CommonRequirements"], xerr = flavors.GetGlobalSystemRequirements(task, c)
-	if xerr != nil {
-		return xerr
-	}
-
+	params := data.Map{}
 	if nodeType == clusternodetype.Master {
 		tp := c.service.GetTenantParameters()
 		content := map[string]interface{}{
@@ -456,7 +466,7 @@ func (c *cluster) installNodeRequirements(task concurrency.Task, nodeType cluste
 			cmd := fmt.Sprintf(cmdTmpl, suffix, suffix)
 			retcode, stdout, stderr, xerr := host.Run(task, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), 2*temporal.GetLongOperationTimeout())
 			if xerr != nil {
-				return fail.Wrap(xerr, "failed to submit content of SAFESCALE_METADATA_SUFFIX to host '%s'", host.GetName())
+				return fail.Wrap(xerr, "failed to submit content of SAFESCALE_METADATA_SUFFIX to Host '%s'", host.GetName())
 			}
 			if retcode != 0 {
 				output := stdout
@@ -465,7 +475,7 @@ func (c *cluster) installNodeRequirements(task concurrency.Task, nodeType cluste
 				} else if stderr != "" {
 					output = stderr
 				}
-				msg := fmt.Sprintf("failed to copy content of SAFESCALE_METADATA_SUFFIX to host '%s': %s", host.GetName(), output)
+				msg := fmt.Sprintf("failed to copy content of SAFESCALE_METADATA_SUFFIX to Host '%s': %s", host.GetName(), output)
 				return fail.NewError(strprocess.Capitalize(msg))
 			}
 		}
@@ -489,10 +499,13 @@ func (c *cluster) installNodeRequirements(task concurrency.Task, nodeType cluste
 	params["MasterIPs"] = list
 	params["ClusterAdminUsername"] = "cladm"
 	params["ClusterAdminPassword"] = identity.AdminPassword
-	params["getDefaultRouteIP"] = netCfg.DefaultRouteIP
-	params["getEndpointIP"] = netCfg.EndpointIP
+	params["DefaultRouteIP"] = netCfg.DefaultRouteIP
+	params["EndpointIP"] = netCfg.EndpointIP
+	params["IPRanges"] = netCfg.CIDR
+	params["SSHPublicKey"] = identity.Keypair.PublicKey
+	params["SSHPrivateKey"] = identity.Keypair.PrivateKey
 
-	if _, _, _, xerr = c.ExecuteScript(task, nil, script, params, host); xerr != nil {
+	if _, _, _, xerr = c.ExecuteScript(task, "node_install_requirements.sh", params, host); xerr != nil {
 		return fail.Wrap(xerr, "[%s] system requirements installation failed", hostLabel)
 	}
 
@@ -581,7 +594,7 @@ func (c *cluster) installRemoteDesktop(task concurrency.Task) (xerr fail.Error) 
 
 		adminPassword := identity.AdminPassword
 
-		feat, xerr := NewEmbeddedFeature(task, "proxycache-client")
+		feat, xerr := NewEmbeddedFeature(task, "remotedesktop")
 		if xerr != nil {
 			return xerr
 		}
@@ -727,7 +740,7 @@ func (c *cluster) installDocker(task concurrency.Task, host resources.Host, host
 	if !r.Successful() {
 		msg := r.AllErrorMessages()
 		logrus.Errorf("[%s] failed to add feature 'docker': %s", hostLabel, msg)
-		return fail.NewError("failed to add feature 'docker' on host '%s': %s", host.GetName(), msg)
+		return fail.NewError("failed to add feature 'docker': %s", host.GetName(), msg)
 	}
 	logrus.Debugf("[%s] feature 'docker' addition successful.", hostLabel)
 	return nil

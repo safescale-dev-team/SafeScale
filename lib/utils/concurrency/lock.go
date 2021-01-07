@@ -22,6 +22,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/CS-SI/SafeScale/lib/utils/debug/callstack"
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 )
@@ -45,6 +46,9 @@ type TaskedLock interface {
 	IsRLocked(Task) (bool, fail.Error)
 	IsLocked(Task) (bool, fail.Error)
 
+	GetReadLockCount(task Task) (uint64, fail.Error)
+	GetWriteLockCount(task Task) (uint64, fail.Error)
+
 	TaskedLockHelpers
 }
 
@@ -67,8 +71,8 @@ func NewTaskedLock() TaskedLock {
 }
 
 // RLock locks for read in the context if:
-// 1. registers the mu for read only if a mu for write is already registered in the context
-// 2. registers the mu for read AND effectively mu for read otherwise
+// 1. registers the lock for read only if a lock for write is already registered in the context
+// 2. registers the lock for read AND effectively lock for read otherwise
 func (tm *taskedLock) RLock(task Task) fail.Error {
 	if tm == nil {
 		return fail.InvalidInstanceError()
@@ -105,7 +109,7 @@ func (tm *taskedLock) RLock(task Task) fail.Error {
 		access = true
 		return nil
 	}
-	traceR.trace("using running write mu...")
+	traceR.trace("using running write lock...")
 	return nil
 }
 
@@ -113,7 +117,7 @@ func (tm *taskedLock) RLock(task Task) fail.Error {
 func (tm *taskedLock) SafeRLock(task Task) {
 	err := tm.RLock(task)
 	if err != nil {
-		logrus.Errorf(fail.Wrap(err, "cannot use SafeRLock() when obviously it's not safe").Error())
+		logrus.Errorf(fail.Wrap(err, callstack.DecorateWith("", "cannot use SafeRLock() when obviously it's not safe", "", 0)).Error())
 	}
 }
 
@@ -168,7 +172,7 @@ func (tm *taskedLock) RUnlock(task Task) (xerr fail.Error) {
 func (tm *taskedLock) SafeRUnlock(task Task) {
 	err := tm.RUnlock(task)
 	if err != nil {
-		logrus.Errorf(fail.Wrap(err, "cannot use SafeRUnlock() when obviously it's not safe").Error())
+		logrus.Errorf(fail.Wrap(err, callstack.DecorateWith("", "cannot use SafeRUnLock() when obviously it's not safe", "", 0)).Error())
 	}
 }
 
@@ -201,7 +205,7 @@ func (tm *taskedLock) Lock(task Task) fail.Error {
 		tm.writeLocks[tid]++
 		return nil
 	}
-	// If already mu for read, returns an error
+	// If already locked for read, returns an error
 	if _, ok := tm.readLocks[tid]; ok {
 		traceR.trace("Cannot Lock, already RLocked")
 		taskID, _ := task.GetID()
@@ -217,7 +221,7 @@ func (tm *taskedLock) Lock(task Task) fail.Error {
 func (tm *taskedLock) SafeLock(task Task) {
 	err := tm.Lock(task)
 	if err != nil {
-		logrus.Errorf(fail.Wrap(err, "cannot use SafeLock() when obviously it's not safe").Error())
+		logrus.Errorf(fail.Wrap(err, callstack.DecorateWith("", "cannot use SafeLock() when obviously it's not safe", "", 0)).Error())
 	}
 }
 
@@ -265,7 +269,7 @@ func (tm *taskedLock) Unlock(task Task) fail.Error {
 func (tm *taskedLock) SafeUnlock(task Task) {
 	err := tm.Unlock(task)
 	if err != nil {
-		logrus.Errorf(fail.Wrap(err, "cannot use SafeUnlock() when obviously it's not safe").Error())
+		logrus.Errorf(fail.Wrap(err, callstack.DecorateWith("", "cannot use SafeUnlock() when obviously it's not safe", "", 0)).Error())
 	}
 }
 
@@ -306,4 +310,48 @@ func (tm *taskedLock) IsLocked(task Task) (bool, fail.Error) {
 	defer tm.rwmutex.RUnlock()
 	_, ok := tm.writeLocks[tid]
 	return ok, nil
+}
+
+func (tm *taskedLock) GetReadLockCount(task Task) (uint64, fail.Error) {
+	if tm == nil {
+		return 0, fail.InvalidInstanceError()
+	}
+	if task.IsNull() {
+		return 0, fail.InvalidParameterError("task", "cannot be nil")
+	}
+
+	tid, xerr := task.GetID()
+	if xerr != nil {
+		return 0, xerr
+	}
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if c, ok := tm.readLocks[tid]; ok {
+		return c, nil
+	}
+	return 0, nil
+}
+
+func (tm *taskedLock) GetWriteLockCount(task Task) (uint64, fail.Error) {
+	if tm == nil {
+		return 0, fail.InvalidInstanceError()
+	}
+	if task.IsNull() {
+		return 0, fail.InvalidParameterError("task", "cannot be nil")
+	}
+
+	tid, xerr := task.GetID()
+	if xerr != nil {
+		return 0, xerr
+	}
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if c, ok := tm.writeLocks[tid]; ok {
+		return c, nil
+	}
+	return 0, nil
 }

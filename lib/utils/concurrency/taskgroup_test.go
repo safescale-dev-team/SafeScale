@@ -18,6 +18,7 @@ package concurrency
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -50,7 +51,6 @@ func TestChildrenWaitingGame(t *testing.T) {
 	}
 
 	res, err := overlord.Wait()
-
 	require.Nil(t, err)
 	require.NotEmpty(t, res)
 }
@@ -281,7 +281,7 @@ func TestChildrenWaitingGameWithTimeoutsButAborting(t *testing.T) {
 		fmt.Println("Iterating...")
 		_, err := overlord.Start(func(t Task, parameters TaskParameters) (TaskResult, fail.Error) {
 			rint := tools.RandomInt(30, 50)
-			fmt.Println("Entering")
+			fmt.Printf("Entering (waiting %d)\n", rint)
 			time.Sleep(time.Duration(rint) * 10 * time.Millisecond)
 			fmt.Println("Exiting")
 
@@ -319,14 +319,15 @@ func TestChildrenWaitingGameWithTimeoutsButAbortingInParallel(t *testing.T) {
 
 	for ind := 0; ind < 10; ind++ {
 		fmt.Println("Iterating...")
+		rint := time.Duration(rand.Intn(20)+30) * 10 * time.Millisecond
 		_, xerr := overlord.Start(func(t Task, parameters TaskParameters) (TaskResult, fail.Error) {
-			rint := tools.RandomInt(30, 50)
-			fmt.Println("Entering")
-			time.Sleep(time.Duration(rint) * 10 * time.Millisecond)
-			fmt.Println("Exiting")
+			delay := parameters.(time.Duration)
+			fmt.Printf("Entering (waiting %v)\n", delay)
+			defer fmt.Println("Exiting")
 
+			time.Sleep(delay * 1000)
 			return "waiting game", nil
-		}, nil)
+		}, rint)
 		if xerr != nil {
 			t.Errorf("Unexpected: %s", xerr)
 		}
@@ -334,15 +335,13 @@ func TestChildrenWaitingGameWithTimeoutsButAbortingInParallel(t *testing.T) {
 
 	begin := time.Now()
 	go func() {
-		time.Sleep(310 * time.Millisecond)
-		xerr = overlord.Abort()
-		if xerr != nil {
+		time.Sleep(350 * time.Millisecond)
+		if xerr := overlord.Abort(); xerr != nil {
 			t.Fail()
 		}
 	}()
 
-	_, xerr = overlord.WaitGroup()
-	if xerr != nil {
+	if _, xerr := overlord.WaitGroup(); xerr != nil {
 		t.Fail()
 	}
 
@@ -350,7 +349,7 @@ func TestChildrenWaitingGameWithTimeoutsButAbortingInParallel(t *testing.T) {
 
 	fmt.Println("Here we are")
 
-	if end >= (time.Millisecond * 350) {
-		t.Errorf("It should have finished near 350 ms but it didn't, it was %s !!", end)
+	if end >= (time.Millisecond * 370) {
+		t.Errorf("It should have finished near 350 ms but it didn't, it was %v !!", end)
 	}
 }
