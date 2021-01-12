@@ -71,30 +71,43 @@ func NewJob(ctx context.Context, cancel context.CancelFunc, svc iaas.Service, de
 	}
 
 	var (
-//		md metadata.MD
+		md metadata.MD
 		id string
-//		ok bool
+		ok bool
 	)
-
-//	md, ok = 
-	metadata.FromIncomingContext(ctx)
-//	if !ok {
+	
+	md, ok = metadata.FromIncomingContext(ctx)
+	logrus.Debugf("metadata: %v", md)
+	if !ok {
 		logrus.Warn("context does not contain a grpc uuid, generating one")
 		uuid, err := uuidpkg.NewV4()
 		if err != nil {
 			return nil, fail.Wrap(err, "failed to generate uuid for job")
 		}
 		id = uuid.String()
-//	} else {
-//		u := md.Get("uuid")
-//		if len(u) == 0 {
+	} else {
+		u := md.Get("uuid")
+//		m := md.Get("grpcgateway-accept")
+//		if (len(u) == 0 && len(m) > 0) {
+//			logrus.Warn("context does not contain a grpc uuid, generating one")
+//			uuid, err := uuidpkg.NewV4()
+//			if err != nil {
+//				return nil, fail.Wrap(err, "failed to generate uuid for job")
+//			}
+//			id = uuid.String()			
+//		} else if len(u) == 0 {
 //			return nil, fail.InvalidParameterError("ctx", "does not contain a grpc uuid")
 //		}
-//
-//		if id = u[0]; id == "" {
-//			return nil, fail.InvalidParameterError("ctx", "does not contain a valid grpc uuid")
-//		}
-//	}
+
+		m := md.Get("grpcgateway-accept")
+		if len(u) == 0 {
+			return nil, fail.InvalidParameterError("ctx", "does not contain a grpc uuid")
+		}
+
+		if id = u[0]; id == "" {
+			return nil, fail.InvalidParameterError("ctx", "does not contain a valid grpc uuid")
+		}
+	}
 
 	task, xerr := concurrency.NewTaskWithContext(ctx, nil)
 	if xerr != nil {

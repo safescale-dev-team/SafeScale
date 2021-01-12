@@ -19,6 +19,7 @@ option go_package = ".;protocol";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+// import "protoc-gen-openapiv2/options/annotations.proto";
 
 // for rest
 import "annotations.proto";
@@ -132,7 +133,7 @@ service TenantService{
 	}
 	rpc Inspect (TenantName) returns (TenantInspectResponse){}
 	rpc List (google.protobuf.Empty) returns (TenantList){
-		option (google.api.http).get = "/v1/tenant/list";		
+		option (google.api.http).get = "/v1/tenants";		
 	}
 	rpc Scan (google.protobuf.Empty) returns (google.protobuf.Empty){}
 	rpc Set (TenantName) returns (google.protobuf.Empty) {
@@ -158,7 +159,7 @@ message ImageListRequest{
 
 service ImageService{
 	rpc List(ImageListRequest) returns (ImageList){
-		option (google.api.http).get = "/v1/image/list";																
+		option (google.api.http).get = "/v1/images";																
 	}
 	//rpc Create(ImageCreateRequest) returns (Image){}
 	//rpc Delete(Image) returns (google.protobuf.Empty){}
@@ -217,13 +218,13 @@ service NetworkService {
 		option (google.api.http).post = "/v1/network";														
 	}
 	rpc List(NetworkListRequest) returns (NetworkList){
-		option (google.api.http).get = "/v1/network/list";																
+		option (google.api.http).get = "/v1/networks";																
 	}
 	rpc Inspect(Reference) returns (Network) {
-		option (google.api.http).get = "/v1/network/{id}";																
+		option (google.api.http).get = "/v1/network/{name}";																
 	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).delete = "/v1/network/{id}";																
+		option (google.api.http).delete = "/v1/network/{name}";																
 	}
 }
 
@@ -307,7 +308,7 @@ service SubnetService {
 		option (google.api.http).post = "/v1/network/{network.id}/subnet";																
 	}
 	rpc List(SubnetListRequest) returns (SubnetList){
-		option (google.api.http).get = "/v1/{network.id}/subnet/list";																
+		option (google.api.http).get = "/v1/{network.id}/subnets";																
 	}
 	rpc Inspect(SubnetInspectRequest) returns (Subnet) {
 		option (google.api.http).get = "/v1/{network.id}/subnet/{subnet.id}";																
@@ -423,25 +424,25 @@ service HostService {
 	}
 	rpc Status(Reference) returns (HostStatus){}
 	rpc List(HostListRequest) returns (HostList){
-		option (google.api.http).get = "/v1/host/list";		
+		option (google.api.http).get = "/v1/hosts";		
 	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/host/{id}";				
 	}
 	rpc Start(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/action/start";				
+		option (google.api.http).post = "/v1/host/{id}/start";				
 	}
 	rpc Stop(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/action/stop";						
+		option (google.api.http).post = "/v1/host/{id}/stop";						
 	}
 	rpc Reboot(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/action/reboot";								
+		option (google.api.http).post = "/v1/host/{id}/reboot";								
 	}
 	rpc Resize(HostDefinition) returns (Host){
-		option (google.api.http).post = "/v1/host/{name}/action/resize";										
+		option (google.api.http).post = "/v1/host/{name}/resize";										
 	}
 	rpc SSH(Reference) returns (SshConfig){
-		option (google.api.http).post = "/v1/host/{id}/action/ssh";												
+		option (google.api.http).post = "/v1/host/{id}/ssh";												
 	}
 	rpc BindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
 // 		option (google.api.http).post = "/v1/host/{host}/security_group/{/ssh";														
@@ -555,7 +556,7 @@ service VolumeService {
 		option (google.api.http).delete = "/v1/volume/{id}";																		
 	}
 	rpc List(VolumeListRequest) returns (VolumeListResponse) {
-		option (google.api.http).post = "/v1/volume/list";																		
+		option (google.api.http).post = "/v1/volumes";																		
 	}
 	rpc Inspect(Reference) returns (VolumeInspectResponse){
 	option (google.api.http).delete = "/v1/volume/{id}";																		
@@ -593,7 +594,7 @@ service BucketService {
 		option (google.api.http).delete = "/v1/bucket/{name}";																				
 	}
 	rpc List(google.protobuf.Empty) returns (BucketList){
-		option (google.api.http).get = "/v1/bucket/list";																				
+		option (google.api.http).get = "/v1/buckets";																				
 	}
 	rpc Inspect(Bucket) returns (BucketMountingPoint){
 		option (google.api.http).get = "/v1/bucket/{name}";																				
@@ -681,7 +682,7 @@ service ShareService {
 		option (google.api.http).delete = "/v1/share/{id}";																								
 	}
 	rpc List(Reference) returns (ShareList){
-		option (google.api.http).post = "/v1/share/list";																								
+		option (google.api.http).post = "/v1/shares";																								
 	}     // Here, Reference is used to carry tenant
 	rpc Mount(ShareMountDefinition) returns (ShareMountDefinition){}
 	rpc Unmount(ShareMountDefinition) returns (google.protobuf.Empty){}
@@ -800,6 +801,18 @@ message ClusterComposite {
 }
 
 message ClusterNetwork {
+// 	option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+// 		json_schema: {
+// 			title: "A bit of everything"
+// 			description: "Intentionaly complicated message type to cover many features of Protobuf."
+// 			required: ["uuid", "int64_value", "double_value"]
+// 		}
+// 		external_docs: {
+// 			url: "https://github.com/grpc-ecosystem/grpc-gateway";
+// 			description: "Find out more about ABitOfEverything";
+// 		}
+// 		example: "{\"uuid\": \"0cf361e1-4b44-483d-a159-54dabdf7e814\"}"
+// 	};
 	string network_id = 1;
 	string cidr = 2;
 	string domain = 3;
@@ -839,7 +852,7 @@ message ClusterNodeRequest {
 
 service ClusterService {
 	rpc List(Reference) returns (ClusterListResponse){
-		option (google.api.http).get = "/v1/cluster/list";																								
+		option (google.api.http).get = "/v1/clusters";																								
 	}
 	rpc Inspect(Reference) returns (ClusterResponse){
 		option (google.api.http).get = "/v1/cluster/{id}";																								
@@ -866,7 +879,7 @@ service ClusterService {
 		option (google.api.http).post = "/v1/cluster/{name}/shrink";																												
 	}
 	rpc ListNodes(Reference) returns (ClusterNodeListResponse){
-		option (google.api.http).get = "/v1/cluster/{id}/node/list";																												
+		option (google.api.http).get = "/v1/cluster/{id}/nodes";																												
 	}
 	rpc InspectNode(ClusterNodeRequest) returns (Host){
 		option (google.api.http).get = "/v1/cluster/{name}/node/{host.id}";																												
@@ -884,7 +897,7 @@ service ClusterService {
 		option (google.api.http).get = "/v1/cluster/{name}/node/{host.id}/state";																												
 	}
 	rpc ListMasters(Reference) returns (ClusterNodeListResponse){
-		option (google.api.http).get = "/v1/cluster/{name}/master/list";																														
+		option (google.api.http).get = "/v1/cluster/{name}/masters";																														
 	}
 	rpc FindAvailableMaster(Reference) returns (Host){
 		option (google.api.http).get = "/v1/cluster/{name}/master/find";																																

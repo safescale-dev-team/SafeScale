@@ -199,7 +199,7 @@ font-style: italic;
   <li><a href="#bucketServiceCreate"><code><span class="http-method">post</span> /v1/bucket</code></a></li>
   <li><a href="#bucketServiceDelete"><code><span class="http-method">delete</span> /v1/bucket/{name}</code></a></li>
   <li><a href="#bucketServiceInspect"><code><span class="http-method">get</span> /v1/bucket/{name}</code></a></li>
-  <li><a href="#bucketServiceList"><code><span class="http-method">get</span> /v1/bucket/list</code></a></li>
+  <li><a href="#bucketServiceList"><code><span class="http-method">get</span> /v1/buckets</code></a></li>
   </ul>
   <h4><a href="#ClusterService">ClusterService</a></h4>
   <ul>
@@ -211,9 +211,9 @@ font-style: italic;
   <li><a href="#clusterServiceInspect"><code><span class="http-method">get</span> /v1/cluster/{id}</code></a></li>
   <li><a href="#clusterServiceInspectMaster"><code><span class="http-method">get</span> /v1/cluster/{name}/master/{host.id}</code></a></li>
   <li><a href="#clusterServiceInspectNode"><code><span class="http-method">get</span> /v1/cluster/{name}/node/{host.id}</code></a></li>
-  <li><a href="#clusterServiceList"><code><span class="http-method">get</span> /v1/cluster/list</code></a></li>
-  <li><a href="#clusterServiceListMasters"><code><span class="http-method">get</span> /v1/cluster/{name}/master/list</code></a></li>
-  <li><a href="#clusterServiceListNodes"><code><span class="http-method">get</span> /v1/cluster/{id}/node/list</code></a></li>
+  <li><a href="#clusterServiceList"><code><span class="http-method">get</span> /v1/clusters</code></a></li>
+  <li><a href="#clusterServiceListMasters"><code><span class="http-method">get</span> /v1/cluster/{name}/masters</code></a></li>
+  <li><a href="#clusterServiceListNodes"><code><span class="http-method">get</span> /v1/cluster/{id}/nodes</code></a></li>
   <li><a href="#clusterServiceShrink"><code><span class="http-method">post</span> /v1/cluster/{name}/shrink</code></a></li>
   <li><a href="#clusterServiceStart"><code><span class="http-method">post</span> /v1/cluster/{id}/start</code></a></li>
   <li><a href="#clusterServiceStartNode"><code><span class="http-method">post</span> /v1/cluster/{name}/node/{host.id}/start</code></a></li>
@@ -227,49 +227,49 @@ font-style: italic;
   <li><a href="#hostServiceCreate"><code><span class="http-method">post</span> /v1/host</code></a></li>
   <li><a href="#hostServiceDelete"><code><span class="http-method">delete</span> /v1/host/{id}</code></a></li>
   <li><a href="#hostServiceInspect"><code><span class="http-method">get</span> /v1/host/{id}</code></a></li>
-  <li><a href="#hostServiceList"><code><span class="http-method">get</span> /v1/host/list</code></a></li>
-  <li><a href="#hostServiceReboot"><code><span class="http-method">post</span> /v1/host/{id}/action/reboot</code></a></li>
-  <li><a href="#hostServiceResize"><code><span class="http-method">post</span> /v1/host/{name}/action/resize</code></a></li>
-  <li><a href="#hostServiceSSH"><code><span class="http-method">post</span> /v1/host/{id}/action/ssh</code></a></li>
-  <li><a href="#hostServiceStart"><code><span class="http-method">post</span> /v1/host/{id}/action/start</code></a></li>
-  <li><a href="#hostServiceStop"><code><span class="http-method">post</span> /v1/host/{id}/action/stop</code></a></li>
+  <li><a href="#hostServiceList"><code><span class="http-method">get</span> /v1/hosts</code></a></li>
+  <li><a href="#hostServiceReboot"><code><span class="http-method">post</span> /v1/host/{id}/reboot</code></a></li>
+  <li><a href="#hostServiceResize"><code><span class="http-method">post</span> /v1/host/{name}/resize</code></a></li>
+  <li><a href="#hostServiceSSH"><code><span class="http-method">post</span> /v1/host/{id}/ssh</code></a></li>
+  <li><a href="#hostServiceStart"><code><span class="http-method">post</span> /v1/host/{id}/start</code></a></li>
+  <li><a href="#hostServiceStop"><code><span class="http-method">post</span> /v1/host/{id}/stop</code></a></li>
   </ul>
   <h4><a href="#ImageService">ImageService</a></h4>
   <ul>
-  <li><a href="#imageServiceList"><code><span class="http-method">get</span> /v1/image/list</code></a></li>
+  <li><a href="#imageServiceList"><code><span class="http-method">get</span> /v1/images</code></a></li>
   </ul>
   <h4><a href="#NetworkService">NetworkService</a></h4>
   <ul>
   <li><a href="#networkServiceCreate"><code><span class="http-method">post</span> /v1/network</code></a></li>
-  <li><a href="#networkServiceDelete"><code><span class="http-method">delete</span> /v1/network/{id}</code></a></li>
-  <li><a href="#networkServiceInspect"><code><span class="http-method">get</span> /v1/network/{id}</code></a></li>
-  <li><a href="#networkServiceList"><code><span class="http-method">get</span> /v1/network/list</code></a></li>
+  <li><a href="#networkServiceDelete"><code><span class="http-method">delete</span> /v1/network/{name}</code></a></li>
+  <li><a href="#networkServiceInspect"><code><span class="http-method">get</span> /v1/network/{name}</code></a></li>
+  <li><a href="#networkServiceList"><code><span class="http-method">get</span> /v1/networks</code></a></li>
   </ul>
   <h4><a href="#ShareService">ShareService</a></h4>
   <ul>
   <li><a href="#shareServiceCreate"><code><span class="http-method">post</span> /v1/share</code></a></li>
   <li><a href="#shareServiceDelete"><code><span class="http-method">delete</span> /v1/share/{id}</code></a></li>
   <li><a href="#shareServiceInspect"><code><span class="http-method">get</span> /v1/share/{id}</code></a></li>
-  <li><a href="#shareServiceList"><code><span class="http-method">post</span> /v1/share/list</code></a></li>
+  <li><a href="#shareServiceList"><code><span class="http-method">post</span> /v1/shares</code></a></li>
   </ul>
   <h4><a href="#SubnetService">SubnetService</a></h4>
   <ul>
   <li><a href="#subnetServiceCreate"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet</code></a></li>
   <li><a href="#subnetServiceDelete"><code><span class="http-method">delete</span> /v1/network/{network.id}/subnet/{subnet.id}</code></a></li>
   <li><a href="#subnetServiceInspect"><code><span class="http-method">get</span> /v1/{network.id}/subnet/{subnet.id}</code></a></li>
-  <li><a href="#subnetServiceList"><code><span class="http-method">get</span> /v1/{network.id}/subnet/list</code></a></li>
+  <li><a href="#subnetServiceList"><code><span class="http-method">get</span> /v1/{network.id}/subnets</code></a></li>
   </ul>
   <h4><a href="#TenantService">TenantService</a></h4>
   <ul>
   <li><a href="#tenantServiceGet"><code><span class="http-method">get</span> /v1/tenant</code></a></li>
-  <li><a href="#tenantServiceList"><code><span class="http-method">get</span> /v1/tenant/list</code></a></li>
+  <li><a href="#tenantServiceList"><code><span class="http-method">get</span> /v1/tenants</code></a></li>
   <li><a href="#tenantServiceSet"><code><span class="http-method">post</span> /v1/tenant</code></a></li>
   </ul>
   <h4><a href="#VolumeService">VolumeService</a></h4>
   <ul>
   <li><a href="#volumeServiceCreate"><code><span class="http-method">post</span> /v1/volume</code></a></li>
   <li><a href="#volumeServiceInspect"><code><span class="http-method">delete</span> /v1/volume/{id}</code></a></li>
-  <li><a href="#volumeServiceList"><code><span class="http-method">post</span> /v1/volume/list</code></a></li>
+  <li><a href="#volumeServiceList"><code><span class="http-method">post</span> /v1/volumes</code></a></li>
   </ul>
 
   <h1><a name="BucketService">BucketService</a></h1>
@@ -413,7 +413,7 @@ font-style: italic;
   <div class="method"><a name="bucketServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/bucket/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/buckets</code></pre></div>
     <div class="method-summary"> (<span class="nickname">bucketServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -1258,7 +1258,7 @@ font-style: italic;
   <div class="method"><a name="clusterServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/cluster/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/clusters</code></pre></div>
     <div class="method-summary"> (<span class="nickname">clusterServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -1623,7 +1623,7 @@ font-style: italic;
   <div class="method"><a name="clusterServiceListMasters"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/cluster/{name}/master/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/cluster/{name}/masters</code></pre></div>
     <div class="method-summary"> (<span class="nickname">clusterServiceListMasters</span>)</div>
     <div class="method-notes"></div>
 
@@ -1706,7 +1706,7 @@ font-style: italic;
   <div class="method"><a name="clusterServiceListNodes"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/cluster/{id}/node/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/cluster/{id}/nodes</code></pre></div>
     <div class="method-summary"> (<span class="nickname">clusterServiceListNodes</span>)</div>
     <div class="method-notes"></div>
 
@@ -2331,7 +2331,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/host/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/hosts</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -2408,7 +2408,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceReboot"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/action/reboot</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/reboot</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceReboot</span>)</div>
     <div class="method-notes"></div>
 
@@ -2452,7 +2452,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceResize"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{name}/action/resize</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{name}/resize</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceResize</span>)</div>
     <div class="method-notes"></div>
 
@@ -2512,7 +2512,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceSSH"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/action/ssh</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/ssh</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceSSH</span>)</div>
     <div class="method-notes"></div>
 
@@ -2565,7 +2565,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceStart"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/action/start</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/start</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceStart</span>)</div>
     <div class="method-notes"></div>
 
@@ -2609,7 +2609,7 @@ font-style: italic;
   <div class="method"><a name="hostServiceStop"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/action/stop</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{id}/stop</code></pre></div>
     <div class="method-summary"> (<span class="nickname">hostServiceStop</span>)</div>
     <div class="method-notes"></div>
 
@@ -2654,7 +2654,7 @@ font-style: italic;
   <div class="method"><a name="imageServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/image/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/images</code></pre></div>
     <div class="method-summary"> (<span class="nickname">imageServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -2796,13 +2796,13 @@ font-style: italic;
   <div class="method"><a name="networkServiceDelete"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/network/{id}</code></pre></div>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/network/{name}</code></pre></div>
     <div class="method-summary"> (<span class="nickname">networkServiceDelete</span>)</div>
     <div class="method-notes"></div>
 
     <h3 class="field-label">Path parameters</h3>
     <div class="field-items">
-      <div class="param">id (required)</div>
+      <div class="param">name (required)</div>
 
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
@@ -2814,7 +2814,7 @@ font-style: italic;
     <div class="field-items">
       <div class="param">tenantId (optional)</div>
 
-      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">id (optional)</div>
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
@@ -2848,13 +2848,13 @@ font-style: italic;
   <div class="method"><a name="networkServiceInspect"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/network/{id}</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/network/{name}</code></pre></div>
     <div class="method-summary"> (<span class="nickname">networkServiceInspect</span>)</div>
     <div class="method-notes"></div>
 
     <h3 class="field-label">Path parameters</h3>
     <div class="field-items">
-      <div class="param">id (required)</div>
+      <div class="param">name (required)</div>
 
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
@@ -2866,7 +2866,7 @@ font-style: italic;
     <div class="field-items">
       <div class="param">tenantId (optional)</div>
 
-      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">id (optional)</div>
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
@@ -2946,7 +2946,7 @@ font-style: italic;
   <div class="method"><a name="networkServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/network/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/networks</code></pre></div>
     <div class="method-summary"> (<span class="nickname">networkServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -3307,7 +3307,7 @@ font-style: italic;
   <div class="method"><a name="shareServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/share/list</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/shares</code></pre></div>
     <div class="method-summary"> (<span class="nickname">shareServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -3641,7 +3641,7 @@ font-style: italic;
   <div class="method"><a name="subnetServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/{network.id}/subnet/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/{network.id}/subnets</code></pre></div>
     <div class="method-summary"> (<span class="nickname">subnetServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -3826,7 +3826,7 @@ font-style: italic;
   <div class="method"><a name="tenantServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/tenant/list</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/tenants</code></pre></div>
     <div class="method-summary"> (<span class="nickname">tenantServiceList</span>)</div>
     <div class="method-notes"></div>
 
@@ -4076,7 +4076,7 @@ font-style: italic;
   <div class="method"><a name="volumeServiceList"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/volume/list</code></pre></div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/volumes</code></pre></div>
     <div class="method-summary"> (<span class="nickname">volumeServiceList</span>)</div>
     <div class="method-notes"></div>
 

@@ -18,41 +18,40 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"path"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"context"
-	"flag"
+	"net/http"
+	"syscall"
+
 
 	"github.com/dlespiau/covertool/pkg/exit"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/CS-SI/SafeScale/lib/protocol"
 	_ "github.com/CS-SI/SafeScale/lib/server"
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
-	"github.com/CS-SI/SafeScale/lib/server/listeners"
 	app2 "github.com/CS-SI/SafeScale/lib/utils/app"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
-	
-	"github.com/CS-SI/SafeScale/lib/server/gateway"
-	
 )
 
 var profileCloseFunc = func() {}
 
 const (
 	defaultDaemonHost string = "localhost" // By default, safescaled only listen on localhost
-	defaultDaemonPort string = "50051"
+	defaultDaemonPort string = "8080"
+	defaultGrpcPort string = "50051"
 )
+
 
 func cleanup(onAbort bool) {
 	if onAbort {
@@ -62,7 +61,33 @@ func cleanup(onAbort bool) {
 	exit.Exit(1)
 }
 
-// *** MAIN ***
+// newGateway returns a new gateway server which translates HTTP into gRPC.
+func newGateway(ctx context.Context, conn *grpc.ClientConn, opts []gwruntime.ServeMuxOption) (http.Handler, error) {
+
+	mux := gwruntime.NewServeMux(opts...)
+
+	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
+		protocol.RegisterBucketServiceHandler,
+//		protocol.RegisterClusterServiceHandler,
+		protocol.RegisterHostServiceHandler,
+		protocol.RegisterImageServiceHandler,
+//		protocol.RegisterJobServiceHandler,
+		protocol.RegisterNetworkServiceHandler,
+		protocol.RegisterSubnetServiceHandler,
+//		protocol.RegisterSecurityGroupServiceHandler,
+//		protocol.RegisterShareServiceHandler,
+//		protocol.RegisterSshServiceHandler,
+//		protocol.RegisterTemplateServiceHandler,
+		protocol.RegisterTenantServiceHandler,
+		protocol.RegisterVolumeServiceHandler,
+	} {
+		if err := f(ctx, mux, conn); err != nil {
+			return nil, err
+		}
+	}
+	return mux, nil
+}
+
 func work(c *cli.Context) {
 	signalCh := make(chan os.Signal)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
@@ -85,59 +110,91 @@ func work(c *cli.Context) {
 	}
 
 	listen := assembleListenString(c)
-
-	// DEV VAR
-	suffix := ""
-	if suffixCandidate := os.Getenv("SAFESCALE_METADATA_SUFFIX"); suffixCandidate != "" {
-		suffix = suffixCandidate
-	}
-
-	envVars := os.Environ()
-	for _, envVar := range envVars {
-		if strings.HasPrefix(envVar, "SAFESCALE") {
-			logrus.Infof("Using %s", envVar)
-		}
-	}
-
-	logrus.Infof("Starting server, listening on '%s', using metadata suffix '%s'", listen, suffix)
-	lis, err := net.Listen("tcp", listen)
+	endpoint := assembleEndpointString(c)
+	
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	
+	logrus.Infof("Connecting to grpc backend on '%s'", endpoint)
+	conn, err := grpc.DialContext(ctx, "localhost:50051", grpc.WithInsecure())
 	if err != nil {
-		logrus.Fatalf("failed to listen: %v", err)
+		logrus.Errorf("Failed to connect to grpc: %v", err)
+		return
 	}
-	s := grpc.NewServer()
+	go func() {
+		<-ctx.Done()
+		if err := conn.Close(); err != nil {
+			logrus.Errorf("Failed to close a client connection to the gRPC server: %v", err)
+		}
+	}()
 
-	logrus.Infoln("Registering services")
-	protocol.RegisterBucketServiceServer(s, &listeners.BucketListener{})
-	protocol.RegisterClusterServiceServer(s, &listeners.ClusterListener{})
-	protocol.RegisterHostServiceServer(s, &listeners.HostListener{})
-	protocol.RegisterImageServiceServer(s, &listeners.ImageListener{})
-	protocol.RegisterJobServiceServer(s, &listeners.JobManagerListener{})
-	protocol.RegisterNetworkServiceServer(s, &listeners.NetworkListener{})
-	protocol.RegisterSubnetServiceServer(s, &listeners.SubnetListener{})
-	protocol.RegisterSecurityGroupServiceServer(s, &listeners.SecurityGroupListener{})
-	protocol.RegisterShareServiceServer(s, &listeners.ShareListener{})
-	protocol.RegisterSshServiceServer(s, &listeners.SSHListener{})
-	protocol.RegisterTemplateServiceServer(s, &listeners.TemplateListener{})
-	protocol.RegisterTenantServiceServer(s, &listeners.TenantListener{})
-	protocol.RegisterVolumeServiceServer(s, &listeners.VolumeListener{})
+	mux := http.NewServeMux()
 
-	// log.Println("Initializing service factory")
-	// commands.InitServiceFactory()
+	var opts []gwruntime.ServeMuxOption
+	gw, err := newGateway(ctx, conn, opts)
+	if err != nil {
+		logrus.Errorf("Failed to initialize gateway, %v", err)
+		return
+	}
+	mux.Handle("/", gw)
 
-	// Register reflection service on gRPC server.
-	reflection.Register(s)
-
-	version := Version + ", build " + Revision + " (" + BuildDate + ")"
-	fmt.Printf("Safescaled version: %s\nReady to serve on '%s' :-)\n", version, listen)
-	if err := s.Serve(lis); err != nil {
-		logrus.Fatalf("Failed to serve: %v", err)
+	s := &http.Server{
+		Addr:    "localhost:8080",
+		Handler: allowCORS(mux),
+	}
+	go func() {
+		<-ctx.Done()
+		logrus.Infof("Shutting down the http server")
+		if err := s.Shutdown(context.Background()); err != nil {
+			logrus.Errorf("Failed to shutdown http server: %v", err)
+		}
+	}()
+	
+	logrus.Infof("Listening http on '%s'", listen)
+	if err := s.ListenAndServe(); err != http.ErrServerClosed {
+		logrus.Errorf("Failed to listen and serve: %v", err)
+		return
 	}
 }
+
+
+//var (
+//	endpoint   = flag.String("endpoint", "localhost:9090", "endpoint of the gRPC service")
+//	network    = flag.String("network", "tcp", `one of "tcp" or "unix". Must be consistent to -endpoint`)
+//	openAPIDir = flag.String("openapi_dir", "examples/internal/proto/examplepb", "path to the directory which contains OpenAPI definitions")
+//)
 
 // assembleListenString constructs the listen string we will use in net.Listen()
 func assembleListenString(c *cli.Context) string {
 	// Get listen from parameters
 	listen := c.String("listen")
+	if listen != "" {
+		// Validate port part of the content of listen...
+		parts := strings.Split(listen, ":")
+		switch len(parts) {
+		case 1:
+			listen = parts[0] + ":" + defaultDaemonPort
+		case 2:
+			num, err := strconv.Atoi(parts[1])
+			if err != nil || num <= 0 {
+				logrus.Warningf("Parameter 'listen' content is invalid (port cannot be '%s'): ignored.", parts[1])
+			}
+		default:
+			logrus.Warningf("Parameter 'listen' content is invalid, ignored.")
+		}
+	}
+	// At last, if listen is empty, build it from defaults
+	if listen == "" {
+		listen = defaultDaemonHost + ":" + defaultDaemonPort
+	}
+	return listen
+}
+
+// assembleEndpointString constructs the endpoint string we will use to send grpc requests
+func assembleEndpointString(c *cli.Context) string {
+	// Get listen from parameters
+	listen := c.String("endpoint")
 	if listen == "" {
 		listen = os.Getenv("SAFESCALED_LISTEN")
 	}
@@ -174,18 +231,12 @@ func assembleListenString(c *cli.Context) string {
 	return listen
 }
 
-var (
-	endpoint   = flag.String("endpoint", "localhost:9090", "endpoint of the gRPC service")
-	network    = flag.String("network", "tcp", `one of "tcp" or "unix". Must be consistent to -endpoint`)
-	openAPIDir = flag.String("openapi_dir", "examples/internal/proto/examplepb", "path to the directory which contains OpenAPI definitions")
-)
-
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	app := cli.NewApp()
-	app.Name = "safescaled"
-	app.Usage = "safescaled [OPTIONS]"
+	app.Name = "safescale-gatewayd"
+	app.Usage = "safescale-gatewayd [OPTIONS]"
 	app.Version = Version + ", build " + Revision + " compiled with " + runtime.Version() + " (" + BuildDate + ")"
 
 	app.Authors = []*cli.Author{
@@ -212,14 +263,14 @@ func main() {
 			Usage:   "Show debug information",
 		},
 		&cli.StringFlag{
-			Name:  "profile",
-			Usage: "Profiles binary; can contain 'cpu', 'ram', 'web' and a combination of them (ie 'cpu,ram')",
-			// TODO: extends profile to accept <what>:params, for example cpu:$HOME/safescale.cpu.pprof, or web:192.168.2.1:1666
-		},
-		&cli.StringFlag{
 			Name:    "listen",
 			Aliases: []string{"l"},
-			Usage:   "Listen on specified port `IP:PORT` (default: localhost:50051)",
+			Usage:   "Listen on specified port `IP:PORT` (default: localhost:8080)",
+		},
+		&cli.StringFlag{
+			Name:    "endpoint",
+			Aliases: []string{"e"},
+			Usage:   "Safescale grpc daemon `IP:PORT` (default: localhost:50051)",
 		},
 	}
 
@@ -257,42 +308,10 @@ func main() {
 		return nil
 	}
 
-	flag.Parse()
-
-	ctx := context.Background()
-	opts := gateway.Options{
-		Addr: ":8080",
-		GRPCServer: gateway.Endpoint{
-			Network: *network,
-			Addr:    *endpoint,
-		},
-		OpenAPIDir: *openAPIDir,
+	err := app.Run(os.Args)
+	if err != nil {
+		logrus.Error(err)
 	}
-	if err := gateway.Run(ctx, opts); err != nil {
-		logrus.Fatal(err)
-	}
-
-//	s := &http.Server{
-//		Addr:    addr,
-//		Handler: mux,
-//	}
-
-//	go func() {
-//		<-ctx.Done()
-//		glog.Infof("Shutting down the http gateway server")
-//		if err := s.Shutdown(context.Background()); err != nil {
-//			logrus.Errorf("Failed to shutdown http gateway server: %v", err)
-//		}
-//	}()
-//
-//	if err := s.ListenAndServe(); err != http.ErrServerClosed {
-//		logrus.Errorf("Failed to listen and serve: %v", err)
-//	}
-
-//	err := app.Run(os.Args)
-//	if err != nil {
-//		logrus.Error(err)
-//	}
 
 	cleanup(false)
 }

@@ -80,28 +80,6 @@
         ]
       }
     },
-    "/v1/bucket/list": {
-      "get": {
-        "operationId": "BucketService_List",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/BucketList"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "BucketService"
-        ]
-      }
-    },
     "/v1/bucket/{name}": {
       "get": {
         "operationId": "BucketService_Inspect",
@@ -160,6 +138,28 @@
         ]
       }
     },
+    "/v1/buckets": {
+      "get": {
+        "operationId": "BucketService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/BucketList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BucketService"
+        ]
+      }
+    },
     "/v1/cluster": {
       "post": {
         "operationId": "ClusterService_Create",
@@ -177,48 +177,6 @@
             }
           }
         },
-        "tags": [
-          "ClusterService"
-        ]
-      }
-    },
-    "/v1/cluster/list": {
-      "get": {
-        "operationId": "ClusterService_List",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/ClusterListResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
         "tags": [
           "ClusterService"
         ]
@@ -266,7 +224,7 @@
         ]
       }
     },
-    "/v1/cluster/{id}/node/list": {
+    "/v1/cluster/{id}/nodes": {
       "get": {
         "operationId": "ClusterService_ListNodes",
         "responses": {
@@ -524,48 +482,6 @@
         ]
       }
     },
-    "/v1/cluster/{name}/master/list": {
-      "get": {
-        "operationId": "ClusterService_ListMasters",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/ClusterNodeListResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ClusterService"
-        ]
-      }
-    },
     "/v1/cluster/{name}/master/{host.id}": {
       "get": {
         "operationId": "ClusterService_InspectMaster",
@@ -604,6 +520,48 @@
           },
           {
             "name": "host.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
+    "/v1/cluster/{name}/masters": {
+      "get": {
+        "operationId": "ClusterService_ListMasters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ClusterNodeListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -858,6 +816,48 @@
         ]
       }
     },
+    "/v1/clusters": {
+      "get": {
+        "operationId": "ClusterService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ClusterListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterService"
+        ]
+      }
+    },
     "/v1/host": {
       "post": {
         "operationId": "HostService_Create",
@@ -875,42 +875,6 @@
             }
           }
         },
-        "tags": [
-          "HostService"
-        ]
-      }
-    },
-    "/v1/host/list": {
-      "get": {
-        "operationId": "HostService_List",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/HostList"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "all",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
         "tags": [
           "HostService"
         ]
@@ -998,7 +962,7 @@
         ]
       }
     },
-    "/v1/host/{id}/action/reboot": {
+    "/v1/host/{id}/reboot": {
       "post": {
         "operationId": "HostService_Reboot",
         "responses": {
@@ -1028,7 +992,7 @@
         ]
       }
     },
-    "/v1/host/{id}/action/ssh": {
+    "/v1/host/{id}/ssh": {
       "post": {
         "operationId": "HostService_SSH",
         "responses": {
@@ -1058,7 +1022,7 @@
         ]
       }
     },
-    "/v1/host/{id}/action/start": {
+    "/v1/host/{id}/start": {
       "post": {
         "operationId": "HostService_Start",
         "responses": {
@@ -1088,7 +1052,7 @@
         ]
       }
     },
-    "/v1/host/{id}/action/stop": {
+    "/v1/host/{id}/stop": {
       "post": {
         "operationId": "HostService_Stop",
         "responses": {
@@ -1118,7 +1082,7 @@
         ]
       }
     },
-    "/v1/host/{name}/action/resize": {
+    "/v1/host/{name}/resize": {
       "post": {
         "operationId": "HostService_Resize",
         "responses": {
@@ -1148,7 +1112,43 @@
         ]
       }
     },
-    "/v1/image/list": {
+    "/v1/hosts": {
+      "get": {
+        "operationId": "HostService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/HostList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/images": {
       "get": {
         "operationId": "ImageService_List",
         "responses": {
@@ -1206,43 +1206,7 @@
         ]
       }
     },
-    "/v1/network/list": {
-      "get": {
-        "operationId": "NetworkService_List",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/NetworkList"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "all",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "NetworkService"
-        ]
-      }
-    },
-    "/v1/network/{id}": {
+    "/v1/network/{name}": {
       "get": {
         "operationId": "NetworkService_Inspect",
         "responses": {
@@ -1261,7 +1225,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1273,7 +1237,7 @@
             "type": "string"
           },
           {
-            "name": "name",
+            "name": "id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1301,7 +1265,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1313,7 +1277,7 @@
             "type": "string"
           },
           {
-            "name": "name",
+            "name": "id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1414,14 +1378,14 @@
         ]
       }
     },
-    "/v1/share": {
-      "post": {
-        "operationId": "ShareService_Create",
+    "/v1/networks": {
+      "get": {
+        "operationId": "NetworkService_List",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/ShareDefinition"
+              "$ref": "#/definitions/NetworkList"
             }
           },
           "default": {
@@ -1431,19 +1395,33 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
-          "ShareService"
+          "NetworkService"
         ]
       }
     },
-    "/v1/share/list": {
+    "/v1/share": {
       "post": {
-        "operationId": "ShareService_List",
+        "operationId": "ShareService_Create",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/ShareList"
+              "$ref": "#/definitions/ShareDefinition"
             }
           },
           "default": {
@@ -1540,6 +1518,28 @@
         ]
       }
     },
+    "/v1/shares": {
+      "post": {
+        "operationId": "ShareService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ShareList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ShareService"
+        ]
+      }
+    },
     "/v1/tenant": {
       "get": {
         "operationId": "TenantService_Get",
@@ -1582,7 +1582,7 @@
         ]
       }
     },
-    "/v1/tenant/list": {
+    "/v1/tenants": {
       "get": {
         "operationId": "TenantService_List",
         "responses": {
@@ -1612,28 +1612,6 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/VolumeInspectResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "VolumeService"
-        ]
-      }
-    },
-    "/v1/volume/list": {
-      "post": {
-        "operationId": "VolumeService_List",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/VolumeListResponse"
             }
           },
           "default": {
@@ -1690,14 +1668,14 @@
         ]
       }
     },
-    "/v1/{network.id}/subnet/list": {
-      "get": {
-        "operationId": "SubnetService_List",
+    "/v1/volumes": {
+      "post": {
+        "operationId": "VolumeService_List",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/SubnetList"
+              "$ref": "#/definitions/VolumeListResponse"
             }
           },
           "default": {
@@ -1707,34 +1685,8 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "network.id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "network.tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "network.name",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "all",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          }
-        ],
         "tags": [
-          "SubnetService"
+          "VolumeService"
         ]
       }
     },
@@ -1791,6 +1743,54 @@
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
+    "/v1/{network.id}/subnets": {
+      "get": {
+        "operationId": "SubnetService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SubnetList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "network.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "network.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -1924,7 +1924,8 @@
       "type": "object",
       "properties": {
         "networkId": {
-          "type": "string"
+          "type": "string",
+          "title": "option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {\n\t\tjson_schema: {\n\t\t\ttitle: \"A bit of everything\"\n\t\t\tdescription: \"Intentionaly complicated message type to cover many features of Protobuf.\"\n\t\t\trequired: [\"uuid\", \"int64_value\", \"double_value\"]\n\t\t}\n\t\texternal_docs: {\n\t\t\turl: \"https://github.com/grpc-ecosystem/grpc-gateway\";\n\t\t\tdescription: \"Find out more about ABitOfEverything\";\n\t\t}\n\t\texample: \"{\\\"uuid\\\": \\\"0cf361e1-4b44-483d-a159-54dabdf7e814\\\"}\"\n\t};"
         },
         "cidr": {
           "type": "string"
