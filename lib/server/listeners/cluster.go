@@ -84,6 +84,9 @@ func (s *ClusterListener) Create(ctx context.Context, in *protocol.ClusterCreate
 	defer fail.OnExitConvertToGRPCStatus(&err)
 	defer fail.OnExitWrapError(&err, "cannot create cluster")
 
+	logrus.Debugf("ctx: %v", ctx)
+	logrus.Debugf("in: %v", in)
+
 	if s == nil {
 		return nil, fail.InvalidInstanceError()
 	}
