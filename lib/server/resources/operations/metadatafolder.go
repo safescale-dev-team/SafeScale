@@ -18,14 +18,15 @@ package operations
 
 import (
 	"bytes"
-	"github.com/CS-SI/SafeScale/lib/utils/retry"
-	"github.com/CS-SI/SafeScale/lib/utils/retry/enums/verdict"
-
+	"encoding/hex"
 	"strings"
 	"time"
+	"crypto/md5"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/CS-SI/SafeScale/lib/utils/retry"
+	"github.com/CS-SI/SafeScale/lib/utils/retry/enums/verdict"
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/objectstorage"
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
@@ -238,6 +239,9 @@ func (f folder) Write(path string, name string, content []byte) fail.Error {
 		return xerr
 	}
 
+	sourceHash := md5.New()
+	_, _ = sourceHash.Write(data)
+
 	// Read after write until the data is up-to-date (or timeout reached, considering the write as failed)
 	timeout := temporal.GetMetadataReadAfterWriteTimeout()
 	xerr := retry.Action(
@@ -247,8 +251,9 @@ func (f folder) Write(path string, name string, content []byte) fail.Error {
 				return innerErr
 			}
 
-			check := target.Bytes()
-			if !bytes.Equal(data, check) {
+			remoteHash := md5.New()
+			_, _ = remoteHash.Write(target.Bytes())
+			if hex.EncodeToString(sourceHash.Sum(nil)) != hex.EncodeToString(remoteHash.Sum(nil)) {
 				return fail.NewError("remote content is different from local reference")
 			}
 
@@ -268,7 +273,7 @@ func (f folder) Write(path string, name string, content []byte) fail.Error {
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrTimeout:
-			return fail.Wrap(xerr.Cause(), "failed to acknowledge metadata '%s:%s' write after %s", bucketName, absolutePath, temporal.FormatDuration(timeout))
+			xerr = fail.Wrap(xerr.Cause(), "failed to acknowledge metadata '%s:%s' write after %s", bucketName, absolutePath, temporal.FormatDuration(timeout))
 		}
 	}
 	return xerr

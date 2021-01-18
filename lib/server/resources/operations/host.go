@@ -18,15 +18,16 @@ package operations
 
 import (
 	"fmt"
-	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks"
-	"github.com/CS-SI/SafeScale/lib/server/resources/enums/securitygroupstate"
-	"github.com/CS-SI/SafeScale/lib/server/resources/enums/subnetproperty"
 	"os"
 	"os/user"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks"
+	"github.com/CS-SI/SafeScale/lib/server/resources/enums/securitygroupstate"
+	"github.com/CS-SI/SafeScale/lib/server/resources/enums/subnetproperty"
 
 	"github.com/sirupsen/logrus"
 
@@ -50,7 +51,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 	"github.com/CS-SI/SafeScale/lib/utils/retry"
-	"github.com/CS-SI/SafeScale/lib/utils/retry/enums/verdict"
 	"github.com/CS-SI/SafeScale/lib/utils/serialize"
 	"github.com/CS-SI/SafeScale/lib/utils/strprocess"
 	"github.com/CS-SI/SafeScale/lib/utils/temporal"
@@ -1057,10 +1057,20 @@ func (rh host) runInstallPhase(task concurrency.Task, phase userdata.Phase, user
 	if xerr != nil {
 		return xerr
 	}
+
+	if task.Aborted() {
+		return fail.AbortedError(nil)
+	}
+
 	file := fmt.Sprintf("/opt/safescale/var/tmp/user_data.%s.sh", phase)
-	if xerr = rh.PushStringToFile(task, string(content), file, "", ""); xerr != nil {
+	if xerr = rh.PushStringToFile(task, string(content), file); xerr != nil {
 		return xerr
 	}
+
+	if task.Aborted() {
+		return fail.AbortedError(nil)
+	}
+
 	command := fmt.Sprintf("sudo bash %s; exit $?", file)
 	// Executes the script on the remote host
 	retcode, _, stderr, xerr := rh.Run(task, command, outputs.COLLECT, 0, 0)
@@ -1726,8 +1736,8 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 	}
 
 	hostName := rh.GetName()
-	xerr = retry.WhileUnsuccessfulDelay1SecondWithNotify(
-		func() error {
+	// xerr = retry.WhileUnsuccessfulDelay1SecondWithNotify(
+	// 	func() error {
 			var innerXErr fail.Error
 			retCode, stdOut, stdErr, innerXErr = run(task, ssh, cmd, outs, executionTimeout)
 			if innerXErr != nil {
@@ -1738,17 +1748,23 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 					innerXErr = retry.StopRetryError(innerXErr)
 				}
 			}
-			return innerXErr
-		},
-		connectionTimeout*2, // VPL: insufficient delay ?
-		func(t retry.Try, v verdict.Enum) {
-			if v == verdict.Retry {
-				logrus.Warnf("Remote SSH service on Host '%s' is not ready, retrying...", hostName)
-			}
-		},
-	)
-	if xerr != nil {
-		switch xerr.(type) {
+
+			// if task.Aborted() {
+			// 	return fail.AbortedError(innerXErr)
+			// }
+		//
+		// 	return innerXErr
+		// },
+		// connectionTimeout*2, // VPL: insufficient delay ?
+		// func(t retry.Try, v verdict.Enum) {
+		// 	if v == verdict.Retry {
+		// 		logrus.Warnf("Remote SSH service on Host '%s' is not ready, retrying...", hostName)
+		// 	}
+		// },
+	// )
+	// if xerr != nil {
+	if innerXErr != nil {
+		switch innerXErr.(type) {
 		case *retry.ErrStopRetry:
 			xerr = fail.ToError(xerr.Cause())
 		case *fail.ErrTimeout:
@@ -1758,6 +1774,8 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 			default:
 				xerr = fail.Wrap(xerr.Cause(), "failed to connect by SSH to Host '%s' after %s", hostName, temporal.FormatDuration(connectionTimeout))
 			}
+		default:
+			xerr = innerXErr
 		}
 	}
 	return retCode, stdOut, stdErr, xerr
@@ -1767,10 +1785,12 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 // If run fails to connect to remote host, returns *fail.ErrNotAvailable
 func run(task concurrency.Task, ssh *system.SSHConfig, cmd string, outs outputs.Enum, timeout time.Duration) (int, string, string, fail.Error) {
 	// Create the command
-	sshCmd, xerr := ssh.Command(task, cmd)
+	sshCmd, xerr := ssh.NewCommand(task, cmd)
 	if xerr != nil {
 		return 0, "", "", xerr
 	}
+
+	defer func() { _ = sshCmd.Close() }()
 
 	var (
 		retcode        int
@@ -1785,6 +1805,7 @@ func run(task concurrency.Task, ssh *system.SSHConfig, cmd string, outs outputs.
 				case *fail.ErrExecution:
 					// Adds stdout annotation to xerr
 					_ = innerXErr.Annotate("stdout", stdout)
+					_ = innerXErr.Annotate("stderr", stderr)
 				}
 				return innerXErr
 			}
@@ -1794,14 +1815,16 @@ func run(task concurrency.Task, ssh *system.SSHConfig, cmd string, outs outputs.
 			}
 			return nil
 		},
-		timeout,
+		timeout+time.Minute,
 	)
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrTimeout:
 			xerr = fail.Wrap(xerr.Cause(), "failed to execute command after %s", temporal.FormatDuration(timeout))
 		case *retry.ErrStopRetry:
-			xerr = fail.ToError(xerr.Cause())
+			if xerr.Cause() != nil {
+				xerr = fail.ToError(xerr.Cause())
+			}
 		}
 	}
 	return retcode, stdout, stderr, xerr
@@ -1864,10 +1887,10 @@ func (rh host) Push(task concurrency.Task, source, target, owner, mode string, t
 
 	cmd := ""
 	if owner != "" {
-		cmd += "chown " + owner + ` '` + target + `' ;`
+		cmd += "sudo chown " + owner + ` '` + target + `' ;`
 	}
 	if mode != "" {
-		cmd += "chmod " + mode + ` '` + target + `'`
+		cmd += "sudo chmod " + mode + ` '` + target + `'`
 	}
 	if cmd != "" {
 		retcode, stdout, stderr, xerr = run(task, ssh, cmd, outputs.DISPLAY, timeout)
@@ -2540,7 +2563,12 @@ func (rh host) IsGateway(task concurrency.Task) (bool, fail.Error) {
 }
 
 // PushStringToFile creates a file 'filename' on remote 'host' with the content 'content'
-func (rh host) PushStringToFile(task concurrency.Task, content string, filename string, owner, mode string) (xerr fail.Error) {
+func (rh host) PushStringToFile(task concurrency.Task, content string, filename string) (xerr fail.Error) {
+	return rh.PushStringToFileWithOwnership(task, content, filename, "", "")
+}
+
+// PushStringToFileWithOwnership creates a file 'filename' on remote 'host' with the content 'content', and apply ownership
+func (rh host) PushStringToFileWithOwnership(task concurrency.Task, content string, filename string, owner, mode string) (xerr fail.Error) {
 	if rh.IsNull() {
 		return fail.InvalidInstanceError()
 	}
@@ -2814,7 +2842,7 @@ func (rh *host) UnbindSecurityGroup(task concurrency.Task, sg resources.Security
 			for k, v := range hsgV1.ByID {
 				if k == sgID {
 					if v.FromSubnet {
-						return fail.InvalidRequestError("cannot unbind a security group from host when from subnet")
+						return fail.InvalidRequestError("cannot unbind Security Group '%s': inherited from Subnet", sg.GetName())
 					}
 					found = true
 					break
