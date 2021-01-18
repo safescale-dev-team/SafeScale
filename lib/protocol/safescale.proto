@@ -19,7 +19,6 @@ option go_package = ".;protocol";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-// import "protoc-gen-openapiv2/options/annotations.proto";
 
 // for rest
 import "annotations.proto";
@@ -215,7 +214,10 @@ message NetworkListRequest {
 
 service NetworkService {
 	rpc Create(NetworkCreateRequest) returns (Network){
-		option (google.api.http).post = "/v1/network";														
+		option (google.api.http) = {
+			post: "/v1/network"
+			body: "*"
+		};														
 	}
 	rpc List(NetworkListRequest) returns (NetworkList){
 		option (google.api.http).get = "/v1/networks";																
@@ -305,7 +307,10 @@ message SubnetSecurityGroupBondsRequest {
 
 service SubnetService {
 	rpc Create(SubnetCreateRequest) returns (Subnet){
-		option (google.api.http).post = "/v1/network/{network.id}/subnet";																
+		option (google.api.http) = {
+			post: "/v1/network/{network.id}/subnet"
+			body: "*"
+		};																
 	}
 	rpc List(SubnetListRequest) returns (SubnetList){
 		option (google.api.http).get = "/v1/{network.id}/subnets";																
@@ -417,12 +422,17 @@ message HostListRequest {
 
 service HostService {
 	rpc Create(HostDefinition) returns (Host){
-		option (google.api.http).post = "/v1/host";		
+		option (google.api.http) = {
+			post: "/v1/host"
+			body: "*"		
+		};
 	}
 	rpc Inspect(Reference) returns (Host){
 		option (google.api.http).get = "/v1/host/{id}";						
 	}
-	rpc Status(Reference) returns (HostStatus){}
+	rpc Status(Reference) returns (HostStatus){
+		option (google.api.http).get = "/v1/host/{id}/status";						
+	}
 	rpc List(HostListRequest) returns (HostList){
 		option (google.api.http).get = "/v1/hosts";		
 	}
@@ -439,7 +449,10 @@ service HostService {
 		option (google.api.http).post = "/v1/host/{id}/reboot";								
 	}
 	rpc Resize(HostDefinition) returns (Host){
-		option (google.api.http).post = "/v1/host/{name}/resize";										
+		option (google.api.http) = {
+			post: "/v1/host/{name}/resize"
+			body: "*"
+		};										
 	}
 	rpc SSH(Reference) returns (SshConfig){
 		option (google.api.http).post = "/v1/host/{id}/ssh";												
@@ -548,10 +561,20 @@ message VolumeListResponse {
 
 service VolumeService {
 	rpc Create(VolumeCreateRequest) returns (VolumeInspectResponse) {
-		option (google.api.http).post = "/v1/volume";																		
+		option (google.api.http) = {
+			post: "/v1/volume"
+			body: "*"
+		};																		
 	}
-	rpc Attach(VolumeAttachmentRequest) returns (google.protobuf.Empty) {}
-	rpc Detach(VolumeDetachmentRequest) returns (google.protobuf.Empty){}
+	rpc Attach(VolumeAttachmentRequest) returns (google.protobuf.Empty){
+		option (google.api.http) = {
+			post: "/v1/volume/{volume.id}/attach/{host.id}"
+			body: "*"
+		};						
+	}
+	rpc Detach(VolumeDetachmentRequest) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/volume/{volume.id}/detach/{host.id}";						
+	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/volume/{id}";																		
 	}
@@ -559,7 +582,7 @@ service VolumeService {
 		option (google.api.http).post = "/v1/volumes";																		
 	}
 	rpc Inspect(Reference) returns (VolumeInspectResponse){
-	option (google.api.http).delete = "/v1/volume/{id}";																		
+		option (google.api.http).get = "/v1/volume/{id}";																		
 	}
 }
 
@@ -586,10 +609,20 @@ message BucketMountingPoint {
 
 service BucketService {
 	rpc Create(Bucket) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/bucket";																		
+		option (google.api.http) = {
+			post: "/v1/bucket"
+			body: "*"
+		};																		
 	}
-	rpc Mount(BucketMountingPoint) returns (google.protobuf.Empty){}
-	rpc Unmount(BucketMountingPoint) returns (google.protobuf.Empty){}
+	rpc Mount(BucketMountingPoint) returns (google.protobuf.Empty){
+		option (google.api.http) = {
+			post: "/v1/bucket/{bucket}/mount/{host.id}"
+			body: "*"
+		};																		
+	}
+	rpc Unmount(BucketMountingPoint) returns (google.protobuf.Empty){
+		option (google.api.http).post = "/v1/bucket/{bucket}/umount/{host.id}";																		
+	}
 	rpc Delete(Bucket) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/bucket/{name}";																				
 	}
@@ -858,7 +891,10 @@ service ClusterService {
 		option (google.api.http).get = "/v1/cluster/{id}";																								
 	}
 	rpc Create(ClusterCreateRequest) returns (ClusterResponse){
-		option (google.api.http).post = "/v1/cluster";																								
+		option (google.api.http) = {
+			post: "/v1/cluster"
+			body: "*"		
+		};
 	}
 	rpc Delete(ClusterDeleteRequest) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/cluster/{name}";																								

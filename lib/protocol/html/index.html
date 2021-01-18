@@ -200,6 +200,8 @@ font-style: italic;
   <li><a href="#bucketServiceDelete"><code><span class="http-method">delete</span> /v1/bucket/{name}</code></a></li>
   <li><a href="#bucketServiceInspect"><code><span class="http-method">get</span> /v1/bucket/{name}</code></a></li>
   <li><a href="#bucketServiceList"><code><span class="http-method">get</span> /v1/buckets</code></a></li>
+  <li><a href="#bucketServiceMount"><code><span class="http-method">post</span> /v1/bucket/{bucket}/mount/{host.id}</code></a></li>
+  <li><a href="#bucketServiceUnmount"><code><span class="http-method">post</span> /v1/bucket/{bucket}/umount/{host.id}</code></a></li>
   </ul>
   <h4><a href="#ClusterService">ClusterService</a></h4>
   <ul>
@@ -232,6 +234,7 @@ font-style: italic;
   <li><a href="#hostServiceResize"><code><span class="http-method">post</span> /v1/host/{name}/resize</code></a></li>
   <li><a href="#hostServiceSSH"><code><span class="http-method">post</span> /v1/host/{id}/ssh</code></a></li>
   <li><a href="#hostServiceStart"><code><span class="http-method">post</span> /v1/host/{id}/start</code></a></li>
+  <li><a href="#hostServiceStatus"><code><span class="http-method">get</span> /v1/host/{id}/status</code></a></li>
   <li><a href="#hostServiceStop"><code><span class="http-method">post</span> /v1/host/{id}/stop</code></a></li>
   </ul>
   <h4><a href="#ImageService">ImageService</a></h4>
@@ -267,8 +270,11 @@ font-style: italic;
   </ul>
   <h4><a href="#VolumeService">VolumeService</a></h4>
   <ul>
+  <li><a href="#volumeServiceAttach"><code><span class="http-method">post</span> /v1/volume/{volume.id}/attach/{host.id}</code></a></li>
   <li><a href="#volumeServiceCreate"><code><span class="http-method">post</span> /v1/volume</code></a></li>
-  <li><a href="#volumeServiceInspect"><code><span class="http-method">delete</span> /v1/volume/{id}</code></a></li>
+  <li><a href="#volumeServiceDelete"><code><span class="http-method">delete</span> /v1/volume/{id}</code></a></li>
+  <li><a href="#volumeServiceDetach"><code><span class="http-method">post</span> /v1/volume/{volume.id}/detach/{host.id}</code></a></li>
+  <li><a href="#volumeServiceInspect"><code><span class="http-method">get</span> /v1/volume/{id}</code></a></li>
   <li><a href="#volumeServiceList"><code><span class="http-method">post</span> /v1/volumes</code></a></li>
   </ul>
 
@@ -281,7 +287,19 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#Bucket">Bucket</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -457,6 +475,110 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="bucketServiceMount"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/bucket/{bucket}/mount/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">bucketServiceMount</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">bucket (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#BucketMountingPoint">BucketMountingPoint</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="bucketServiceUnmount"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/bucket/{bucket}/umount/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">bucketServiceUnmount</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">bucket (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <h1><a name="ClusterService">ClusterService</a></h1>
   <div class="method"><a name="clusterServiceCreate"/>
     <div class="method-path">
@@ -466,7 +588,19 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#ClusterCreateRequest">ClusterCreateRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -2162,7 +2296,19 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#HostDefinition">HostDefinition</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -2463,7 +2609,19 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#HostDefinition">HostDefinition</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -2606,6 +2764,64 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="hostServiceStatus"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/host/{id}/status</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceStatus</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#HostStatus">HostStatus</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "name" : "name",
+  "status" : "status"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#HostStatus">HostStatus</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="hostServiceStop"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -2717,7 +2933,19 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#NetworkCreateRequest">NetworkCreateRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -3404,7 +3632,19 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#SubnetCreateRequest">SubnetCreateRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -3911,6 +4151,64 @@ font-style: italic;
   </div> <!-- method -->
   <hr/>
   <h1><a name="VolumeService">VolumeService</a></h1>
+  <div class="method"><a name="volumeServiceAttach"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/volume/{volume.id}/attach/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">volumeServiceAttach</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">volume.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#VolumeAttachmentRequest">VolumeAttachmentRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="volumeServiceCreate"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -3919,7 +4217,19 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
 
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#VolumeCreateRequest">VolumeCreateRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
 
 
 
@@ -3985,10 +4295,108 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
-  <div class="method"><a name="volumeServiceInspect"/>
+  <div class="method"><a name="volumeServiceDelete"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
     <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/volume/{id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">volumeServiceDelete</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="volumeServiceDetach"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/volume/{volume.id}/detach/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">volumeServiceDetach</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">volume.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="volumeServiceInspect"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/volume/{id}</code></pre></div>
     <div class="method-summary"> (<span class="nickname">volumeServiceInspect</span>)</div>
     <div class="method-notes"></div>
 
@@ -4194,6 +4602,7 @@ font-style: italic;
     <li><a href="#ClusterComplexity"><code>ClusterComplexity</code> - </a></li>
     <li><a href="#ClusterComposite"><code>ClusterComposite</code> - </a></li>
     <li><a href="#ClusterControlplane"><code>ClusterControlplane</code> - </a></li>
+    <li><a href="#ClusterCreateRequest"><code>ClusterCreateRequest</code> - </a></li>
     <li><a href="#ClusterDefaults"><code>ClusterDefaults</code> - </a></li>
     <li><a href="#ClusterFlavor"><code>ClusterFlavor</code> - </a></li>
     <li><a href="#ClusterIdentity"><code>ClusterIdentity</code> - </a></li>
@@ -4209,6 +4618,7 @@ font-style: italic;
     <li><a href="#FeatureTargetType"><code>FeatureTargetType</code> - </a></li>
     <li><a href="#GatewayDefinition"><code>GatewayDefinition</code> - </a></li>
     <li><a href="#Host"><code>Host</code> - </a></li>
+    <li><a href="#HostDefinition"><code>HostDefinition</code> - </a></li>
     <li><a href="#HostList"><code>HostList</code> - </a></li>
     <li><a href="#HostSizing"><code>HostSizing</code> - </a></li>
     <li><a href="#HostState"><code>HostState</code> - <ul>
@@ -4230,6 +4640,7 @@ font-style: italic;
     <li><a href="#KeyValue"><code>KeyValue</code> - </a></li>
     <li><a href="#NFSExportOptions"><code>NFSExportOptions</code> - </a></li>
     <li><a href="#Network"><code>Network</code> - </a></li>
+    <li><a href="#NetworkCreateRequest"><code>NetworkCreateRequest</code> - </a></li>
     <li><a href="#NetworkList"><code>NetworkList</code> - </a></li>
     <li><a href="#NetworkState"><code>NetworkState</code> - </a></li>
     <li><a href="#PublicIPListResponse"><code>PublicIPListResponse</code> - </a></li>
@@ -4250,6 +4661,7 @@ font-style: italic;
     <li><a href="#SshConfig"><code>SshConfig</code> - </a></li>
     <li><a href="#SshResponse"><code>SshResponse</code> - </a></li>
     <li><a href="#Subnet"><code>Subnet</code> - </a></li>
+    <li><a href="#SubnetCreateRequest"><code>SubnetCreateRequest</code> - </a></li>
     <li><a href="#SubnetList"><code>SubnetList</code> - </a></li>
     <li><a href="#SubnetState"><code>SubnetState</code> - </a></li>
     <li><a href="#TemplateList"><code>TemplateList</code> - </a></li>
@@ -4262,7 +4674,9 @@ font-style: italic;
     <li><a href="#TenantName"><code>TenantName</code> - </a></li>
     <li><a href="#TenantObjectStorage"><code>TenantObjectStorage</code> - </a></li>
     <li><a href="#VirtualIp"><code>VirtualIp</code> - </a></li>
+    <li><a href="#VolumeAttachmentRequest"><code>VolumeAttachmentRequest</code> - </a></li>
     <li><a href="#VolumeAttachmentResponse"><code>VolumeAttachmentResponse</code> - </a></li>
+    <li><a href="#VolumeCreateRequest"><code>VolumeCreateRequest</code> - </a></li>
     <li><a href="#VolumeInspectResponse"><code>VolumeInspectResponse</code> - </a></li>
     <li><a href="#VolumeListResponse"><code>VolumeListResponse</code> - </a></li>
     <li><a href="#VolumeSpeed"><code>VolumeSpeed</code> - </a></li>
@@ -4311,6 +4725,26 @@ font-style: italic;
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">vip (optional)</div><div class="param-desc"><span class="param-type"><a href="#VirtualIp">VirtualIp</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="ClusterCreateRequest"><code>ClusterCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">complexity (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterComplexity">ClusterComplexity</a></span>  </div>
+<div class="param">flavor (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterFlavor">ClusterFlavor</a></span>  </div>
+<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">cidr (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">disabled (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+<div class="param">os (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">globalSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">gatewaySizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">masterSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">nodeSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">nodeCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4466,6 +4900,28 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
+    <h3><a name="HostDefinition"><code>HostDefinition</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">network (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">cpuCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">ram (optional)</div><div class="param-desc"><span class="param-type"><a href="#float">Float</a></span>  format: float</div>
+<div class="param">disk (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">imageId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">public (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">gpuCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">cpuFreq (optional)</div><div class="param-desc"><span class="param-type"><a href="#float">Float</a></span>  format: float</div>
+<div class="param">force (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">sizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#HostSizing">HostSizing</a></span>  </div>
+<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">sizingAsString (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">subnets (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
     <h3><a name="HostList"><code>HostList</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -4586,6 +5042,21 @@ font-style: italic;
 <div class="param">state (optional)</div><div class="param-desc"><span class="param-type"><a href="#NetworkState">NetworkState</a></span>  </div>
 <div class="param">subnets (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
 <div class="param">dnsServers (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="NetworkCreateRequest"><code>NetworkCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">cidr (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">gateway (optional)</div><div class="param-desc"><span class="param-type"><a href="#GatewayDefinition">GatewayDefinition</a></span>  </div>
+<div class="param">failOver (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">dnsServers (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+<div class="param">noSubnet (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4773,6 +5244,19 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
+    <h3><a name="SubnetCreateRequest"><code>SubnetCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">network (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
+<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">cidr (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">gateway (optional)</div><div class="param-desc"><span class="param-type"><a href="#GatewayDefinition">GatewayDefinition</a></span>  </div>
+<div class="param">failOver (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
     <h3><a name="SubnetList"><code>SubnetList</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -4885,6 +5369,18 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
+    <h3><a name="VolumeAttachmentRequest"><code>VolumeAttachmentRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">volume (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
+<div class="param">host (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
+<div class="param">mountPath (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">format (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">device (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">doNotFormat (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
     <h3><a name="VolumeAttachmentResponse"><code>VolumeAttachmentResponse</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -4893,6 +5389,16 @@ font-style: italic;
 <div class="param">format (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">device (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">doNotFormat (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="VolumeCreateRequest"><code>VolumeCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">speed (optional)</div><div class="param-desc"><span class="param-type"><a href="#VolumeSpeed">VolumeSpeed</a></span>  </div>
+<div class="param">size (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

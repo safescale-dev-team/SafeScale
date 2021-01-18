@@ -75,6 +75,96 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Bucket"
+            }
+          }
+        ],
+        "tags": [
+          "BucketService"
+        ]
+      }
+    },
+    "/v1/bucket/{bucket}/mount/{host.id}": {
+      "post": {
+        "operationId": "BucketService_Mount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BucketMountingPoint"
+            }
+          }
+        ],
+        "tags": [
+          "BucketService"
+        ]
+      }
+    },
+    "/v1/bucket/{bucket}/umount/{host.id}": {
+      "post": {
+        "operationId": "BucketService_Unmount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bucket",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
         "tags": [
           "BucketService"
         ]
@@ -177,6 +267,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "ClusterService"
         ]
@@ -875,6 +975,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HostDefinition"
+            }
+          }
+        ],
         "tags": [
           "HostService"
         ]
@@ -1052,6 +1162,48 @@
         ]
       }
     },
+    "/v1/host/{id}/status": {
+      "get": {
+        "operationId": "HostService_Status",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/HostStatus"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
     "/v1/host/{id}/stop": {
       "post": {
         "operationId": "HostService_Stop",
@@ -1105,6 +1257,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HostDefinition"
+            }
           }
         ],
         "tags": [
@@ -1201,6 +1361,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NetworkCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "NetworkService"
         ]
@@ -1311,6 +1481,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SubnetCreateRequest"
+            }
           }
         ],
         "tags": [
@@ -1621,13 +1799,23 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "VolumeService"
         ]
       }
     },
     "/v1/volume/{id}": {
-      "delete": {
+      "get": {
         "operationId": "VolumeService_Inspect",
         "responses": {
           "200": {
@@ -1660,6 +1848,126 @@
             "name": "name",
             "in": "query",
             "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VolumeService"
+        ]
+      },
+      "delete": {
+        "operationId": "VolumeService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VolumeService"
+        ]
+      }
+    },
+    "/v1/volume/{volume.id}/attach/{host.id}": {
+      "post": {
+        "operationId": "VolumeService_Attach",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "volume.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeAttachmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "VolumeService"
+        ]
+      }
+    },
+    "/v1/volume/{volume.id}/detach/{host.id}": {
+      "post": {
+        "operationId": "VolumeService_Detach",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "volume.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
             "type": "string"
           }
         ],
@@ -1859,6 +2167,57 @@
       "properties": {
         "vip": {
           "$ref": "#/definitions/VirtualIp"
+        }
+      }
+    },
+    "ClusterCreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "complexity": {
+          "$ref": "#/definitions/ClusterComplexity"
+        },
+        "flavor": {
+          "$ref": "#/definitions/ClusterFlavor"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "cidr": {
+          "type": "string"
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "os": {
+          "type": "string"
+        },
+        "globalSizing": {
+          "type": "string"
+        },
+        "gatewaySizing": {
+          "type": "string"
+        },
+        "masterSizing": {
+          "type": "string"
+        },
+        "nodeSizing": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "nodeCount": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -2170,6 +2529,67 @@
         }
       }
     },
+    "HostDefinition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "network": {
+          "type": "string"
+        },
+        "cpuCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ram": {
+          "type": "number",
+          "format": "float"
+        },
+        "disk": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "imageId": {
+          "type": "string"
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "gpuCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cpuFreq": {
+          "type": "number",
+          "format": "float"
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "sizing": {
+          "$ref": "#/definitions/HostSizing"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "sizingAsString": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subnets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "HostList": {
       "type": "object",
       "properties": {
@@ -2388,6 +2808,41 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "NetworkCreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cidr": {
+          "type": "string"
+        },
+        "gateway": {
+          "$ref": "#/definitions/GatewayDefinition"
+        },
+        "failOver": {
+          "type": "boolean"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "dnsServers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "noSubnet": {
+          "type": "boolean"
         }
       }
     },
@@ -2741,6 +3196,32 @@
         }
       }
     },
+    "SubnetCreateRequest": {
+      "type": "object",
+      "properties": {
+        "network": {
+          "$ref": "#/definitions/Reference"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cidr": {
+          "type": "string"
+        },
+        "gateway": {
+          "$ref": "#/definitions/GatewayDefinition"
+        },
+        "failOver": {
+          "type": "boolean"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        }
+      }
+    },
     "SubnetList": {
       "type": "object",
       "properties": {
@@ -2942,6 +3423,29 @@
         }
       }
     },
+    "VolumeAttachmentRequest": {
+      "type": "object",
+      "properties": {
+        "volume": {
+          "$ref": "#/definitions/Reference"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
+        },
+        "mountPath": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        },
+        "doNotFormat": {
+          "type": "boolean"
+        }
+      }
+    },
     "VolumeAttachmentResponse": {
       "type": "object",
       "properties": {
@@ -2959,6 +3463,24 @@
         },
         "doNotFormat": {
           "type": "boolean"
+        }
+      }
+    },
+    "VolumeCreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "speed": {
+          "$ref": "#/definitions/VolumeSpeed"
+        },
+        "size": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tenantId": {
+          "type": "string"
         }
       }
     },
