@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020, CS Systemes d'Information, http://csgroup.eu
+ * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -191,9 +191,10 @@ func executeScript(task concurrency.Task, sshconfig system.SSHConfig, name strin
 	)
 
 	if !hidesOutput {
-		cmd = fmt.Sprintf("chmod u+rwx %s; bash -c %s;exit ${PIPESTATUS}", filename, filename)
+		cmd = fmt.Sprintf("chmod u+rwx %s; bash -c %s; exit ${PIPESTATUS}", filename, filename)
 	} else {
-		cmd = fmt.Sprintf("chmod u+rwx %s; export BASH_XTRACEFD=7; bash -c %s 7> /tmp/captured 2>&1;retcode=${PIPESTATUS};cat /tmp/captured; rm /tmp/captured;exit ${retcode}", filename, filename)
+//		cmd = fmt.Sprintf("chmod u+rwx %s; export BASH_XTRACEFD=7; bash -c %s 7> /tmp/captured 2>&1;retcode=${PIPESTATUS};cat /tmp/captured; rm /tmp/captured;exit ${retcode}", filename, filename)
+		cmd = fmt.Sprintf("chmod u+rwx %s; captf=$(mktemp); export BASH_XTRACEFD=7; bash -c %s 7>$captf 2>&1; rc=${PIPESTATUS}; cat $captf; rm $captf; exit ${rc}", filename, filename)
 	}
 
 	retryErr = retry.Action(

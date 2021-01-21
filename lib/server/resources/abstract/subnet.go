@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020, CS Systemes d'Information, http://csgroup.eu
+ * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,12 +49,6 @@ type SubnetRequest struct {
 	DefaultSshPort uint32         // contains the port to use for SSH on all hosts of the subnet by default
 	KeepOnFailure  bool           // tells if resources have to be kept in case of failure (default behavior is to delete them)
 }
-
-//// FIXME: comment!
-//type SubNetwork struct {
-//	Targets string `json:"subnetmask,omitempty"` // FIXME: comment!
-//	ID   string `json:"subnetid,omitempty"`   // FIXME: comment!
-//}
 
 // Subnet represents a subnet
 type Subnet struct {

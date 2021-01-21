@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020, CS Systemes d'Information, http://csgroup.eu
+ * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -273,8 +273,9 @@ func (rn *network) Delete(task concurrency.Task) (xerr fail.Error) {
 							return xerr
 						}
 					} else {
+						subnetName := rs.GetName()
 						if xerr = rs.Delete(task); xerr != nil {
-							return xerr
+							return fail.Wrap(xerr, "failed to delete Subnet '%s'", subnetName)
 						}
 					}
 				}

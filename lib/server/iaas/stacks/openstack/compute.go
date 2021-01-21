@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020, CS Systemes d'Information, http://csgroup.eu
+ * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -680,7 +680,7 @@ func (s Stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 	// --- Initializes abstract.HostCore ---
 
 	ahc := abstract.NewHostCore()
-	ahc.PrivateKey = request.KeyPair.PrivateKey
+	ahc.PrivateKey = userData.FirstPrivateKey
 	ahc.Password = request.Password
 
 	// --- query provider for host creation ---
@@ -861,6 +861,10 @@ func (s Stack) CreateHost(request abstract.HostRequest) (host *abstract.HostFull
 
 	logrus.Infoln(msgSuccess)
 	return newHost, userData, nil
+}
+
+func (s Stack) GetMetadataOfInstance(id string) (map[string]string, fail.Error) {
+	return s.rpcGetMetadataOfInstance(id)
 }
 
 // identifyOpenstackSubnetsAndPorts ...
