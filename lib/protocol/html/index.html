@@ -626,6 +626,7 @@ font-style: italic;
   "controlplane" : {
     "vip" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -639,6 +640,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -660,6 +662,7 @@ font-style: italic;
     }
   },
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -673,6 +676,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -687,34 +691,46 @@ font-style: italic;
     "ram" : 6.0274563
   } ],
   "defaults" : {
+    "gatewayOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    },
+    "nodeOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    },
     "nodeSizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
     "gatewaySizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
     "masterSizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
-    "Image" : "Image"
+    "Image" : "Image",
+    "masterOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    }
   },
   "identity" : {
     "privateKey" : "privateKey",
@@ -725,6 +741,7 @@ font-style: italic;
     "tenants" : [ "tenants", "tenants" ]
   },
   "masters" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -738,6 +755,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -926,6 +944,7 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -939,6 +958,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1008,6 +1028,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -1086,6 +1107,7 @@ font-style: italic;
   "controlplane" : {
     "vip" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -1099,6 +1121,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -1120,6 +1143,7 @@ font-style: italic;
     }
   },
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1133,6 +1157,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1147,34 +1172,46 @@ font-style: italic;
     "ram" : 6.0274563
   } ],
   "defaults" : {
+    "gatewayOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    },
+    "nodeOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    },
     "nodeSizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
     "gatewaySizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
     "masterSizing" : {
       "minCpuCount" : 5,
-      "minCpuFreq" : 2.027123,
-      "maxCpuCount" : 5,
-      "maxRamSize" : 7.0614014,
-      "minRamSize" : 2.302136,
-      "minDiskSize" : 9,
-      "gpuCount" : 3
+      "minCpuFreq" : 4.145608,
+      "maxCpuCount" : 2,
+      "maxRamSize" : 9.301444,
+      "minRamSize" : 7.0614014,
+      "minDiskSize" : 3,
+      "gpuCount" : 2
     },
-    "Image" : "Image"
+    "Image" : "Image",
+    "masterOptions" : {
+      "sshPort" : 7,
+      "hostNamePattern" : "hostNamePattern"
+    }
   },
   "identity" : {
     "privateKey" : "privateKey",
@@ -1185,6 +1222,7 @@ font-style: italic;
     "tenants" : [ "tenants", "tenants" ]
   },
   "masters" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1198,6 +1236,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1289,6 +1328,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -1359,6 +1399,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -1434,6 +1475,7 @@ font-style: italic;
     "controlplane" : {
       "vip" : {
         "hosts" : [ {
+          "sshPort" : 5,
           "privateIp" : "privateIp",
           "cpu" : 0,
           "publicIp" : "publicIp",
@@ -1447,6 +1489,7 @@ font-style: italic;
           "gatewayId" : "gatewayId",
           "ram" : 6.0274563
         }, {
+          "sshPort" : 5,
           "privateIp" : "privateIp",
           "cpu" : 0,
           "publicIp" : "publicIp",
@@ -1468,6 +1511,7 @@ font-style: italic;
       }
     },
     "nodes" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1481,6 +1525,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1495,34 +1540,46 @@ font-style: italic;
       "ram" : 6.0274563
     } ],
     "defaults" : {
+      "gatewayOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      },
+      "nodeOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      },
       "nodeSizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
       "gatewaySizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
       "masterSizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
-      "Image" : "Image"
+      "Image" : "Image",
+      "masterOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      }
     },
     "identity" : {
       "privateKey" : "privateKey",
@@ -1533,6 +1590,7 @@ font-style: italic;
       "tenants" : [ "tenants", "tenants" ]
     },
     "masters" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1546,6 +1604,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1590,6 +1649,7 @@ font-style: italic;
     "controlplane" : {
       "vip" : {
         "hosts" : [ {
+          "sshPort" : 5,
           "privateIp" : "privateIp",
           "cpu" : 0,
           "publicIp" : "publicIp",
@@ -1603,6 +1663,7 @@ font-style: italic;
           "gatewayId" : "gatewayId",
           "ram" : 6.0274563
         }, {
+          "sshPort" : 5,
           "privateIp" : "privateIp",
           "cpu" : 0,
           "publicIp" : "publicIp",
@@ -1624,6 +1685,7 @@ font-style: italic;
       }
     },
     "nodes" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1637,6 +1699,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1651,34 +1714,46 @@ font-style: italic;
       "ram" : 6.0274563
     } ],
     "defaults" : {
+      "gatewayOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      },
+      "nodeOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      },
       "nodeSizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
       "gatewaySizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
       "masterSizing" : {
         "minCpuCount" : 5,
-        "minCpuFreq" : 2.027123,
-        "maxCpuCount" : 5,
-        "maxRamSize" : 7.0614014,
-        "minRamSize" : 2.302136,
-        "minDiskSize" : 9,
-        "gpuCount" : 3
+        "minCpuFreq" : 4.145608,
+        "maxCpuCount" : 2,
+        "maxRamSize" : 9.301444,
+        "minRamSize" : 7.0614014,
+        "minDiskSize" : 3,
+        "gpuCount" : 2
       },
-      "Image" : "Image"
+      "Image" : "Image",
+      "masterOptions" : {
+        "sshPort" : 7,
+        "hostNamePattern" : "hostNamePattern"
+      }
     },
     "identity" : {
       "privateKey" : "privateKey",
@@ -1689,6 +1764,7 @@ font-style: italic;
       "tenants" : [ "tenants", "tenants" ]
     },
     "masters" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1702,6 +1778,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -1793,6 +1870,7 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1806,6 +1884,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1876,6 +1955,7 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1889,6 +1969,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1951,6 +2032,7 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "nodes" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -1964,6 +2046,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -2324,6 +2407,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -2444,6 +2528,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -2507,6 +2592,7 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "hosts" : [ {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -2520,6 +2606,7 @@ font-style: italic;
     "gatewayId" : "gatewayId",
     "ram" : 6.0274563
   }, {
+    "sshPort" : 5,
     "privateIp" : "privateIp",
     "cpu" : 0,
     "publicIp" : "publicIp",
@@ -2637,6 +2724,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
+  "sshPort" : 5,
   "privateIp" : "privateIp",
   "cpu" : 0,
   "publicIp" : "publicIp",
@@ -2971,6 +3059,7 @@ font-style: italic;
   "secondaryGatewayId" : "secondaryGatewayId",
   "virtualIp" : {
     "hosts" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -2984,6 +3073,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3121,6 +3211,7 @@ font-style: italic;
   "secondaryGatewayId" : "secondaryGatewayId",
   "virtualIp" : {
     "hosts" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3134,6 +3225,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3214,6 +3306,7 @@ font-style: italic;
     "secondaryGatewayId" : "secondaryGatewayId",
     "virtualIp" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3227,6 +3320,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3257,6 +3351,7 @@ font-style: italic;
     "secondaryGatewayId" : "secondaryGatewayId",
     "virtualIp" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3270,6 +3365,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3668,6 +3764,7 @@ font-style: italic;
   "gatewayIds" : [ "gatewayIds", "gatewayIds" ],
   "virtualIp" : {
     "hosts" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3681,6 +3778,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3828,6 +3926,7 @@ font-style: italic;
   "gatewayIds" : [ "gatewayIds", "gatewayIds" ],
   "virtualIp" : {
     "hosts" : [ {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3841,6 +3940,7 @@ font-style: italic;
       "gatewayId" : "gatewayId",
       "ram" : 6.0274563
     }, {
+      "sshPort" : 5,
       "privateIp" : "privateIp",
       "cpu" : 0,
       "publicIp" : "publicIp",
@@ -3927,6 +4027,7 @@ font-style: italic;
     "gatewayIds" : [ "gatewayIds", "gatewayIds" ],
     "virtualIp" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3940,6 +4041,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3968,6 +4070,7 @@ font-style: italic;
     "gatewayIds" : [ "gatewayIds", "gatewayIds" ],
     "virtualIp" : {
       "hosts" : [ {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -3981,6 +4084,7 @@ font-style: italic;
         "gatewayId" : "gatewayId",
         "ram" : 6.0274563
       }, {
+        "sshPort" : 5,
         "privateIp" : "privateIp",
         "cpu" : 0,
         "publicIp" : "publicIp",
@@ -4605,6 +4709,7 @@ font-style: italic;
     <li><a href="#ClusterCreateRequest"><code>ClusterCreateRequest</code> - </a></li>
     <li><a href="#ClusterDefaults"><code>ClusterDefaults</code> - </a></li>
     <li><a href="#ClusterFlavor"><code>ClusterFlavor</code> - </a></li>
+    <li><a href="#ClusterHostOptions"><code>ClusterHostOptions</code> - </a></li>
     <li><a href="#ClusterIdentity"><code>ClusterIdentity</code> - </a></li>
     <li><a href="#ClusterListResponse"><code>ClusterListResponse</code> - </a></li>
     <li><a href="#ClusterNetwork"><code>ClusterNetwork</code> - </a></li>
@@ -4621,16 +4726,7 @@ font-style: italic;
     <li><a href="#HostDefinition"><code>HostDefinition</code> - </a></li>
     <li><a href="#HostList"><code>HostList</code> - </a></li>
     <li><a href="#HostSizing"><code>HostSizing</code> - </a></li>
-    <li><a href="#HostState"><code>HostState</code> - <ul>
-<li>HS_STOPPED: STOPPED host is stopped</li>
-<li>HS_STARTING: STARTING host is starting</li>
-<li>HS_STARTED: STARTED host is started</li>
-<li>HS_STOPPING: STOPPING host is stopping</li>
-<li>HS_ERROR: ERROR host is in error state</li>
-<li>HS_TERMINATED: TERMINATED host is terminated (in AWS, it's like DELETED)</li>
-<li>HS_UNKNOWN: UNKNOWN is unknown</li>
-</ul>
-</a></li>
+    <li><a href="#HostState"><code>HostState</code> - </a></li>
     <li><a href="#HostStatus"><code>HostStatus</code> - </a></li>
     <li><a href="#HostTemplate"><code>HostTemplate</code> - </a></li>
     <li><a href="#Image"><code>Image</code> - </a></li>
@@ -4745,6 +4841,9 @@ font-style: italic;
 <div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">nodeCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
+<div class="param">gatewayOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">masterOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">nodeOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4755,6 +4854,9 @@ font-style: italic;
 <div class="param">masterSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#HostSizing">HostSizing</a></span>  </div>
 <div class="param">nodeSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#HostSizing">HostSizing</a></span>  </div>
 <div class="param">Image (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">gatewayOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterHostOptions">ClusterHostOptions</a></span>  </div>
+<div class="param">masterOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterHostOptions">ClusterHostOptions</a></span>  </div>
+<div class="param">nodeOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterHostOptions">ClusterHostOptions</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4762,6 +4864,14 @@ font-style: italic;
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="ClusterHostOptions"><code>ClusterHostOptions</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
+<div class="param">hostNamePattern (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
   </div>
   <div class="model">
     <h3><a name="ClusterIdentity"><code>ClusterIdentity</code> - </a> <a class="up" href="#__Models">Up</a></h3>
@@ -4878,6 +4988,7 @@ font-style: italic;
 <div class="param">gpuType (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">sizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#HostSizing">HostSizing</a></span>  </div>
 <div class="param">sizingAsString (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4897,6 +5008,7 @@ font-style: italic;
 <div class="param">osKind (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">attachedVolumeNames (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
 <div class="param">password (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4919,6 +5031,7 @@ font-style: italic;
 <div class="param">sizingAsString (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">subnets (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+<div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -4942,16 +5055,7 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="HostState"><code>HostState</code> - <ul>
-<li>HS_STOPPED: STOPPED host is stopped</li>
-<li>HS_STARTING: STARTING host is starting</li>
-<li>HS_STARTED: STARTED host is started</li>
-<li>HS_STOPPING: STOPPING host is stopping</li>
-<li>HS_ERROR: ERROR host is in error state</li>
-<li>HS_TERMINATED: TERMINATED host is terminated (in AWS, it's like DELETED)</li>
-<li>HS_UNKNOWN: UNKNOWN is unknown</li>
-</ul>
-</a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="HostState"><code>HostState</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->
@@ -5254,6 +5358,7 @@ font-style: italic;
 <div class="param">failOver (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
 <div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
+<div class="param">defaultSshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

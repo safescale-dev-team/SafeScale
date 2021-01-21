@@ -843,18 +843,6 @@ message ClusterComposite {
 }
 
 message ClusterNetwork {
-// 	option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
-// 		json_schema: {
-// 			title: "A bit of everything"
-// 			description: "Intentionaly complicated message type to cover many features of Protobuf."
-// 			required: ["uuid", "int64_value", "double_value"]
-// 		}
-// 		external_docs: {
-// 			url: "https://github.com/grpc-ecosystem/grpc-gateway";
-// 			description: "Find out more about ABitOfEverything";
-// 		}
-// 		example: "{\"uuid\": \"0cf361e1-4b44-483d-a159-54dabdf7e814\"}"
-// 	};
 	string network_id = 1;
 	string cidr = 2;
 	string domain = 3;

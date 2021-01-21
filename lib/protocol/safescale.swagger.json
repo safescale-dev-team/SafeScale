@@ -2218,6 +2218,15 @@
         "nodeCount": {
           "type": "integer",
           "format": "int64"
+        },
+        "gatewayOptions": {
+          "type": "string"
+        },
+        "masterOptions": {
+          "type": "string"
+        },
+        "nodeOptions": {
+          "type": "string"
         }
       }
     },
@@ -2235,6 +2244,15 @@
         },
         "Image": {
           "type": "string"
+        },
+        "gatewayOptions": {
+          "$ref": "#/definitions/ClusterHostOptions"
+        },
+        "masterOptions": {
+          "$ref": "#/definitions/ClusterHostOptions"
+        },
+        "nodeOptions": {
+          "$ref": "#/definitions/ClusterHostOptions"
         }
       }
     },
@@ -2246,6 +2264,18 @@
         "CF_K8S"
       ],
       "default": "CF_UNKNOWN"
+    },
+    "ClusterHostOptions": {
+      "type": "object",
+      "properties": {
+        "sshPort": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "hostNamePattern": {
+          "type": "string"
+        }
+      }
     },
     "ClusterIdentity": {
       "type": "object",
@@ -2283,8 +2313,7 @@
       "type": "object",
       "properties": {
         "networkId": {
-          "type": "string",
-          "title": "option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {\n\t\tjson_schema: {\n\t\t\ttitle: \"A bit of everything\"\n\t\t\tdescription: \"Intentionaly complicated message type to cover many features of Protobuf.\"\n\t\t\trequired: [\"uuid\", \"int64_value\", \"double_value\"]\n\t\t}\n\t\texternal_docs: {\n\t\t\turl: \"https://github.com/grpc-ecosystem/grpc-gateway\";\n\t\t\tdescription: \"Find out more about ABitOfEverything\";\n\t\t}\n\t\texample: \"{\\\"uuid\\\": \\\"0cf361e1-4b44-483d-a159-54dabdf7e814\\\"}\"\n\t};"
+          "type": "string"
         },
         "cidr": {
           "type": "string"
@@ -2476,6 +2505,10 @@
         },
         "sizingAsString": {
           "type": "string"
+        },
+        "sshPort": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -2526,6 +2559,10 @@
         },
         "password": {
           "type": "string"
+        },
+        "sshPort": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2587,6 +2624,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "sshPort": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2645,8 +2686,7 @@
         "HS_TERMINATED",
         "HS_UNKNOWN"
       ],
-      "default": "HS_STOPPED",
-      "title": "- HS_STOPPED: STOPPED host is stopped\n - HS_STARTING: STARTING host is starting\n - HS_STARTED: STARTED host is started\n - HS_STOPPING: STOPPING host is stopping\n - HS_ERROR: ERROR host is in error state\n - HS_TERMINATED: TERMINATED host is terminated (in AWS, it's like DELETED)\n - HS_UNKNOWN: UNKNOWN is unknown"
+      "default": "HS_STOPPED"
     },
     "HostStatus": {
       "type": "object",
@@ -3219,6 +3259,10 @@
         },
         "keepOnFailure": {
           "type": "boolean"
+        },
+        "defaultSshPort": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
