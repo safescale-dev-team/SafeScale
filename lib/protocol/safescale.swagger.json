@@ -267,16 +267,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ClusterCreateRequest"
-            }
-          }
-        ],
         "tags": [
           "ClusterService"
         ]
@@ -2167,66 +2157,6 @@
       "properties": {
         "vip": {
           "$ref": "#/definitions/VirtualIp"
-        }
-      }
-    },
-    "ClusterCreateRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "complexity": {
-          "$ref": "#/definitions/ClusterComplexity"
-        },
-        "flavor": {
-          "$ref": "#/definitions/ClusterFlavor"
-        },
-        "keepOnFailure": {
-          "type": "boolean"
-        },
-        "cidr": {
-          "type": "string"
-        },
-        "disabled": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "os": {
-          "type": "string"
-        },
-        "globalSizing": {
-          "type": "string"
-        },
-        "gatewaySizing": {
-          "type": "string"
-        },
-        "masterSizing": {
-          "type": "string"
-        },
-        "nodeSizing": {
-          "type": "string"
-        },
-        "domain": {
-          "type": "string"
-        },
-        "tenantId": {
-          "type": "string"
-        },
-        "nodeCount": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "gatewayOptions": {
-          "type": "string"
-        },
-        "masterOptions": {
-          "type": "string"
-        },
-        "nodeOptions": {
-          "type": "string"
         }
       }
     },

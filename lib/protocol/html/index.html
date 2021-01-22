@@ -588,19 +588,7 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#ClusterCreateRequest">ClusterCreateRequest</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -4706,7 +4694,6 @@ font-style: italic;
     <li><a href="#ClusterComplexity"><code>ClusterComplexity</code> - </a></li>
     <li><a href="#ClusterComposite"><code>ClusterComposite</code> - </a></li>
     <li><a href="#ClusterControlplane"><code>ClusterControlplane</code> - </a></li>
-    <li><a href="#ClusterCreateRequest"><code>ClusterCreateRequest</code> - </a></li>
     <li><a href="#ClusterDefaults"><code>ClusterDefaults</code> - </a></li>
     <li><a href="#ClusterFlavor"><code>ClusterFlavor</code> - </a></li>
     <li><a href="#ClusterHostOptions"><code>ClusterHostOptions</code> - </a></li>
@@ -4821,29 +4808,6 @@ font-style: italic;
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">vip (optional)</div><div class="param-desc"><span class="param-type"><a href="#VirtualIp">VirtualIp</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="ClusterCreateRequest"><code>ClusterCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">complexity (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterComplexity">ClusterComplexity</a></span>  </div>
-<div class="param">flavor (optional)</div><div class="param-desc"><span class="param-type"><a href="#ClusterFlavor">ClusterFlavor</a></span>  </div>
-<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">cidr (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">disabled (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
-<div class="param">os (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">globalSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">gatewaySizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">masterSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">nodeSizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">nodeCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
-<div class="param">gatewayOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">masterOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">nodeOptions (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

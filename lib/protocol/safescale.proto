@@ -890,7 +890,6 @@ service ClusterService {
 	rpc Create(ClusterCreateRequest) returns (ClusterResponse){
 		option (google.api.http) = {
 			post: "/v1/cluster"
-			body: "*"		
 		};
 	}
 	rpc Delete(ClusterDeleteRequest) returns (google.protobuf.Empty){
