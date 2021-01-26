@@ -2,6 +2,6 @@ package main
 // Build constants
 const (
     Version = "21.02.0-alpha"
-    BuildDate = "2021/01/25-16:16"
-    Revision = "53c7ea3a21da5664ba58b9243e6222980f785a2c"
+    BuildDate = "2021/01/26-16:32"
+    Revision = "4a388d4331b33d6c1e4ce2144eb82772ff4ea3b2"
 )

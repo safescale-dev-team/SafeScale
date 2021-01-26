@@ -75,16 +75,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Bucket"
-            }
-          }
-        ],
         "tags": [
           "BucketService"
         ]
@@ -119,14 +109,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/BucketMountingPoint"
-            }
           }
         ],
         "tags": [
@@ -948,6 +930,278 @@
         ]
       }
     },
+    "/v1/feature": {
+      "post": {
+        "operationId": "FeatureService_Add",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "FeatureService"
+        ]
+      }
+    },
+    "/v1/feature/{name}": {
+      "get": {
+        "operationId": "FeatureService_Check",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "FT_ALL",
+              "FT_HOST",
+              "FT_CLUSTER"
+            ],
+            "default": "FT_ALL"
+          },
+          {
+            "name": "targetRef.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "settings.skipProxy",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.serialize",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.ignoreFeatureRequirements",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.ignoreSizingRequirements",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.addUnconditionally",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "FeatureService"
+        ]
+      },
+      "delete": {
+        "operationId": "FeatureService_Remove",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "FT_ALL",
+              "FT_HOST",
+              "FT_CLUSTER"
+            ],
+            "default": "FT_ALL"
+          },
+          {
+            "name": "targetRef.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "settings.skipProxy",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.serialize",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.ignoreFeatureRequirements",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.ignoreSizingRequirements",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "settings.addUnconditionally",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "FeatureService"
+        ]
+      }
+    },
+    "/v1/features": {
+      "get": {
+        "operationId": "FeatureService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/FeatureListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "FT_ALL",
+              "FT_HOST",
+              "FT_CLUSTER"
+            ],
+            "default": "FT_ALL"
+          },
+          {
+            "name": "targetRef.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRef.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "installedOnly",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "FeatureService"
+        ]
+      }
+    },
     "/v1/host": {
       "post": {
         "operationId": "HostService_Create",
@@ -965,14 +1219,214 @@
             }
           }
         },
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/host/{host.id}/security_group/{group.id}/bind": {
+      "post": {
+        "operationId": "HostService_BindSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
+            "name": "host.id",
+            "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/host/{host.id}/security_group/{group.id}/disable": {
+      "post": {
+        "operationId": "HostService_DisableSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/HostDefinition"
+              "properties": {}
             }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/host/{host.id}/security_group/{group.id}/enable": {
+      "post": {
+        "operationId": "HostService_EnableSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/host/{host.id}/security_group/{group.id}/unbind": {
+      "post": {
+        "operationId": "HostService_UnbindSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HostService"
+        ]
+      }
+    },
+    "/v1/host/{host.id}/security_groups": {
+      "get": {
+        "operationId": "HostService_ListSecurityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupBondsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "group.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "host.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "host.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SGS_ALL",
+              "SGS_ENABLED",
+              "SGS_DISABLED"
+            ],
+            "default": "SGS_ALL"
           }
         ],
         "tags": [
@@ -1247,14 +1701,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/HostDefinition"
-            }
           }
         ],
         "tags": [
@@ -1471,14 +1917,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SubnetCreateRequest"
-            }
           }
         ],
         "tags": [
@@ -1546,6 +1984,258 @@
         ]
       }
     },
+    "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/bind": {
+      "post": {
+        "operationId": "SubnetService_BindSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subnet.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
+    "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/disable": {
+      "post": {
+        "operationId": "SubnetService_DisableSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subnet.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
+    "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/enable": {
+      "post": {
+        "operationId": "SubnetService_EnableSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subnet.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
+    "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/unbind": {
+      "post": {
+        "operationId": "SubnetService_UnbindSecurityGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subnet.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
+    "/v1/network/{network.id}/subnet/{subnet.id}/security_groups": {
+      "get": {
+        "operationId": "SubnetService_ListSecurityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupBondsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "network.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "subnet.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "group.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "network.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "network.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subnet.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subnet.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SGS_ALL",
+              "SGS_ENABLED",
+              "SGS_DISABLED"
+            ],
+            "default": "SGS_ALL"
+          }
+        ],
+        "tags": [
+          "SubnetService"
+        ]
+      }
+    },
     "/v1/networks": {
       "get": {
         "operationId": "NetworkService_List",
@@ -1579,6 +2269,655 @@
         ],
         "tags": [
           "NetworkService"
+        ]
+      }
+    },
+    "/v1/public_ip": {
+      "post": {
+        "operationId": "PublicIPService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PublicIPResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/public_ip/{id}": {
+      "get": {
+        "operationId": "PublicIPService_Inspect",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PublicIPResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/public_ip/{ip.id}": {
+      "delete": {
+        "operationId": "PublicIPService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ip.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ip.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ip.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/public_ip/{ip.id}/bind/{host.id}": {
+      "post": {
+        "operationId": "PublicIPService_Bind",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ip.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/public_ip/{ip.id}/unbind/{host.id}": {
+      "post": {
+        "operationId": "PublicIPService_Unbind",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ip.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/public_ips": {
+      "get": {
+        "operationId": "PublicIPService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/PublicIPListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PublicIPService"
+        ]
+      }
+    },
+    "/v1/security_group": {
+      "post": {
+        "operationId": "SecurityGroupService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{group.id}": {
+      "delete": {
+        "operationId": "SecurityGroupService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "group.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{group.id}/rule/{rule.ids}": {
+      "delete": {
+        "operationId": "SecurityGroupService_DeleteRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rule.ids",
+            "in": "path",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "minItems": 1
+          },
+          {
+            "name": "group.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "group.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rule.description",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rule.etherType",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SGRET_UNKNOWN",
+              "SGRET_IPV4",
+              "SGRET_IPV6"
+            ],
+            "default": "SGRET_UNKNOWN"
+          },
+          {
+            "name": "rule.direction",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SGRD_UNKNOWN",
+              "SGRD_INGRESS",
+              "SGRD_EGRESS"
+            ],
+            "default": "SGRD_UNKNOWN"
+          },
+          {
+            "name": "rule.protocol",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rule.portFrom",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "rule.portTo",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "rule.involved",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{group.name}/rule": {
+      "post": {
+        "operationId": "SecurityGroupService_AddRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{id}": {
+      "get": {
+        "operationId": "SecurityGroupService_Inspect",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{id}/clear": {
+      "post": {
+        "operationId": "SecurityGroupService_Clear",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{id}/reset": {
+      "post": {
+        "operationId": "SecurityGroupService_Reset",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_group/{id}/sanitize": {
+      "post": {
+        "operationId": "SecurityGroupService_Sanitize",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_groups": {
+      "get": {
+        "operationId": "SecurityGroupService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
+        ]
+      }
+    },
+    "/v1/security_groups/bonds": {
+      "get": {
+        "operationId": "SecurityGroupService_Bonds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupBondsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "target.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "target.id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "target.name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SecurityGroupService"
         ]
       }
     },
@@ -1686,6 +3025,78 @@
         ]
       }
     },
+    "/v1/share/{share.id}/host/{host.id}/mount": {
+      "post": {
+        "operationId": "ShareService_Mount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ShareMountDefinition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "share.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ShareService"
+        ]
+      }
+    },
+    "/v1/share/{share.id}/host/{host.id}/umount": {
+      "post": {
+        "operationId": "ShareService_Unmount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "share.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "host.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ShareService"
+        ]
+      }
+    },
     "/v1/shares": {
       "post": {
         "operationId": "ShareService_List",
@@ -1705,6 +3116,42 @@
         },
         "tags": [
           "ShareService"
+        ]
+      }
+    },
+    "/v1/templates": {
+      "get": {
+        "operationId": "TemplateService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TemplateList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TemplateService"
         ]
       }
     },
@@ -1789,16 +3236,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/VolumeCreateRequest"
-            }
-          }
-        ],
         "tags": [
           "VolumeService"
         ]
@@ -1915,14 +3352,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/VolumeAttachmentRequest"
-            }
           }
         ],
         "tags": [
@@ -2489,71 +3918,6 @@
         },
         "password": {
           "type": "string"
-        },
-        "sshPort": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "HostDefinition": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "network": {
-          "type": "string"
-        },
-        "cpuCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ram": {
-          "type": "number",
-          "format": "float"
-        },
-        "disk": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "imageId": {
-          "type": "string"
-        },
-        "public": {
-          "type": "boolean"
-        },
-        "gpuCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "cpuFreq": {
-          "type": "number",
-          "format": "float"
-        },
-        "force": {
-          "type": "boolean"
-        },
-        "sizing": {
-          "$ref": "#/definitions/HostSizing"
-        },
-        "domain": {
-          "type": "string"
-        },
-        "keepOnFailure": {
-          "type": "boolean"
-        },
-        "sizingAsString": {
-          "type": "string"
-        },
-        "tenantId": {
-          "type": "string"
-        },
-        "subnets": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         },
         "sshPort": {
           "type": "integer",
@@ -3166,36 +4530,6 @@
         }
       }
     },
-    "SubnetCreateRequest": {
-      "type": "object",
-      "properties": {
-        "network": {
-          "$ref": "#/definitions/Reference"
-        },
-        "name": {
-          "type": "string"
-        },
-        "cidr": {
-          "type": "string"
-        },
-        "gateway": {
-          "$ref": "#/definitions/GatewayDefinition"
-        },
-        "failOver": {
-          "type": "boolean"
-        },
-        "domain": {
-          "type": "string"
-        },
-        "keepOnFailure": {
-          "type": "boolean"
-        },
-        "defaultSshPort": {
-          "type": "integer",
-          "format": "int64"
-        }
-      }
-    },
     "SubnetList": {
       "type": "object",
       "properties": {
@@ -3397,29 +4731,6 @@
         }
       }
     },
-    "VolumeAttachmentRequest": {
-      "type": "object",
-      "properties": {
-        "volume": {
-          "$ref": "#/definitions/Reference"
-        },
-        "host": {
-          "$ref": "#/definitions/Reference"
-        },
-        "mountPath": {
-          "type": "string"
-        },
-        "format": {
-          "type": "string"
-        },
-        "device": {
-          "type": "string"
-        },
-        "doNotFormat": {
-          "type": "boolean"
-        }
-      }
-    },
     "VolumeAttachmentResponse": {
       "type": "object",
       "properties": {
@@ -3437,24 +4748,6 @@
         },
         "doNotFormat": {
           "type": "boolean"
-        }
-      }
-    },
-    "VolumeCreateRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "speed": {
-          "$ref": "#/definitions/VolumeSpeed"
-        },
-        "size": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "tenantId": {
-          "type": "string"
         }
       }
     },

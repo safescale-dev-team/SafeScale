@@ -224,18 +224,30 @@ font-style: italic;
   <li><a href="#clusterServiceStop"><code><span class="http-method">post</span> /v1/cluster/{id}/stop</code></a></li>
   <li><a href="#clusterServiceStopNode"><code><span class="http-method">post</span> /v1/cluster/{name}/node/{host.id}/stop</code></a></li>
   </ul>
+  <h4><a href="#FeatureService">FeatureService</a></h4>
+  <ul>
+  <li><a href="#featureServiceAdd"><code><span class="http-method">post</span> /v1/feature</code></a></li>
+  <li><a href="#featureServiceCheck"><code><span class="http-method">get</span> /v1/feature/{name}</code></a></li>
+  <li><a href="#featureServiceList"><code><span class="http-method">get</span> /v1/features</code></a></li>
+  <li><a href="#featureServiceRemove"><code><span class="http-method">delete</span> /v1/feature/{name}</code></a></li>
+  </ul>
   <h4><a href="#HostService">HostService</a></h4>
   <ul>
+  <li><a href="#hostServiceBindSecurityGroup"><code><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/bind</code></a></li>
   <li><a href="#hostServiceCreate"><code><span class="http-method">post</span> /v1/host</code></a></li>
   <li><a href="#hostServiceDelete"><code><span class="http-method">delete</span> /v1/host/{id}</code></a></li>
+  <li><a href="#hostServiceDisableSecurityGroup"><code><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/disable</code></a></li>
+  <li><a href="#hostServiceEnableSecurityGroup"><code><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/enable</code></a></li>
   <li><a href="#hostServiceInspect"><code><span class="http-method">get</span> /v1/host/{id}</code></a></li>
   <li><a href="#hostServiceList"><code><span class="http-method">get</span> /v1/hosts</code></a></li>
+  <li><a href="#hostServiceListSecurityGroups"><code><span class="http-method">get</span> /v1/host/{host.id}/security_groups</code></a></li>
   <li><a href="#hostServiceReboot"><code><span class="http-method">post</span> /v1/host/{id}/reboot</code></a></li>
   <li><a href="#hostServiceResize"><code><span class="http-method">post</span> /v1/host/{name}/resize</code></a></li>
   <li><a href="#hostServiceSSH"><code><span class="http-method">post</span> /v1/host/{id}/ssh</code></a></li>
   <li><a href="#hostServiceStart"><code><span class="http-method">post</span> /v1/host/{id}/start</code></a></li>
   <li><a href="#hostServiceStatus"><code><span class="http-method">get</span> /v1/host/{id}/status</code></a></li>
   <li><a href="#hostServiceStop"><code><span class="http-method">post</span> /v1/host/{id}/stop</code></a></li>
+  <li><a href="#hostServiceUnbindSecurityGroup"><code><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/unbind</code></a></li>
   </ul>
   <h4><a href="#ImageService">ImageService</a></h4>
   <ul>
@@ -248,19 +260,52 @@ font-style: italic;
   <li><a href="#networkServiceInspect"><code><span class="http-method">get</span> /v1/network/{name}</code></a></li>
   <li><a href="#networkServiceList"><code><span class="http-method">get</span> /v1/networks</code></a></li>
   </ul>
+  <h4><a href="#PublicIPService">PublicIPService</a></h4>
+  <ul>
+  <li><a href="#publicIPServiceBind"><code><span class="http-method">post</span> /v1/public_ip/{ip.id}/bind/{host.id}</code></a></li>
+  <li><a href="#publicIPServiceCreate"><code><span class="http-method">post</span> /v1/public_ip</code></a></li>
+  <li><a href="#publicIPServiceDelete"><code><span class="http-method">delete</span> /v1/public_ip/{ip.id}</code></a></li>
+  <li><a href="#publicIPServiceInspect"><code><span class="http-method">get</span> /v1/public_ip/{id}</code></a></li>
+  <li><a href="#publicIPServiceList"><code><span class="http-method">get</span> /v1/public_ips</code></a></li>
+  <li><a href="#publicIPServiceUnbind"><code><span class="http-method">post</span> /v1/public_ip/{ip.id}/unbind/{host.id}</code></a></li>
+  </ul>
+  <h4><a href="#SecurityGroupService">SecurityGroupService</a></h4>
+  <ul>
+  <li><a href="#securityGroupServiceAddRule"><code><span class="http-method">post</span> /v1/security_group/{group.name}/rule</code></a></li>
+  <li><a href="#securityGroupServiceBonds"><code><span class="http-method">get</span> /v1/security_groups/bonds</code></a></li>
+  <li><a href="#securityGroupServiceClear"><code><span class="http-method">post</span> /v1/security_group/{id}/clear</code></a></li>
+  <li><a href="#securityGroupServiceCreate"><code><span class="http-method">post</span> /v1/security_group</code></a></li>
+  <li><a href="#securityGroupServiceDelete"><code><span class="http-method">delete</span> /v1/security_group/{group.id}</code></a></li>
+  <li><a href="#securityGroupServiceDeleteRule"><code><span class="http-method">delete</span> /v1/security_group/{group.id}/rule/{rule.ids}</code></a></li>
+  <li><a href="#securityGroupServiceInspect"><code><span class="http-method">get</span> /v1/security_group/{id}</code></a></li>
+  <li><a href="#securityGroupServiceList"><code><span class="http-method">get</span> /v1/security_groups</code></a></li>
+  <li><a href="#securityGroupServiceReset"><code><span class="http-method">post</span> /v1/security_group/{id}/reset</code></a></li>
+  <li><a href="#securityGroupServiceSanitize"><code><span class="http-method">post</span> /v1/security_group/{id}/sanitize</code></a></li>
+  </ul>
   <h4><a href="#ShareService">ShareService</a></h4>
   <ul>
   <li><a href="#shareServiceCreate"><code><span class="http-method">post</span> /v1/share</code></a></li>
   <li><a href="#shareServiceDelete"><code><span class="http-method">delete</span> /v1/share/{id}</code></a></li>
   <li><a href="#shareServiceInspect"><code><span class="http-method">get</span> /v1/share/{id}</code></a></li>
   <li><a href="#shareServiceList"><code><span class="http-method">post</span> /v1/shares</code></a></li>
+  <li><a href="#shareServiceMount"><code><span class="http-method">post</span> /v1/share/{share.id}/host/{host.id}/mount</code></a></li>
+  <li><a href="#shareServiceUnmount"><code><span class="http-method">post</span> /v1/share/{share.id}/host/{host.id}/umount</code></a></li>
   </ul>
   <h4><a href="#SubnetService">SubnetService</a></h4>
   <ul>
+  <li><a href="#subnetServiceBindSecurityGroup"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/bind</code></a></li>
   <li><a href="#subnetServiceCreate"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet</code></a></li>
   <li><a href="#subnetServiceDelete"><code><span class="http-method">delete</span> /v1/network/{network.id}/subnet/{subnet.id}</code></a></li>
+  <li><a href="#subnetServiceDisableSecurityGroup"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/disable</code></a></li>
+  <li><a href="#subnetServiceEnableSecurityGroup"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/enable</code></a></li>
   <li><a href="#subnetServiceInspect"><code><span class="http-method">get</span> /v1/{network.id}/subnet/{subnet.id}</code></a></li>
   <li><a href="#subnetServiceList"><code><span class="http-method">get</span> /v1/{network.id}/subnets</code></a></li>
+  <li><a href="#subnetServiceListSecurityGroups"><code><span class="http-method">get</span> /v1/network/{network.id}/subnet/{subnet.id}/security_groups</code></a></li>
+  <li><a href="#subnetServiceUnbindSecurityGroup"><code><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/unbind</code></a></li>
+  </ul>
+  <h4><a href="#TemplateService">TemplateService</a></h4>
+  <ul>
+  <li><a href="#templateServiceList"><code><span class="http-method">get</span> /v1/templates</code></a></li>
   </ul>
   <h4><a href="#TenantService">TenantService</a></h4>
   <ul>
@@ -287,19 +332,7 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#Bucket">Bucket</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -491,19 +524,7 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#BucketMountingPoint">BucketMountingPoint</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -2358,7 +2379,289 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <h1><a name="FeatureService">FeatureService</a></h1>
+  <div class="method"><a name="featureServiceAdd"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/feature</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">featureServiceAdd</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="featureServiceCheck"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/feature/{name}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">featureServiceCheck</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">name (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetType (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: FT_ALL </div><div class="param">targetRef.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.id (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.skipProxy (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.serialize (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.ignoreFeatureRequirements (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.ignoreSizingRequirements (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.addUnconditionally (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="featureServiceList"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/features</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">featureServiceList</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">targetType (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: FT_ALL </div><div class="param">targetRef.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.id (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">installedOnly (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#FeatureListResponse">FeatureListResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "features" : [ {
+    "name" : "name"
+  }, {
+    "name" : "name"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#FeatureListResponse">FeatureListResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="featureServiceRemove"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/feature/{name}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">featureServiceRemove</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">name (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetType (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: FT_ALL </div><div class="param">targetRef.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.id (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">targetRef.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.skipProxy (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.serialize (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.ignoreFeatureRequirements (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.ignoreSizingRequirements (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">settings.addUnconditionally (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <h1><a name="HostService">HostService</a></h1>
+  <div class="method"><a name="hostServiceBindSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/bind</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceBindSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="hostServiceCreate"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -2367,19 +2670,7 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#HostDefinition">HostDefinition</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -2451,6 +2742,98 @@ font-style: italic;
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="hostServiceDisableSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/disable</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceDisableSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="hostServiceEnableSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/enable</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceEnableSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
 
 
     <h3 class="field-label">Return type</h3>
@@ -2626,6 +3009,86 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="hostServiceListSecurityGroups"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/host/{host.id}/security_groups</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceListSecurityGroups</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">group.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">group.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">host.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">host.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">state (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: SGS_ALL </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "hosts" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ],
+  "subnets" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="hostServiceReboot"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -2684,19 +3147,7 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#HostDefinition">HostDefinition</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -2908,6 +3359,52 @@ font-style: italic;
     <h3 class="field-label">Path parameters</h3>
     <div class="field-items">
       <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="hostServiceUnbindSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/host/{host.id}/security_group/{group.id}/unbind</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">hostServiceUnbindSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
 
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
@@ -3392,6 +3889,966 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <h1><a name="PublicIPService">PublicIPService</a></h1>
+  <div class="method"><a name="publicIPServiceBind"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/public_ip/{ip.id}/bind/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceBind</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">ip.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="publicIPServiceCreate"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/public_ip</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceCreate</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#PublicIPResponse">PublicIPResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "macAddress" : "macAddress",
+  "name" : "name",
+  "ipAddress" : "ipAddress",
+  "description" : "description",
+  "id" : "id",
+  "type" : "type"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#PublicIPResponse">PublicIPResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="publicIPServiceDelete"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/public_ip/{ip.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceDelete</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">ip.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">ip.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">ip.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">force (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="publicIPServiceInspect"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/public_ip/{id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceInspect</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#PublicIPResponse">PublicIPResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "macAddress" : "macAddress",
+  "name" : "name",
+  "ipAddress" : "ipAddress",
+  "description" : "description",
+  "id" : "id",
+  "type" : "type"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#PublicIPResponse">PublicIPResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="publicIPServiceList"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/public_ips</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceList</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">all (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#PublicIPListResponse">PublicIPListResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "publicIps" : [ {
+    "macAddress" : "macAddress",
+    "name" : "name",
+    "ipAddress" : "ipAddress",
+    "description" : "description",
+    "id" : "id",
+    "type" : "type"
+  }, {
+    "macAddress" : "macAddress",
+    "name" : "name",
+    "ipAddress" : "ipAddress",
+    "description" : "description",
+    "id" : "id",
+    "type" : "type"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#PublicIPListResponse">PublicIPListResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="publicIPServiceUnbind"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/public_ip/{ip.id}/unbind/{host.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">publicIPServiceUnbind</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">ip.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <h1><a name="SecurityGroupService">SecurityGroupService</a></h1>
+  <div class="method"><a name="securityGroupServiceAddRule"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/security_group/{group.name}/rule</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceAddRule</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">group.name (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "name" : "name",
+  "description" : "description",
+  "rules" : [ {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  }, {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  } ],
+  "id" : "id"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceBonds"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/security_groups/bonds</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceBonds</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">target.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">target.id (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">target.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">kind (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "hosts" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ],
+  "subnets" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceClear"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/security_group/{id}/clear</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceClear</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceCreate"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/security_group</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceCreate</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "name" : "name",
+  "description" : "description",
+  "rules" : [ {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  }, {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  } ],
+  "id" : "id"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceDelete"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/security_group/{group.id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceDelete</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">group.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">group.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">force (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceDeleteRule"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /v1/security_group/{group.id}/rule/{rule.ids}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceDeleteRule</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">rule.ids (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">group.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">group.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">rule.description (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">rule.etherType (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: SGRET_UNKNOWN </div><div class="param">rule.direction (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: SGRD_UNKNOWN </div><div class="param">rule.protocol (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">rule.portFrom (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null format: int32</div><div class="param">rule.portTo (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null format: int32</div><div class="param">rule.involved (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "name" : "name",
+  "description" : "description",
+  "rules" : [ {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  }, {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  } ],
+  "id" : "id"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceInspect"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/security_group/{id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceInspect</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "name" : "name",
+  "description" : "description",
+  "rules" : [ {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  }, {
+    "protocol" : "protocol",
+    "involved" : [ "involved", "involved" ],
+    "portFrom" : 0,
+    "ids" : [ "ids", "ids" ],
+    "description" : "description",
+    "portTo" : 6
+  } ],
+  "id" : "id"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupResponse">SecurityGroupResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceList"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/security_groups</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceList</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">all (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupListResponse">SecurityGroupListResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "securityGroups" : [ {
+    "name" : "name",
+    "description" : "description",
+    "rules" : [ {
+      "protocol" : "protocol",
+      "involved" : [ "involved", "involved" ],
+      "portFrom" : 0,
+      "ids" : [ "ids", "ids" ],
+      "description" : "description",
+      "portTo" : 6
+    }, {
+      "protocol" : "protocol",
+      "involved" : [ "involved", "involved" ],
+      "portFrom" : 0,
+      "ids" : [ "ids", "ids" ],
+      "description" : "description",
+      "portTo" : 6
+    } ],
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "description" : "description",
+    "rules" : [ {
+      "protocol" : "protocol",
+      "involved" : [ "involved", "involved" ],
+      "portFrom" : 0,
+      "ids" : [ "ids", "ids" ],
+      "description" : "description",
+      "portTo" : 6
+    }, {
+      "protocol" : "protocol",
+      "involved" : [ "involved", "involved" ],
+      "portFrom" : 0,
+      "ids" : [ "ids", "ids" ],
+      "description" : "description",
+      "portTo" : 6
+    } ],
+    "id" : "id"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupListResponse">SecurityGroupListResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceReset"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/security_group/{id}/reset</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceReset</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="securityGroupServiceSanitize"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/security_group/{id}/sanitize</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">securityGroupServiceSanitize</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <h1><a name="ShareService">ShareService</a></h1>
   <div class="method"><a name="shareServiceCreate"/>
     <div class="method-path">
@@ -3701,7 +5158,165 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="shareServiceMount"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/share/{share.id}/host/{host.id}/mount</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">shareServiceMount</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">share.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#ShareMountDefinition">ShareMountDefinition</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "path" : "path",
+  "host" : {
+    "tenantId" : "tenantId",
+    "name" : "name",
+    "id" : "id"
+  },
+  "options" : "options",
+  "share" : {
+    "tenantId" : "tenantId",
+    "name" : "name",
+    "id" : "id"
+  },
+  "type" : "type",
+  "withCache" : true
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#ShareMountDefinition">ShareMountDefinition</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="shareServiceUnmount"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/share/{share.id}/host/{host.id}/umount</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">shareServiceUnmount</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">share.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">host.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <h1><a name="SubnetService">SubnetService</a></h1>
+  <div class="method"><a name="subnetServiceBindSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/bind</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">subnetServiceBindSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">network.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">subnet.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="subnetServiceCreate"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -3716,19 +5331,7 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#SubnetCreateRequest">SubnetCreateRequest</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -3835,6 +5438,102 @@ font-style: italic;
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="subnetServiceDisableSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/disable</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">subnetServiceDisableSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">network.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">subnet.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="subnetServiceEnableSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/enable</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">subnetServiceEnableSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">network.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">subnet.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
 
 
     <h3 class="field-label">Return type</h3>
@@ -4111,6 +5810,208 @@ font-style: italic;
         <a href="#rpcStatus">rpcStatus</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="subnetServiceListSecurityGroups"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/network/{network.id}/subnet/{subnet.id}/security_groups</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">subnetServiceListSecurityGroups</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">network.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">subnet.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">group.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">group.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">network.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">network.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">subnet.tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">subnet.name (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">state (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: SGS_ALL </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "hosts" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ],
+  "subnets" : [ {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  }, {
+    "name" : "name",
+    "disabled" : true,
+    "id" : "id"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#SecurityGroupBondsResponse">SecurityGroupBondsResponse</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="subnetServiceUnbindSecurityGroup"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/unbind</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">subnetServiceUnbindSecurityGroup</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">network.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">subnet.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div><div class="param">group.id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Object
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#Object">Object</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <h1><a name="TemplateService">TemplateService</a></h1>
+  <div class="method"><a name="templateServiceList"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/templates</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">templateServiceList</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">all (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#TemplateList">TemplateList</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "templates" : [ {
+    "disk" : 1,
+    "cores" : 0,
+    "name" : "name",
+    "id" : "id",
+    "gpuCount" : 5,
+    "ram" : 6,
+    "gpuType" : "gpuType"
+  }, {
+    "disk" : 1,
+    "cores" : 0,
+    "name" : "name",
+    "id" : "id",
+    "gpuCount" : 5,
+    "ram" : 6,
+    "gpuType" : "gpuType"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#TemplateList">TemplateList</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
   <h1><a name="TenantService">TenantService</a></h1>
   <div class="method"><a name="tenantServiceGet"/>
     <div class="method-path">
@@ -4259,19 +6160,7 @@ font-style: italic;
       <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#VolumeAttachmentRequest">VolumeAttachmentRequest</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -4309,19 +6198,7 @@ font-style: italic;
     <div class="method-notes"></div>
 
 
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="header">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
 
-    <h3 class="field-label">Request body</h3>
-    <div class="field-items">
-      <div class="param">body <a href="#VolumeCreateRequest">VolumeCreateRequest</a> (required)</div>
-
-      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
-
-    </div>  <!-- field-items -->
 
 
 
@@ -4710,7 +6587,6 @@ font-style: italic;
     <li><a href="#FeatureTargetType"><code>FeatureTargetType</code> - </a></li>
     <li><a href="#GatewayDefinition"><code>GatewayDefinition</code> - </a></li>
     <li><a href="#Host"><code>Host</code> - </a></li>
-    <li><a href="#HostDefinition"><code>HostDefinition</code> - </a></li>
     <li><a href="#HostList"><code>HostList</code> - </a></li>
     <li><a href="#HostSizing"><code>HostSizing</code> - </a></li>
     <li><a href="#HostState"><code>HostState</code> - </a></li>
@@ -4744,7 +6620,6 @@ font-style: italic;
     <li><a href="#SshConfig"><code>SshConfig</code> - </a></li>
     <li><a href="#SshResponse"><code>SshResponse</code> - </a></li>
     <li><a href="#Subnet"><code>Subnet</code> - </a></li>
-    <li><a href="#SubnetCreateRequest"><code>SubnetCreateRequest</code> - </a></li>
     <li><a href="#SubnetList"><code>SubnetList</code> - </a></li>
     <li><a href="#SubnetState"><code>SubnetState</code> - </a></li>
     <li><a href="#TemplateList"><code>TemplateList</code> - </a></li>
@@ -4757,9 +6632,7 @@ font-style: italic;
     <li><a href="#TenantName"><code>TenantName</code> - </a></li>
     <li><a href="#TenantObjectStorage"><code>TenantObjectStorage</code> - </a></li>
     <li><a href="#VirtualIp"><code>VirtualIp</code> - </a></li>
-    <li><a href="#VolumeAttachmentRequest"><code>VolumeAttachmentRequest</code> - </a></li>
     <li><a href="#VolumeAttachmentResponse"><code>VolumeAttachmentResponse</code> - </a></li>
-    <li><a href="#VolumeCreateRequest"><code>VolumeCreateRequest</code> - </a></li>
     <li><a href="#VolumeInspectResponse"><code>VolumeInspectResponse</code> - </a></li>
     <li><a href="#VolumeListResponse"><code>VolumeListResponse</code> - </a></li>
     <li><a href="#VolumeSpeed"><code>VolumeSpeed</code> - </a></li>
@@ -4972,29 +6845,6 @@ font-style: italic;
 <div class="param">osKind (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">attachedVolumeNames (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
 <div class="param">password (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="HostDefinition"><code>HostDefinition</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">network (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">cpuCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">ram (optional)</div><div class="param-desc"><span class="param-type"><a href="#float">Float</a></span>  format: float</div>
-<div class="param">disk (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">imageId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">public (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">gpuCount (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">cpuFreq (optional)</div><div class="param-desc"><span class="param-type"><a href="#float">Float</a></span>  format: float</div>
-<div class="param">force (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">sizing (optional)</div><div class="param-desc"><span class="param-type"><a href="#HostSizing">HostSizing</a></span>  </div>
-<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">sizingAsString (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">subnets (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
 <div class="param">sshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
     </div>  <!-- field-items -->
   </div>
@@ -5312,20 +7162,6 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="SubnetCreateRequest"><code>SubnetCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">network (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
-<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">cidr (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">gateway (optional)</div><div class="param-desc"><span class="param-type"><a href="#GatewayDefinition">GatewayDefinition</a></span>  </div>
-<div class="param">failOver (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">domain (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">keepOnFailure (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-<div class="param">defaultSshPort (optional)</div><div class="param-desc"><span class="param-type"><a href="#long">Long</a></span>  format: int64</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
     <h3><a name="SubnetList"><code>SubnetList</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -5438,18 +7274,6 @@ font-style: italic;
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="VolumeAttachmentRequest"><code>VolumeAttachmentRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">volume (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
-<div class="param">host (optional)</div><div class="param-desc"><span class="param-type"><a href="#Reference">Reference</a></span>  </div>
-<div class="param">mountPath (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">format (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">device (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">doNotFormat (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
     <h3><a name="VolumeAttachmentResponse"><code>VolumeAttachmentResponse</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -5458,16 +7282,6 @@ font-style: italic;
 <div class="param">format (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">device (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">doNotFormat (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="VolumeCreateRequest"><code>VolumeCreateRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">speed (optional)</div><div class="param-desc"><span class="param-type"><a href="#VolumeSpeed">VolumeSpeed</a></span>  </div>
-<div class="param">size (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">tenantId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
