@@ -68,9 +68,9 @@ const (
 type subnet struct {
 	*core
 
-	cacheLock *sync.Mutex
+	cacheLock      *sync.Mutex
 	cachedGateways [2]*host
-	cachedNetwork *network
+	cachedNetwork  *network
 }
 
 func nullSubnet() *subnet {
@@ -122,7 +122,7 @@ func NewSubnet(svc iaas.Service) (resources.Subnet, fail.Error) {
 	}
 
 	out := &subnet{
-		core: coreInstance,
+		core:      coreInstance,
 		cacheLock: &sync.Mutex{},
 	}
 	return out, nil
@@ -425,16 +425,16 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 	failover := req.HA
 	if failover {
 		if caps.PrivateVirtualIP {
-			logrus.Info("Provider support private Virtual IP, honoring the failover setup for gateways.")
+			logrus.Info("Driver support private Virtual IP, honoring the failover setup for gateways.")
 		} else {
-			logrus.Warning("Provider does not support private Virtual IP, cannot set up failover of subnet default route.")
+			logrus.Warning("Driver does not support private Virtual IP, cannot set up failover of subnet default route.")
 			failover = false
 		}
 	}
 
 	// Creates VIP for gateways if asked for
 	if failover {
-		if as.VIP, xerr = svc.CreateVIP(as.ID, as.Network, fmt.Sprintf("for gateways of subnet %s", as.Name), []string{subnetGWSG.GetID()}); xerr != nil {
+		if as.VIP, xerr = svc.CreateVIP(as.Network, as.ID, fmt.Sprintf("for gateways of subnet %s", as.Name), []string{subnetGWSG.GetID()}); xerr != nil {
 			return fail.Wrap(xerr, "failed to create VIP")
 		}
 
@@ -531,7 +531,7 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 	if gwSizing == nil {
 		gwSizing = &abstract.HostSizingRequirements{MinGPU: -1}
 	}
-	tpls, xerr := svc.SelectTemplatesBySize(*gwSizing, false)
+	tpls, xerr := svc.ListTemplatesBySizing(*gwSizing, false)
 	if xerr != nil {
 		return fail.Wrap(xerr, "failed to find appropriate template")
 	}
@@ -594,12 +594,12 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 	if domain != "" {
 		domain = "." + domain
 	}
-
-	keypairName := "kp_" + subnetName
-	keypair, xerr := svc.CreateKeyPair(keypairName)
-	if xerr != nil {
-		return xerr
-	}
+	//
+	// keypairName := "kp_" + subnetName
+	// keypair, xerr := svc.CreateKeyPair(keypairName)
+	// if xerr != nil {
+	// 	return xerr
+	// }
 
 	keepalivedPassword, err := utils.GeneratePassword(16)
 	if err != nil {
@@ -609,7 +609,7 @@ func (rs *subnet) Create(task concurrency.Task, req abstract.SubnetRequest, gwna
 	gwRequest := abstract.HostRequest{
 		ImageID:          img.ID,
 		Subnets:          []*abstract.Subnet{as},
-		KeyPair:          keypair,
+		// KeyPair:          keypair,
 		SshPort:          req.DefaultSshPort,
 		TemplateID:       template.ID,
 		KeepOnFailure:    req.KeepOnFailure,
@@ -1316,24 +1316,24 @@ func (rs *subnet) GetGateway(task concurrency.Task, primary bool) (_ resources.H
 		xerr = rs.Inspect(task, func(clonable data.Clonable, _ *serialize.JSONProperties) fail.Error {
 			as, ok := clonable.(*abstract.Subnet)
 			if !ok {
-			return fail.InconsistentError("'*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
-		}
+				return fail.InconsistentError("'*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
 			if primary {
 				if len(as.GatewayIDs) < 1 {
-				return fail.NotFoundError("no gateway registered")
-			}
+					return fail.NotFoundError("no gateway registered")
+				}
 				gatewayID = as.GatewayIDs[0]
 			} else {
 				if len(as.GatewayIDs) < 2 {
-				return fail.NotFoundError("no secondary gateway registered")
-			}
+					return fail.NotFoundError("no secondary gateway registered")
+				}
 				gatewayID = as.GatewayIDs[1]
 			}
 			return nil
 		})
 		if xerr != nil {
-		return nullHost(), xerr
-	}
+			return nullHost(), xerr
+		}
 
 		if gatewayID == "" {
 			return nullHost(), fail.NotFoundError("no %s gateway ID found in subnet properties", primaryStr)
@@ -1365,7 +1365,6 @@ func (rs *subnet) Delete(task concurrency.Task) (xerr fail.Error) {
 	rs.SafeLock(task)
 	defer rs.SafeUnlock(task)
 
-	// var gwID string
 	xerr = rs.Alter(task, func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
 		as, ok := clonable.(*abstract.Subnet)
 		if !ok {

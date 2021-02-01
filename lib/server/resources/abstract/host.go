@@ -47,16 +47,15 @@ func (kp *KeyPair) IsNull() bool {
 }
 
 // NewKeyPair creates a *resources.KeyPair
-func NewKeyPair(prefix string) (*KeyPair, fail.Error) {
+func NewKeyPair(name string) (*KeyPair, fail.Error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, fail.Wrap(err, "failed to create host UUID")
 	}
 
-	if prefix == "" {
-		prefix = "kp"
+	if name == "" {
+		name = fmt.Sprintf("kp_%s", id)
 	}
-	name := fmt.Sprintf("%s_%s", prefix, id)
 
 	privKey, pubKey, xerr := crypt.GenerateRSAKeyPair(name)
 	if err != nil {
@@ -81,6 +80,32 @@ type HostSizingRequirements struct {
 	MinCPUFreq  float32
 	Replaceable bool // Tells if we accept server that could be removed without notice (AWS proposes such kind of server with SPOT
 	Image       string
+	Template    string // if != "", describes the template to use and disables the use of other fields
+}
+
+func (hsr HostSizingRequirements) Equals(in HostSizingRequirements) bool {
+	if hsr.MinCores != in.MinCores {
+		return false
+	}
+	if hsr.MaxCores != in.MaxCores {
+		return false
+	}
+	if hsr.MinRAMSize != in.MinRAMSize {
+		return false
+	}
+	if hsr.MaxRAMSize != in.MaxRAMSize {
+		return false
+	}
+	if hsr.MinDiskSize != in.MinDiskSize {
+		return false
+	}
+	if hsr.MinGPU != in.MinGPU {
+		return false
+	}
+	if hsr.MinCPUFreq != in.MinCPUFreq {
+		return false
+	}
+	return true
 }
 
 // StoredCPUInfo ...

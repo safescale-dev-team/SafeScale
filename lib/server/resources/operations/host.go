@@ -493,6 +493,21 @@ func (rh *host) Create(task concurrency.Task, hostReq abstract.HostRequest, host
 
 	// If TemplateID is not explicitly provided, search the appropriate template to satisfy 'hostDef'
 	if hostReq.TemplateID == "" {
+		if hostDef.Template != "" {
+			tmpl, xerr := svc.FindTemplateByName(hostDef.Template)
+			if xerr != nil {
+				switch xerr.(type) {
+				case *fail.ErrNotFound:
+				// continue
+				default:
+					return nil, xerr
+				}
+			} else {
+				hostReq.TemplateID = tmpl.ID
+			}
+		}
+	}
+	if hostReq.TemplateID == "" {
 		hostReq.TemplateID, xerr = rh.findTemplateID(hostDef)
 		if xerr != nil {
 			return nil, xerr
@@ -565,10 +580,10 @@ func (rh *host) Create(task concurrency.Task, hostReq abstract.HostRequest, host
 		}
 	}
 
-	// Give a chance to set a password by safescaled environment (meaning for all Hosts)
-	if hostReq.Password == "" {
-		hostReq.Password = os.Getenv("SAFESCALE_UNSAFE_PASSWORD")
-	}
+	// // Give a chance to set a password by safescaled environment (meaning for all Hosts)
+	// if hostReq.Password == "" {
+	// 	hostReq.Password = os.Getenv("SAFESCALE_UNSAFE_PASSWORD")
+	// }
 
 	ahf, userdataContent, xerr := svc.CreateHost(hostReq)
 	if xerr != nil {
@@ -1007,31 +1022,42 @@ func (rh *host) onFailureUndoSetSecurityGroups(task concurrency.Task, errorPtr *
 
 func (rh host) findTemplateID(hostDef abstract.HostSizingRequirements) (string, fail.Error) {
 	svc := rh.GetService()
-	useScannerDB := hostDef.MinGPU > 0 || hostDef.MinCPUFreq > 0
-	templates, xerr := svc.SelectTemplatesBySize(hostDef, useScannerDB)
+	if hostDef.Template != "" {
+		if tpl, xerr := svc.FindTemplateByName(hostDef.Template); xerr == nil {
+			return tpl.ID, nil
+		}
+		logrus.Warning(fail.NotFoundError("failed to find template '%s', trying to guess from sizing...", hostDef.Template))
+	}
+
+	template, xerr := svc.FindTemplateBySizing(hostDef)
 	if xerr != nil {
-		return "", fail.Wrap(xerr, "failed to find template corresponding to requested resources")
+		return "", xerr
 	}
-	var template abstract.HostTemplate
-	if len(templates) > 0 {
-		template = *(templates[0])
-		msg := fmt.Sprintf("Selected host template: '%s' (%d core%s", template.Name, template.Cores, strprocess.Plural(uint(template.Cores)))
-		if template.CPUFreq > 0 {
-			msg += fmt.Sprintf(" at %.01f GHz", template.CPUFreq)
-		}
-		msg += fmt.Sprintf(", %.01f GB RAM, %d GB disk", template.RAMSize, template.DiskSize)
-		if template.GPUNumber > 0 {
-			msg += fmt.Sprintf(", %d GPU%s", template.GPUNumber, strprocess.Plural(uint(template.GPUNumber)))
-			if template.GPUType != "" {
-				msg += fmt.Sprintf(" %s", template.GPUType)
-			}
-		}
-		msg += ")"
-		logrus.Infof(msg)
-	} else {
-		logrus.Errorf("failed to find template corresponding to requested resources")
-		return "", fail.Wrap(xerr, "failed to find template corresponding to requested resources")
-	}
+	//useScannerDB := hostDef.MinGPU > 0 || hostDef.MinCPUFreq > 0
+	//templates, xerr := svc.ListTemplatesBySizing(hostDef, useScannerDB)
+	//if xerr != nil {
+	//	return "", fail.Wrap(xerr, "failed to find template corresponding to requested resources")
+	//}
+	//var template abstract.HostTemplate
+	//if len(templates) > 0 {
+	//	template = *(templates[0])
+	//	msg := fmt.Sprintf("Selected host template: '%s' (%d core%s", template.Name, template.Cores, strprocess.Plural(uint(template.Cores)))
+	//	if template.CPUFreq > 0 {
+	//		msg += fmt.Sprintf(" at %.01f GHz", template.CPUFreq)
+	//	}
+	//	msg += fmt.Sprintf(", %.01f GB RAM, %d GB disk", template.RAMSize, template.DiskSize)
+	//	if template.GPUNumber > 0 {
+	//		msg += fmt.Sprintf(", %d GPU%s", template.GPUNumber, strprocess.Plural(uint(template.GPUNumber)))
+	//		if template.GPUType != "" {
+	//			msg += fmt.Sprintf(" %s", template.GPUType)
+	//		}
+	//	}
+	//	msg += ")"
+	//	logrus.Infof(msg)
+	//} else {
+	//	logrus.Errorf("failed to find template corresponding to requested resources")
+	//	return "", fail.Wrap(xerr, "failed to find template corresponding to requested resources")
+	//}
 	return template.ID, nil
 }
 
@@ -1517,11 +1543,11 @@ func (rh *host) relaxedDeleteHost(task concurrency.Task) fail.Error {
 		// Unmount() have to lock for write, and won't succeed while host.properties.Reading() is running,
 		// leading to a deadlock)
 		for _, item := range mounts {
-			objs, loopErr := LoadShare(task, svc, item.ID)
+			rs, loopErr := LoadShare(task, svc, item.ID)
 			if loopErr != nil {
 				return loopErr
 			}
-			loopErr = objs.Unmount(task, rh)
+			loopErr = rs.Unmount(task, rh)
 			if loopErr != nil {
 				return loopErr
 			}
@@ -1529,43 +1555,46 @@ func (rh *host) relaxedDeleteHost(task concurrency.Task) fail.Error {
 
 		// if host exports shares, delete them
 		for _, v := range shares {
-			objs, loopErr := LoadShare(task, svc, v.Name)
+			rs, loopErr := LoadShare(task, svc, v.Name)
 			if loopErr != nil {
 				return loopErr
 			}
-			loopErr = objs.Delete(task)
+			loopErr = rs.Delete(task)
 			if loopErr != nil {
 				return loopErr
 			}
 		}
 
-		// Update networks property propertiesv1.HostNetworking to remove the reference to the host
+		// Walk through property propertiesv1.HostNetworking to remove the reference to the host in Subnets
 		innerXErr = props.Inspect(task, hostproperty.NetworkV2, func(clonable data.Clonable) fail.Error {
 			hostNetworkV2, ok := clonable.(*propertiesv2.HostNetworking)
 			if !ok {
 				return fail.InconsistentError("'*propertiesv2.HostNetworking' expected, '%s' provided", reflect.TypeOf(clonable).String())
 			}
 			hostID := rh.GetID()
-			hostName := rh.GetName()
+			// hostName := rh.GetName()
 			var errors []error
 			for k := range hostNetworkV2.SubnetsByID {
 				rs, loopErr := LoadSubnet(task, svc, "", k)
+				if loopErr == nil{
+					loopErr = rs.UnbindHost(task, hostID)
+				}
 				if loopErr != nil {
 					logrus.Errorf(loopErr.Error())
 					errors = append(errors, loopErr)
 					continue
 				}
-				loopErr = rs.Alter(task, func(_ data.Clonable, netprops *serialize.JSONProperties) fail.Error {
-					return netprops.Alter(task, subnetproperty.HostsV1, func(clonable data.Clonable) fail.Error {
-						subnetHostsV1, ok := clonable.(*propertiesv1.SubnetHosts)
-						if !ok {
-							return fail.InconsistentError("'*propertiesv1.SubnetHosts' expected, '%s' provided", reflect.TypeOf(clonable).String())
-						}
-						delete(subnetHostsV1.ByID, hostID)
-						delete(subnetHostsV1.ByName, hostName)
-						return nil
-					})
-				})
+				// loopErr = rs.Alter(task, func(_ data.Clonable, netprops *serialize.JSONProperties) fail.Error {
+				// 	return netprops.Alter(task, subnetproperty.HostsV1, func(clonable data.Clonable) fail.Error {
+				// 		subnetHostsV1, ok := clonable.(*propertiesv1.SubnetHosts)
+				// 		if !ok {
+				// 			return fail.InconsistentError("'*propertiesv1.SubnetHosts' expected, '%s' provided", reflect.TypeOf(clonable).String())
+				// 		}
+				// 		delete(subnetHostsV1.ByID, hostID)
+				// 		delete(subnetHostsV1.ByName, hostName)
+				// 		return nil
+				// 	})
+				// })
 				if loopErr != nil {
 					logrus.Errorf(loopErr.Error())
 					errors = append(errors, loopErr)
@@ -1607,21 +1636,6 @@ func (rh *host) relaxedDeleteHost(task concurrency.Task) fail.Error {
 				return fail.Wrap(fail.NewErrorList(errors), "failed to unbind some Security Groups")
 			}
 
-			// Delete default Security Group of IPAddress
-			if hsgV1.DefaultID != "" {
-				rsg, derr := LoadSecurityGroup(task, svc, hsgV1.DefaultID)
-				if derr == nil {
-					derr = rsg.Delete(task)
-				}
-				if derr != nil {
-					switch derr.(type) {
-					case *fail.ErrNotFound:
-						// Consider a Security Group that cannot be found as a success
-					default:
-						return fail.Wrap(derr, "failed to delete default Security Group of Host")
-					}
-				}
-			}
 			return nil
 		})
 		if innerXErr != nil {
@@ -1687,7 +1701,29 @@ func (rh *host) relaxedDeleteHost(task concurrency.Task) fail.Error {
 			}
 		}
 
-		return nil
+		// Delete default Security Group of Host
+		return props.Alter(task, hostproperty.SecurityGroupsV1, func(clonable data.Clonable) fail.Error {
+			hsgV1, ok := clonable.(*propertiesv1.HostSecurityGroups)
+			if !ok {
+				return fail.InconsistentError("'*propertiesv1.HostSecurityGroups' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
+
+			if hsgV1.DefaultID != "" {
+				rsg, derr := LoadSecurityGroup(task, svc, hsgV1.DefaultID)
+				if derr == nil {
+					derr = rsg.Delete(task)
+				}
+				if derr != nil {
+					switch derr.(type) {
+					case *fail.ErrNotFound:
+						// Consider a Security Group that cannot be found as a success
+					default:
+						return fail.Wrap(derr, "failed to delete default Security Group of Host")
+					}
+				}
+			}
+			return nil
+		})
 	})
 	if xerr != nil {
 		return xerr
@@ -1768,53 +1804,33 @@ func (rh host) Run(task concurrency.Task, cmd string, outs outputs.Enum, connect
 	}
 
 	hostName := rh.GetName()
-	// xerr = retry.WhileUnsuccessfulDelay1SecondWithNotify(
-	// 	func() error {
-	var innerXErr fail.Error
-	retCode, stdOut, stdErr, innerXErr = run(task, ssh, cmd, outs, executionTimeout)
-	if innerXErr != nil {
-		switch innerXErr.(type) {
-		case *fail.ErrTimeout:
-			innerXErr = fail.Wrap(innerXErr.Cause(), "failed to run command in %s", executionTimeout)
-		case *fail.ErrExecution:
-			innerXErr = retry.StopRetryError(innerXErr)
-		}
-	}
-
-	// if task.Aborted() {
-	// 	return fail.AbortedError(innerXErr)
-	// }
-	//
-	// 	return innerXErr
-	// },
-	// connectionTimeout*2, // VPL: insufficient delay ?
-	// func(t retry.Try, v verdict.Enum) {
-	// 	if v == verdict.Retry {
-	// 		logrus.Warnf("Remote SSH service on Host '%s' is not ready, retrying...", hostName)
-	// 	}
-	// },
-	// )
-	// if xerr != nil {
-	if innerXErr != nil {
-		switch innerXErr.(type) {
-		case *retry.ErrStopRetry:
-			xerr = fail.ToError(xerr.Cause())
+	retCode, stdOut, stdErr, xerr = run(task, ssh, cmd, outs, executionTimeout)
+	if xerr != nil {
+		switch xerr.(type) {
+		case *retry.ErrStopRetry: // == *fail.ErrAborted
+			if cerr := xerr.Cause(); cerr != nil {
+				xerr = fail.ToError(cerr)
+			}
 		case *fail.ErrTimeout:
 			switch xerr.Cause().(type) {
 			case *fail.ErrTimeout:
-				xerr = fail.Wrap(xerr.Cause(), "failed to execute command on Host '%s'", hostName)
+				xerr = fail.Wrap(xerr.Cause(), "failed to execute command on Host '%s' in %s", hostName, temporal.FormatDuration(executionTimeout))
 			default:
 				xerr = fail.Wrap(xerr.Cause(), "failed to connect by SSH to Host '%s' after %s", hostName, temporal.FormatDuration(connectionTimeout))
 			}
-		default:
-			xerr = innerXErr
 		}
 	}
+
 	return retCode, stdOut, stdErr, xerr
 }
 
 // run executes command on the host
 // If run fails to connect to remote host, returns *fail.ErrNotAvailable
+// In case of error, can return:
+// - *fail.ErrExecution: // FIXME: complete comment
+// - *fail.ErrNotAvailable: // FIXME: complete comment
+// - *fail.ErrTimeout: // FIXME: complete comment
+// - *fail.ErrAborted: // FIXME: complete comment
 func run(task concurrency.Task, ssh *system.SSHConfig, cmd string, outs outputs.Enum, timeout time.Duration) (int, string, string, fail.Error) {
 	// Create the command
 	sshCmd, xerr := ssh.NewCommand(task, cmd)

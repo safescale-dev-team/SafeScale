@@ -822,30 +822,38 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, xerr
 	}
 
-	// Import keypair to create host
-	creationKeyPair, xerr := abstract.NewKeyPair(request.ResourceName + "_install")
-	if xerr != nil {
-		return nullAHF, nullUDC, xerr
+	// Build KeyPair and password if not provided
+	if xerr = stacks.ProvideCredentialsIfNeeded(&request); xerr != nil {
+		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to provide credentials for Host")
 	}
-
-	xerr = s.ImportKeyPair(creationKeyPair)
-	if xerr != nil {
-		return nullAHF, nullUDC, xerr
-	}
-
-	request.KeyPair = creationKeyPair
-
-	defer func() {
-		if derr := s.DeleteKeyPair(creationKeyPair.Name); derr != nil {
-			logrus.Errorf("Cleaning up on failure, failed to delete creation keypair: %v", derr)
-		}
-	}()
 
 	// Configure userdata content
 	udc = userdata.NewContent()
 	if xerr = s.prepareUserData(request, udc); xerr != nil {
 		return nullAHF, nullUDC, xerr
 	}
+
+	// Import keypair to create host
+	// creationKeyPair, xerr := abstract.NewKeyPair(request.ResourceName + "_install")
+	// if xerr != nil {
+	// 	return nullAHF, nullUDC, xerr
+	// }
+	// Using udc.FirstPublicKey in creation keypair
+	creationKeyPair := &abstract.KeyPair{
+		Name: request.ResourceName+"_install",
+		PublicKey: udc.FirstPublicKey,
+	}
+	if xerr = s.ImportKeyPair(creationKeyPair); xerr != nil {
+		return nullAHF, nullUDC, xerr
+	}
+
+	// request.KeyPair = creationKeyPair
+
+	defer func() {
+		if derr := s.DeleteKeyPair(creationKeyPair.Name); derr != nil {
+			logrus.Errorf("Cleaning up on failure, failed to delete creation keypair: %v", derr)
+		}
+	}()
 
 	ahf = abstract.NewHostFull()
 	if xerr = s.initHostProperties(&request, ahf, *udc); xerr != nil {
@@ -987,7 +995,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	ahf.Core.ID = vm.VmId
 	ahf.Core.Name = request.ResourceName
 	ahf.Core.Password = request.Password
-	ahf.Core.PrivateKey = request.KeyPair.PrivateKey
+	ahf.Core.PrivateKey = udc.FirstPrivateKey
 	// ahf.CurrentState, ahf.Core.LastState = hoststate.STARTED, hoststate.STARTED
 	nics = append(nics, defaultNic)
 	xerr = s.setHostProperties(ahf, request.Subnets, vm, nics)

@@ -30,7 +30,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/hoststate"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/converters"
-	"github.com/CS-SI/SafeScale/lib/utils"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
@@ -487,9 +486,9 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	if s.IsNull() {
 		return nullAHF, nullUDC, fail.InvalidInstanceError()
 	}
-	if request.KeyPair == nil {
-		return nullAHF, nullUDC, fail.InvalidParameterError("request.KeyPair", "cannot be nil")
-	}
+	// if request.KeyPair == nil {
+	// 	return nullAHF, nullUDC, fail.InvalidParameterError("request.KeyPair", "cannot be nil")
+	// }
 
 	defer debug.NewTracer(nil, tracing.ShouldTrace("stack.aws") || tracing.ShouldTrace("stacks.compute"), "(%v)", request).WithStopwatch().Entering().Exiting()
 	defer fail.OnPanic(&xerr)
@@ -498,20 +497,16 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	resourceName := request.ResourceName
 	subnets := request.Subnets
 	// hostMustHavePublicIP := request.PublicIP
-	keyPairName := request.KeyPair.Name
 
 	if len(subnets) == 0 {
 		return nullAHF, nullUDC, fail.InvalidRequestError("the Host '%s' must be on at least one Subnet (even if public)", resourceName)
 	}
 
-	// If no password is provided, create one
-	if request.Password == "" {
-		password, err := utils.GeneratePassword(16)
-		if err != nil {
-			return nullAHF, nullUDC, fail.Wrap(err, "failed to generate password")
-		}
-		request.Password = password
+	// If no credentials (KeyPair and/or Password) are  supplied create ones
+	if xerr = stacks.ProvideCredentialsIfNeeded(&request); xerr != nil {
+		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to provide credentials for Host")
 	}
+	keyPairName := request.KeyPair.Name
 
 	// The default Subnet is the first of the provided list, by convention
 	defaultSubnet, defaultSubnetID := func() (*abstract.Subnet, string) {
@@ -528,26 +523,6 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		}
 		// FIXME: fallback to net-safescale ?
 	}
-
-	// defaultSubnet := request.Networks[0]
-	// defaultGateway := request.DefaultGateway
-	// isGateway := defaultGateway == nil && defaultSubnet.Name != abstract.SingleHostNetworkName
-	// defaultGatewayID := ""
-	// defaultGatewayPrivateIP := ""
-	// if defaultGateway != nil {
-	//	xerr = defaultGateway.Properties.Inspect(hostproperty.NetworkV1, func(v data.Clonable) fail.Error {
-	//		hostNetworkV1 := v.(*propertiesv1.HostNetworking)
-	//		defaultGatewayPrivateIP = hostNetworkV1.IPv4Addresses[defaultNetwork]
-	//		defaultGatewayID = defaultGateway.ID
-	//		return nil
-	//	})
-	//	if err != nil {
-	//		return nil, userData, xerr
-	//	}
-	// }
-	// if defaultGateway == nil && !hostMustHavePublicIP {
-	//    return nil, userData, fail.InvalidRequestError("the host %s must have a gateway or be public", resourceName)
-	// }
 
 	// --- prepares data structures for Provider usage ---
 
@@ -588,7 +563,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	// --- Initializes resources.IPAddress ---
 
 	ahf = abstract.NewHostFull()
-	ahf.Core.PrivateKey = userData.FirstPrivateKey // Add initial PrivateKey to ahf definition
+	ahf.Core.PrivateKey = userData.FirstPrivateKey // Add initial PrivateKey to Host description
 	ahf.Core.Password = request.Password
 
 	ahf.Networking.DefaultSubnetID = defaultSubnetID
@@ -600,6 +575,16 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	// Sets provider parameters to create ahf
 	userDataPhase1, xerr := userData.Generate(userdata.PHASE1_INIT)
 	if xerr != nil {
+		return nullAHF, nullUDC, xerr
+	}
+
+	// import keypair on provider side
+	keypair := abstract.KeyPair{
+		Name: keyPairName,
+		PublicKey: userData.FirstPublicKey,
+		PrivateKey: userData.FirstPrivateKey,
+	}
+	if xerr = s.ImportKeyPair(&keypair); xerr != nil {
 		return nullAHF, nullUDC, xerr
 	}
 
@@ -620,14 +605,19 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 				server, innerXErr = s.buildAwsMachine(keyPairName, request.ResourceName, rim.ID, s.AwsConfig.Zone, defaultSubnet.ID, string(userDataPhase1), isGateway, template)
 			}
 			if innerXErr != nil {
-				logrus.Warnf("error creating Host: %+v", innerXErr)
+				switch innerXErr.(type) {
+				case *fail.ErrOverload:
+					return retry.StopRetryError(innerXErr)
+				default:
+					logrus.Warnf("error creating Host: %+v", innerXErr)
 
-				if server != nil && server.ID != "" {
-					if derr := s.DeleteHost(server.ID); derr != nil {
-						_ = innerXErr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete Host '%s'", server.Name))
+					if server != nil && server.ID != "" {
+						if derr := s.DeleteHost(server.ID); derr != nil {
+							_ = innerXErr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete Host '%s'", server.Name))
+						}
 					}
+					return innerXErr
 				}
-				return innerXErr
 			}
 
 			if server == nil {
@@ -1144,6 +1134,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 
 		// Remove keypair
 		if keyPairName != "" {
+			// FIXME: move this in rpc.go and call it rpcDeleteKeyPair()
 			xerr = stacks.RetryableRemoteCall(
 				func() error {
 					_, err := s.EC2Service.DeleteKeyPair(&ec2.DeleteKeyPairInput{
@@ -1156,7 +1147,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 			if xerr != nil {
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
-				// A missing keypair is considered as a successful deletion
+					// A missing keypair is considered as a successful deletion
 				default:
 					return fail.Wrap(xerr, "error deleting keypair")
 				}

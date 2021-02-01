@@ -18,7 +18,8 @@ package aws
 
 import (
 	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks/api"
-	"github.com/sirupsen/logrus"
+
+	"fmt"
 
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/objectstorage"
@@ -80,16 +81,13 @@ func (p *provider) Build(params map[string]interface{}) (providers.Provider, fai
 		return &provider{}, fail.SyntaxError("section compute not found in tenants.toml")
 	}
 
-	networkName := "safescale"
-
+	var networkName string
 	networkCfg, ok := params["network"].(map[string]interface{})
-	if !ok {
-		logrus.Warnf("section network not found in tenants.toml !!")
-	} else {
-		newNetworkName, _ := networkCfg["ProviderNetwork"].(string)
-		if newNetworkName != "" {
-			networkName = newNetworkName
-		}
+	if ok {
+		networkName, _ = networkCfg["ProviderNetwork"].(string)
+	}
+	if networkName == "" {
+		networkName = "safescale"
 	}
 
 	region, ok := computeCfg["Region"].(string)
@@ -101,23 +99,23 @@ func (p *provider) Build(params map[string]interface{}) (providers.Provider, fai
 		return &provider{}, fail.SyntaxError("field 'Zone' in section 'compute' not found in tenants.toml")
 	}
 
-	s3Endpoint, ok := computeCfg["S3"].(string)
-	if !ok {
-		return &provider{}, fail.SyntaxError("field 'S3' in section 'compute' not found in tenants.toml")
-	}
-	ec2Endpoint, ok := computeCfg["EC2"].(string)
-	if !ok {
-		return &provider{}, fail.SyntaxError("field 'EC2' in section 'compute' not found in tenants.toml")
-	}
-	ssmEndpoint, ok := computeCfg["SSM"].(string)
-	if !ok {
-		return &provider{}, fail.SyntaxError("field 'SSM' in section 'cimpute' not found in tenants.toml")
-	}
+	// s3Endpoint, ok := computeCfg["S3"].(string)
+	// if !ok {
+	// 	return &provider{}, fail.SyntaxError("field 'S3' in section 'compute' not found in tenants.toml")
+	// }
+	// ec2Endpoint, ok := computeCfg["EC2"].(string)
+	// if !ok {
+	// 	return &provider{}, fail.SyntaxError("field 'EC2' in section 'compute' not found in tenants.toml")
+	// }
+	// ssmEndpoint, ok := computeCfg["SSM"].(string)
+	// if !ok {
+	// 	return &provider{}, fail.SyntaxError("field 'SSM' in section 'cimpute' not found in tenants.toml")
+	// }
 
 	awsConf := stacks.AWSConfiguration{
-		S3Endpoint:  s3Endpoint,
-		Ec2Endpoint: ec2Endpoint,
-		SsmEndpoint: ssmEndpoint,
+		// S3Endpoint:  s3Endpoint,
+		Ec2Endpoint: fmt.Sprintf("https://ec2.%s.amazonaws.com", region),
+		SsmEndpoint: fmt.Sprintf("https://ssm.%s.amazonaws.com", region),
 		Region:      region,
 		Zone:        zone,
 		NetworkName: networkName,
@@ -139,18 +137,21 @@ func (p *provider) Build(params map[string]interface{}) (providers.Provider, fai
 		return &provider{}, fail.SyntaxError("no secret access key provided in tenants.toml")
 	}
 
-	identityEndpoint, ok := identityCfg["auth_uri"].(string)
-	if !ok || identityEndpoint == "" {
-		return &provider{}, fail.SyntaxError("no identity endpoint provided in tenants.toml")
+	identityEndpoint, _ := identityCfg["IdentityEndpoint"].(string)
+	if identityEndpoint == "" {
+		identityEndpoint, ok = identityCfg["auth_uri"].(string) // deprecated, kept until next release
+		if !ok || identityEndpoint == "" {
+			identityEndpoint = "https://iam.amazonaws.com"
+		}
 	}
 
 	projectName, _ := computeCfg["ProjectName"].(string)
 	projectID, _ := computeCfg["ProjectID"].(string)
 	defaultImage, _ := computeCfg["DefaultImage"].(string)
 
-	operatorUsername := abstract.DefaultUser
-	if operatorUsernameIf, ok := computeCfg["OperatorUsername"]; ok {
-		operatorUsername = operatorUsernameIf.(string)
+	operatorUsername, _ := computeCfg["OperatorUsername"].(string)
+	if operatorUsername == "" {
+		operatorUsername = abstract.DefaultUser
 	}
 
 	authOptions := stacks.AuthenticationOptions{
@@ -262,7 +263,7 @@ func (p provider) ListTemplates(all bool) ([]abstract.HostTemplate, fail.Error) 
 // GetCapabilities returns the capabilities of the provider
 func (p provider) GetCapabilities() providers.Capabilities {
 	return providers.Capabilities{
-		PrivateVirtualIP: true,
+		PrivateVirtualIP: false,
 	}
 }
 

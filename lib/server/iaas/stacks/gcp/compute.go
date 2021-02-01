@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"google.golang.org/api/compute/v1"
@@ -151,6 +150,7 @@ func (s stack) InspectTemplate(id string) (_ abstract.HostTemplate, xerr fail.Er
 
 // -------------SSH KEYS-------------------------------------------------------------------------------------------------
 
+// FIXME: change code to really create a keypair on provider side
 // CreateKeyPair creates and import a key pair
 func (s stack) CreateKeyPair(name string) (_ *abstract.KeyPair, xerr fail.Error) {
 	if s.IsNull() {
@@ -202,34 +202,12 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	}
 
 	// If no key pair is supplied create one
-	if request.KeyPair == nil {
-		id, err := uuid.NewV4()
-		if err != nil {
-			msg := fmt.Sprintf("failed to create host UUID: %s", err.Error())
-			logrus.Debugf(strprocess.Capitalize(msg))
-			return nullAHF, nullUD, fail.NewError(msg)
-		}
-
-		name := fmt.Sprintf("%s_%s", request.ResourceName, id)
-		request.KeyPair, err = s.CreateKeyPair(name)
-		if err != nil {
-			msg := fmt.Sprintf("failed to create host key pair: %s", err.Error())
-			logrus.Debugf(strprocess.Capitalize(msg))
-			return nullAHF, nullUD, fail.NewError(msg)
-		}
-	}
-	if request.Password == "" {
-		password, err := utils.GeneratePassword(16)
-		if err != nil {
-			return nullAHF, nullUD, fail.NewError("failed to generate password: %s", err.Error())
-		}
-		request.Password = password
+	if xerr = stacks.ProvideCredentialsIfNeeded(&request); xerr != nil {
+		return nullAHF, nullUD, fail.Wrap(xerr, "failed to provide credentials for Host")
 	}
 
-	// The Default Network is the first of the provided list, by convention
 	defaultSubnet := request.Subnets[0]
 	defaultSubnetID := defaultSubnet.ID
-
 	an, xerr := s.InspectNetwork(defaultSubnet.Network)
 	if xerr != nil {
 		switch xerr.(type) {
@@ -372,7 +350,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	logrus.Debugf("Host '%s' created.", ahf.GetName())
 
 	// Add to abstract.HostFull data that does not come with creation data from provider
-	ahf.Core.PrivateKey = userData.FirstPrivateKey // Add PrivateKey to ahf definition
+	ahf.Core.PrivateKey = userData.FirstPrivateKey // Add PrivateKey to Host description
 	ahf.Core.Password = request.Password           // and OperatorUsername's password
 	ahf.Networking.IsGateway = request.IsGateway
 	ahf.Networking.DefaultSubnetID = defaultSubnetID
@@ -471,7 +449,7 @@ func (s stack) ClearHostStartupScript(hostParam stacks.HostParameter) fail.Error
 	return s.rpcResetStartupScriptOfInstance(ahf.GetID())
 }
 
-	// InspectHost returns the host identified by ref (name or id) or by a *abstract.HostFull containing an id
+// InspectHost returns the host identified by ref (name or id) or by a *abstract.HostFull containing an id
 func (s stack) InspectHost(hostParam stacks.HostParameter) (host *abstract.HostFull, xerr fail.Error) {
 	nullAHF := abstract.NewHostFull()
 	if s.IsNull() {
@@ -600,23 +578,23 @@ func (s stack) complementHost(host *abstract.HostFull, instance *compute.Instanc
 	host.Networking.SubnetsByName = subnetIDByName
 	host.Networking.PublicIPv4 = ipv4
 
-	host.Sizing = s.fromMachineTypeToAllocatedSize(instance.MachineType)
+	//host.Sizing = s.fromMachineTypeToAllocatedSize(instance.MachineType)
 
 	return nil
 }
 
-func (s stack) fromMachineTypeToAllocatedSize(machineType string) *abstract.HostEffectiveSizing {
-	hz := abstract.HostEffectiveSizing{}
-	mt, xerr := s.rpcGetMachineType(machineType)
-	if xerr != nil {
-		return &hz
-	}
-
-	// FIXME: complete mapping
-	hz.Cores = int(mt.GuestCpus)
-	hz.RAMSize = float32(mt.MemoryMb / 1024)
-	return &hz
-}
+//func (s stack) fromMachineTypeToAllocatedSize(machineType string) *abstract.HostEffectiveSizing {
+//	hz := abstract.HostEffectiveSizing{}
+//	mt, xerr := s.rpcGetMachineType(machineType)
+//	if xerr != nil {
+//		return &hz
+//	}
+//
+//	// FIXME: complete mapping
+//	hz.Cores = int(mt.GuestCpus)
+//	hz.RAMSize = float32(mt.MemoryMb / 1024.0)
+//	return &hz
+//}
 
 func stateConvert(gcpHostStatus string) (hoststate.Enum, fail.Error) {
 	switch gcpHostStatus {

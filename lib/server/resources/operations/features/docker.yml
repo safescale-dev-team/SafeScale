@@ -21,6 +21,7 @@ feature:
         cluster: all
     parameters:
         - DockerComposeVersion=1.27.4
+
     install:
         bash:
             check:
@@ -170,11 +171,12 @@ feature:
                             }
                             EOF
                             else
+                            # VPL: these options seems to trouble docker in some cases. Need further analysis.
+                            #    "exec-opts": [
+                            #        "native.cgroupdriver=${DRIVER}"
+                            #    ],
                                 cat > /etc/docker/daemon.json <<-EOF
                             {
-                                "exec-opts": [
-                                    "native.cgroupdriver=${DRIVER}"
-                                ],
                                 "no-new-privileges": false,
                                 "log-driver": "json-file",
                                 "log-level":"info",
