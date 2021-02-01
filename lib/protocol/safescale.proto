@@ -136,7 +136,10 @@ service TenantService{
 	}
 	rpc Scan (google.protobuf.Empty) returns (google.protobuf.Empty){}
 	rpc Set (TenantName) returns (google.protobuf.Empty) {
-		option (google.api.http).post = "/v1/tenant";		
+		option (google.api.http) = {
+			post: "/v1/tenant"
+			body: "*"
+		};
 	}
 }
 
@@ -216,7 +219,7 @@ service NetworkService {
 	rpc Create(NetworkCreateRequest) returns (Network){
 		option (google.api.http) = {
 			post: "/v1/network"
-			body: "*"
+			body: "*"		
 		};														
 	}
 	rpc List(NetworkListRequest) returns (NetworkList){
@@ -311,6 +314,7 @@ service SubnetService {
 	rpc Create(SubnetCreateRequest) returns (Subnet){
 		option (google.api.http) = {
 			post: "/v1/network/{network.id}/subnet"
+			body: "*"		
 		};																
 	}
 	rpc List(SubnetListRequest) returns (SubnetList){
@@ -323,16 +327,28 @@ service SubnetService {
 		option (google.api.http).delete = "/v1/network/{network.id}/subnet/{subnet.id}";																
 	}
 	rpc BindSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/bind";																		
+		option (google.api.http) = {
+			post: "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/bind"
+			body: "*"		
+		};
 	}
 	rpc UnbindSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/unbind";																				
+		option (google.api.http) = {
+			post: "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/unbind"
+			body: "*"
+		};																			
 	}
 	rpc EnableSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/enable";																						
+		option (google.api.http) = {
+			post: "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/enable"
+			body: "*"
+		};																						
 	}
 	rpc DisableSecurityGroup(SecurityGroupSubnetBindRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/disable";																								
+		option (google.api.http) = {
+			post: "/v1/network/{network.id}/subnet/{subnet.id}/security_group/{group.id}/disable"
+			body: "*"
+		};																							
 	}
 	rpc ListSecurityGroups(SecurityGroupSubnetBindRequest) returns (SecurityGroupBondsResponse){
 		option (google.api.http).get = "/v1/network/{network.id}/subnet/{subnet.id}/security_groups";																										
@@ -427,9 +443,10 @@ message HostListRequest {
 }
 
 service HostService {
-	rpc Create(HostDefinition) returns (Host){
+	rpc Create(HostDefinition) returns (Host) {
 		option (google.api.http) = {
 			post: "/v1/host"
+			body: "*"
 		};
 	}
 	rpc Inspect(Reference) returns (Host){
@@ -445,33 +462,55 @@ service HostService {
 		option (google.api.http).delete = "/v1/host/{id}";				
 	}
 	rpc Start(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/start";				
+		option (google.api.http) = {
+			post: "/v1/host/{id}/start"
+			body: "*"
+		};				
 	}
 	rpc Stop(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/stop";						
+		option (google.api.http) = {
+			post: "/v1/host/{id}/stop"
+			body: "*"
+		};						
 	}
 	rpc Reboot(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{id}/reboot";								
+		option (google.api.http) = {
+			post: "/v1/host/{id}/reboot"
+			body: "*"
+		};								
 	}
 	rpc Resize(HostDefinition) returns (Host){
 		option (google.api.http) = {
 			post: "/v1/host/{name}/resize"
+			body: "*"		
 		};										
 	}
 	rpc SSH(Reference) returns (SshConfig){
-		option (google.api.http).post = "/v1/host/{id}/ssh";												
+		option (google.api.http).get = "/v1/host/{id}/ssh";												
 	}
 	rpc BindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/host/{host.id}/security_group/{group.id}/bind";																												
+		option (google.api.http) = {
+			post: "/v1/host/{host.id}/security_group/{group.id}/bind"
+			body: "*"
+		};																												
 	}
 	rpc UnbindSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
- 		option (google.api.http).post = "/v1/host/{host.id}/security_group/{group.id}/unbind";																												
+ 		option (google.api.http) = {
+ 			post: "/v1/host/{host.id}/security_group/{group.id}/unbind"
+ 			body: "*"
+ 		};																											
 	}
 	rpc EnableSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
- 		option (google.api.http).post = "/v1/host/{host.id}/security_group/{group.id}/enable";																														
+ 		option (google.api.http) = {
+ 			post: "/v1/host/{host.id}/security_group/{group.id}/enable"
+ 			body: "*"
+ 		};																													
 	}
 	rpc DisableSecurityGroup(SecurityGroupHostBindRequest) returns (google.protobuf.Empty){
- 		option (google.api.http).post = "/v1/host/{host.id}/security_group/{group.id}/disable";																														
+ 		option (google.api.http) = {
+ 			post: "/v1/host/{host.id}/security_group/{group.id}/disable"
+ 			body: "*"
+ 		};																														
 	}
 	rpc ListSecurityGroups(SecurityGroupHostBindRequest) returns (SecurityGroupBondsResponse){
  		option (google.api.http).get = "/v1/host/{host.id}/security_groups";																														
@@ -577,21 +616,29 @@ service VolumeService {
 	rpc Create(VolumeCreateRequest) returns (VolumeInspectResponse) {
 		option (google.api.http) = {
 			post: "/v1/volume"
+			body: "*"
 		};																		
 	}
 	rpc Attach(VolumeAttachmentRequest) returns (google.protobuf.Empty){
 		option (google.api.http) = {
 			post: "/v1/volume/{volume.id}/attach/{host.id}"
+			body: "*"
 		};						
 	}
 	rpc Detach(VolumeDetachmentRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/volume/{volume.id}/detach/{host.id}";						
+		option (google.api.http) = {
+			post: "/v1/volume/{volume.id}/detach/{host.id}"
+			body: "*"
+		};						
 	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/volume/{id}";																		
 	}
 	rpc List(VolumeListRequest) returns (VolumeListResponse) {
-		option (google.api.http).post = "/v1/volumes";																		
+		option (google.api.http) = {
+			post: "/v1/volumes"
+			body: "*"
+		};																		
 	}
 	rpc Inspect(Reference) returns (VolumeInspectResponse){
 		option (google.api.http).get = "/v1/volume/{id}";																		
@@ -623,15 +670,20 @@ service BucketService {
 	rpc Create(Bucket) returns (google.protobuf.Empty){
 		option (google.api.http) = {
 			post: "/v1/bucket"
+			body: "*"
 		};																		
 	}
 	rpc Mount(BucketMountingPoint) returns (google.protobuf.Empty){
 		option (google.api.http) = {
 			post: "/v1/bucket/{bucket}/mount/{host.id}"
+			body: "*"
 		};																		
 	}
 	rpc Unmount(BucketMountingPoint) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/bucket/{bucket}/umount/{host.id}";																		
+		option (google.api.http) = {
+			post: "/v1/bucket/{bucket}/umount/{host.id}"
+			body: "*"
+		};																		
 	}
 	rpc Delete(Bucket) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/bucket/{name}";																				
@@ -719,19 +771,31 @@ message ShareMountList {
 
 service ShareService {
 	rpc Create(ShareDefinition) returns (ShareDefinition){
-		option (google.api.http).post = "/v1/share";																						
+		option (google.api.http) = {
+			post: "/v1/share"
+			body: "*"
+		};																						
 	}
 	rpc Delete(Reference) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/share/{id}";																								
 	}
 	rpc List(Reference) returns (ShareList){
-		option (google.api.http).post = "/v1/shares";																								
+		option (google.api.http) = {
+			post: "/v1/shares"
+			body: "*"
+		};																								
 	}     // Here, Reference is used to carry tenant
 	rpc Mount(ShareMountDefinition) returns (ShareMountDefinition){
-		option (google.api.http).post = "/v1/share/{share.id}/host/{host.id}/mount";																										
+		option (google.api.http) = {
+			post: "/v1/share/{share.id}/host/{host.id}/mount"
+			body: "*"
+		};																										
 	}
 	rpc Unmount(ShareMountDefinition) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/share/{share.id}/host/{host.id}/umount";																												
+		option (google.api.http) = {
+			post: "/v1/share/{share.id}/host/{host.id}/umount"
+			body: "*"
+		};																												
 	}
 	rpc Inspect(Reference) returns (ShareMountList){
 		option (google.api.http).get = "/v1/share/{id}";																								
@@ -907,25 +971,38 @@ service ClusterService {
 	rpc Create(ClusterCreateRequest) returns (ClusterResponse){
 		option (google.api.http) = {
 			post: "/v1/cluster"
+			body: "*"
 		};
 	}
 	rpc Delete(ClusterDeleteRequest) returns (google.protobuf.Empty){
 		option (google.api.http).delete = "/v1/cluster/{name}";																								
 	}
 	rpc Start(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/cluster/{id}/start";																								
+		option (google.api.http) = {
+			post: "/v1/cluster/{id}/start"
+			body: "*"
+		};																								
 	}
 	rpc Stop(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/cluster/{id}/stop";																								
+		option (google.api.http) = {
+			post: "/v1/cluster/{id}/stop"
+			body: "*"
+		};																								
 	}
 	rpc State(Reference) returns (ClusterStateResponse){
 		option (google.api.http).get = "/v1/cluster/{id}/state";																								
 	}
 	rpc Expand(ClusterResizeRequest) returns (ClusterNodeListResponse){
-		option (google.api.http).post = "/v1/cluster/{name}/expand";																										
+		option (google.api.http) = {
+			post: "/v1/cluster/{name}/expand"
+			body: "*"
+		};																										
 	}
 	rpc Shrink(ClusterResizeRequest) returns (ClusterNodeListResponse){
-		option (google.api.http).post = "/v1/cluster/{name}/shrink";																												
+		option (google.api.http) = {
+			post: "/v1/cluster/{name}/shrink"
+			body: "*"
+		};																												
 	}
 	rpc ListNodes(Reference) returns (ClusterNodeListResponse){
 		option (google.api.http).get = "/v1/cluster/{id}/nodes";																												
@@ -937,10 +1014,16 @@ service ClusterService {
 		option (google.api.http).delete = "/v1/cluster/{name}/node/{host.id}";																												
 	}
 	rpc StopNode(ClusterNodeRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/cluster/{name}/node/{host.id}/stop";																												
+		option (google.api.http) = {
+			post: "/v1/cluster/{name}/node/{host.id}/stop"
+			body: "*"
+		};																												
 	}
 	rpc StartNode(ClusterNodeRequest) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/cluster/{name}/node/{host.id}/start";																												
+		option (google.api.http) = {
+			post: "/v1/cluster/{name}/node/{host.id}/start"
+			body: "*"
+		};																												
 	}
 	rpc StateNode(ClusterNodeRequest) returns (ClusterStateResponse){
 		option (google.api.http).get = "/v1/cluster/{name}/node/{host.id}/state";																												
@@ -1005,6 +1088,7 @@ service FeatureService {
 	rpc Add(FeatureActionRequest) returns (google.protobuf.Empty){
 		option (google.api.http) = {
 			post: "/v1/feature"
+			body: "*"
 		};
 	}
 	rpc Remove(FeatureActionRequest) returns (google.protobuf.Empty){
@@ -1113,17 +1197,22 @@ service SecurityGroupService {
 	rpc AddRule(SecurityGroupRuleRequest) returns (SecurityGroupResponse){
 		option (google.api.http) = {
 			post: "/v1/security_group/{group.name}/rule"
+			body: "*"
 		};				
 	}
 	rpc Bonds(SecurityGroupBondsRequest) returns (SecurityGroupBondsResponse){
 		option (google.api.http).get = "/v1/security_groups/bonds";				
 	}
 	rpc Clear(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/security_group/{id}/clear";						
+		option (google.api.http) = {
+			post: "/v1/security_group/{id}/clear"
+			body: "*"
+		};						
 	}
 	rpc Create(SecurityGroupCreateRequest) returns (SecurityGroupResponse){
 		option (google.api.http) = {
 			post: "/v1/security_group"
+			body: "*"
 		};		
 	}
 	rpc Delete(SecurityGroupDeleteRequest) returns (google.protobuf.Empty){
@@ -1139,10 +1228,16 @@ service SecurityGroupService {
 		option (google.api.http).get = "/v1/security_groups";
 	}
 	rpc Reset(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/security_group/{id}/reset";		
+		option (google.api.http) = {
+			post: "/v1/security_group/{id}/reset"
+			body: "*"
+		};		
 	}
 	rpc Sanitize(Reference) returns (google.protobuf.Empty){
-		option (google.api.http).post = "/v1/security_group/{id}/sanitize";				
+		option (google.api.http) = {
+			post: "/v1/security_group/{id}/sanitize"
+			body: "*"
+		};				
 	}
 }
 
@@ -1189,6 +1284,7 @@ service PublicIPService {
 	rpc Create(PublicIPCreateRequest) returns (PublicIPResponse){
 		option (google.api.http) = {
 			post: "/v1/public_ip"
+			body: "*"
 		};		
 	}
 	rpc Delete(PublicIPDeleteRequest) returns (google.protobuf.Empty){
@@ -1201,9 +1297,15 @@ service PublicIPService {
 		option (google.api.http).get = "/v1/public_ips";						
 	}
 	rpc Bind(PublicIPBindRequest) returns (google.protobuf.Empty){
- 		option (google.api.http).post = "/v1/public_ip/{ip.id}/bind/{host.id}";								
+ 		option (google.api.http) = {
+ 			post: "/v1/public_ip/{ip.id}/bind/{host.id}"
+ 			body: "*"
+ 		};								
 	}
 	rpc Unbind(PublicIPBindRequest) returns (google.protobuf.Empty){
- 		option (google.api.http).post = "/v1/public_ip/{ip.id}/unbind/{host.id}";										
+ 		option (google.api.http) = {
+ 			post: "/v1/public_ip/{ip.id}/unbind/{host.id}"
+ 			body: "*"
+ 		};										
 	}
 }

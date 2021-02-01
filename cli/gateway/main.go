@@ -130,6 +130,8 @@ func work(c *cli.Context) {
 	}()
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/openapiv2/", openAPIServer("lib/protocol"))
+	
 
 	var opts []gwruntime.ServeMuxOption
 	gw, err := newGateway(ctx, conn, opts)
@@ -157,13 +159,6 @@ func work(c *cli.Context) {
 		return
 	}
 }
-
-
-//var (
-//	endpoint   = flag.String("endpoint", "localhost:9090", "endpoint of the gRPC service")
-//	network    = flag.String("network", "tcp", `one of "tcp" or "unix". Must be consistent to -endpoint`)
-//	openAPIDir = flag.String("openapi_dir", "examples/internal/proto/examplepb", "path to the directory which contains OpenAPI definitions")
-//)
 
 // assembleListenString constructs the listen string we will use in net.Listen()
 func assembleListenString(c *cli.Context) string {
@@ -203,7 +198,7 @@ func assembleEndpointString(c *cli.Context) string {
 		parts := strings.Split(listen, ":")
 		switch len(parts) {
 		case 1:
-			listen = parts[0] + ":" + defaultDaemonPort
+			listen = parts[0] + ":" + defaultGrpcPort
 		case 2:
 			num, err := strconv.Atoi(parts[1])
 			if err != nil || num <= 0 {
@@ -226,7 +221,7 @@ func assembleEndpointString(c *cli.Context) string {
 	}
 	// At last, if listen is empty, build it from defaults
 	if listen == "" {
-		listen = defaultDaemonHost + ":" + defaultDaemonPort
+		listen = defaultDaemonHost + ":" + defaultGrpcPort
 	}
 	return listen
 }

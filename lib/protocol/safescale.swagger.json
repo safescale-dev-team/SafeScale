@@ -75,6 +75,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Bucket"
+            }
+          }
+        ],
         "tags": [
           "BucketService"
         ]
@@ -109,6 +119,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BucketMountingPoint"
+            }
           }
         ],
         "tags": [
@@ -145,6 +163,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BucketMountingPoint"
+            }
           }
         ],
         "tags": [
@@ -249,6 +275,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "ClusterService"
         ]
@@ -361,6 +397,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -433,6 +477,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -505,6 +557,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterResizeRequest"
+            }
           }
         ],
         "tags": [
@@ -767,6 +827,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterNodeRequest"
+            }
           }
         ],
         "tags": [
@@ -851,6 +919,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterNodeRequest"
+            }
           }
         ],
         "tags": [
@@ -881,6 +957,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ClusterResizeRequest"
+            }
           }
         ],
         "tags": [
@@ -947,6 +1031,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FeatureActionRequest"
+            }
+          }
+        ],
         "tags": [
           "FeatureService"
         ]
@@ -1219,6 +1313,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HostDefinition"
+            }
+          }
+        ],
         "tags": [
           "HostService"
         ]
@@ -1253,6 +1357,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupHostBindRequest"
+            }
           }
         ],
         "tags": [
@@ -1289,6 +1401,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupHostBindRequest"
+            }
           }
         ],
         "tags": [
@@ -1325,6 +1445,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupHostBindRequest"
+            }
           }
         ],
         "tags": [
@@ -1361,6 +1489,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupHostBindRequest"
+            }
           }
         ],
         "tags": [
@@ -1539,6 +1675,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -1547,7 +1691,7 @@
       }
     },
     "/v1/host/{id}/ssh": {
-      "post": {
+      "get": {
         "operationId": "HostService_SSH",
         "responses": {
           "200": {
@@ -1568,6 +1712,18 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -1599,6 +1755,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -1671,6 +1835,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -1701,6 +1873,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HostDefinition"
+            }
           }
         ],
         "tags": [
@@ -1917,6 +2097,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SubnetCreateRequest"
+            }
           }
         ],
         "tags": [
@@ -2019,6 +2207,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupSubnetBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2061,6 +2257,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupSubnetBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2103,6 +2307,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupSubnetBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2145,6 +2357,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupSubnetBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2289,6 +2509,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PublicIPCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "PublicIPService"
         ]
@@ -2419,6 +2649,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PublicIPBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2455,6 +2693,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PublicIPBindRequest"
+            }
           }
         ],
         "tags": [
@@ -2515,6 +2761,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "SecurityGroupService"
         ]
@@ -2704,6 +2960,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SecurityGroupRuleRequest"
+            }
           }
         ],
         "tags": [
@@ -2776,6 +3040,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -2806,6 +3078,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -2836,6 +3116,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
           }
         ],
         "tags": [
@@ -2938,6 +3226,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ShareDefinition"
+            }
+          }
+        ],
         "tags": [
           "ShareService"
         ]
@@ -3054,6 +3352,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ShareMountDefinition"
+            }
           }
         ],
         "tags": [
@@ -3090,6 +3396,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ShareMountDefinition"
+            }
           }
         ],
         "tags": [
@@ -3114,6 +3428,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reference"
+            }
+          }
+        ],
         "tags": [
           "ShareService"
         ]
@@ -3192,6 +3516,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TenantName"
+            }
+          }
+        ],
         "tags": [
           "TenantService"
         ]
@@ -3236,6 +3570,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeCreateRequest"
+            }
+          }
+        ],
         "tags": [
           "VolumeService"
         ]
@@ -3352,6 +3696,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeAttachmentRequest"
+            }
           }
         ],
         "tags": [
@@ -3388,6 +3740,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeDetachmentRequest"
+            }
           }
         ],
         "tags": [
@@ -3412,6 +3772,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VolumeListRequest"
+            }
+          }
+        ],
         "tags": [
           "VolumeService"
         ]
@@ -3589,6 +3959,66 @@
         }
       }
     },
+    "ClusterCreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "complexity": {
+          "$ref": "#/definitions/ClusterComplexity"
+        },
+        "flavor": {
+          "$ref": "#/definitions/ClusterFlavor"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "cidr": {
+          "type": "string"
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "os": {
+          "type": "string"
+        },
+        "globalSizing": {
+          "type": "string"
+        },
+        "gatewaySizing": {
+          "type": "string"
+        },
+        "masterSizing": {
+          "type": "string"
+        },
+        "nodeSizing": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "nodeCount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "gatewayOptions": {
+          "type": "string"
+        },
+        "masterOptions": {
+          "type": "string"
+        },
+        "nodeOptions": {
+          "type": "string"
+        }
+      }
+    },
     "ClusterDefaults": {
       "type": "object",
       "properties": {
@@ -3717,6 +4147,41 @@
         }
       }
     },
+    "ClusterNodeRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
+        }
+      }
+    },
+    "ClusterResizeRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nodeSizing": {
+          "type": "string"
+        },
+        "imageId": {
+          "type": "string"
+        },
+        "dryRun": {
+          "type": "boolean"
+        },
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
     "ClusterResponse": {
       "type": "object",
       "properties": {
@@ -3780,6 +4245,32 @@
       "properties": {
         "state": {
           "$ref": "#/definitions/ClusterState"
+        }
+      }
+    },
+    "FeatureActionRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetType": {
+          "$ref": "#/definitions/FeatureTargetType"
+        },
+        "targetRef": {
+          "$ref": "#/definitions/Reference"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "$ref": "#/definitions/FeatureSettings"
         }
       }
     },
@@ -3918,6 +4409,71 @@
         },
         "password": {
           "type": "string"
+        },
+        "sshPort": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "HostDefinition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "network": {
+          "type": "string"
+        },
+        "cpuCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ram": {
+          "type": "number",
+          "format": "float"
+        },
+        "disk": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "imageId": {
+          "type": "string"
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "gpuCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cpuFreq": {
+          "type": "number",
+          "format": "float"
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "sizing": {
+          "$ref": "#/definitions/HostSizing"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "sizingAsString": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "subnets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "sshPort": {
           "type": "integer",
@@ -4202,6 +4758,37 @@
       ],
       "default": "NS_UNKNOWNSTATE"
     },
+    "PublicIPBindRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "ip": {
+          "$ref": "#/definitions/Reference"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
+        }
+      }
+    },
+    "PublicIPCreateRequest": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
     "PublicIPListResponse": {
       "type": "object",
       "properties": {
@@ -4278,6 +4865,40 @@
           "items": {
             "$ref": "#/definitions/SecurityGroupBond"
           }
+        }
+      }
+    },
+    "SecurityGroupCreateRequest": {
+      "type": "object",
+      "properties": {
+        "network": {
+          "$ref": "#/definitions/Reference"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SecurityGroupRule"
+          }
+        }
+      }
+    },
+    "SecurityGroupHostBindRequest": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/Reference"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
+        },
+        "state": {
+          "$ref": "#/definitions/SecurityGroupState"
         }
       }
     },
@@ -4367,6 +4988,17 @@
       ],
       "default": "SGRET_UNKNOWN"
     },
+    "SecurityGroupRuleRequest": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/Reference"
+        },
+        "rule": {
+          "$ref": "#/definitions/SecurityGroupRule"
+        }
+      }
+    },
     "SecurityGroupState": {
       "type": "string",
       "enum": [
@@ -4375,6 +5007,23 @@
         "SGS_DISABLED"
       ],
       "default": "SGS_ALL"
+    },
+    "SecurityGroupSubnetBindRequest": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/Reference"
+        },
+        "network": {
+          "$ref": "#/definitions/Reference"
+        },
+        "subnet": {
+          "$ref": "#/definitions/Reference"
+        },
+        "state": {
+          "$ref": "#/definitions/SecurityGroupState"
+        }
+      }
     },
     "ShareDefinition": {
       "type": "object",
@@ -4527,6 +5176,36 @@
         },
         "networkId": {
           "type": "string"
+        }
+      }
+    },
+    "SubnetCreateRequest": {
+      "type": "object",
+      "properties": {
+        "network": {
+          "$ref": "#/definitions/Reference"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cidr": {
+          "type": "string"
+        },
+        "gateway": {
+          "$ref": "#/definitions/GatewayDefinition"
+        },
+        "failOver": {
+          "type": "boolean"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "keepOnFailure": {
+          "type": "boolean"
+        },
+        "defaultSshPort": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -4731,6 +5410,29 @@
         }
       }
     },
+    "VolumeAttachmentRequest": {
+      "type": "object",
+      "properties": {
+        "volume": {
+          "$ref": "#/definitions/Reference"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
+        },
+        "mountPath": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        },
+        "doNotFormat": {
+          "type": "boolean"
+        }
+      }
+    },
     "VolumeAttachmentResponse": {
       "type": "object",
       "properties": {
@@ -4748,6 +5450,35 @@
         },
         "doNotFormat": {
           "type": "boolean"
+        }
+      }
+    },
+    "VolumeCreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "speed": {
+          "$ref": "#/definitions/VolumeSpeed"
+        },
+        "size": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tenantId": {
+          "type": "string"
+        }
+      }
+    },
+    "VolumeDetachmentRequest": {
+      "type": "object",
+      "properties": {
+        "volume": {
+          "$ref": "#/definitions/Reference"
+        },
+        "host": {
+          "$ref": "#/definitions/Reference"
         }
       }
     },
@@ -4784,6 +5515,17 @@
           "items": {
             "$ref": "#/definitions/VolumeAttachmentResponse"
           }
+        }
+      }
+    },
+    "VolumeListRequest": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "tenantId": {
+          "type": "string"
         }
       }
     },
