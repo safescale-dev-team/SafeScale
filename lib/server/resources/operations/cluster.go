@@ -571,8 +571,22 @@ func (c *cluster) Create(task concurrency.Task, req abstract.ClusterRequest) (xe
 		}
 	}()
 
-	// At the end, configure cluster as a whole
-	return c.configureCluster(task)
+	// configure cluster as a whole
+	if xerr = c.configureCluster(task); xerr != nil {
+		return xerr
+	}
+
+	// Sets nominal state of the new cluster in metadata
+	return c.Alter(task, func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
+		return props.Alter(task, clusterproperty.StateV1, func(clonable data.Clonable) fail.Error {
+			stateV1, ok := clonable.(*propertiesv1.ClusterState)
+			if !ok {
+				return fail.InconsistentError("'*propertiesv1.GetState' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
+			stateV1.State = clusterstate.Nominal
+			return nil
+		})
+	})
 }
 
 // firstLight contains the code leading to cluster first metadata written
@@ -583,7 +597,7 @@ func (c *cluster) firstLight(task concurrency.Task, req abstract.ClusterRequest)
 	if task.IsNull() {
 		return fail.InvalidParameterError("task", "cannot be null value of 'concurrency.Task'")
 	}
-	if req.Name == "" {
+	if req.Name = strings.TrimSpace(req.Name); req.Name == "" {
 		return fail.InvalidParameterError("req.Name", "cannot be empty string")
 	}
 
