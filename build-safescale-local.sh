@@ -5,7 +5,7 @@
 # ----------------------
 echo "Accessing working directory"
 BRANCH_NAME=${BRANCH_NAME:="develop"}
-WRKDIR=${GOPATH=/go}
+WRKDIR=${GOPATH=/go}/src/github.com/CS-SI
 cd ${WRKDIR}
 
 cd SafeScale

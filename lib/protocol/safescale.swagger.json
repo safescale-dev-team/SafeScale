@@ -4004,10 +4004,6 @@
         "tenantId": {
           "type": "string"
         },
-        "nodeCount": {
-          "type": "integer",
-          "format": "int64"
-        },
         "gatewayOptions": {
           "type": "string"
         },
