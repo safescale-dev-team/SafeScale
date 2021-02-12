@@ -867,7 +867,7 @@ var clusterHelmCommand = &cli.Command{
 		}
 
 		clientID := GenerateClientIdentity()
-		useTLS := " --tls"
+		useTLS := ""
 		var filteredArgs []string
 		args := c.Args().Tail()
 		ignoreNext := false

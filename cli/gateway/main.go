@@ -130,7 +130,7 @@ func work(c *cli.Context) {
 	}()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/openapiv2/", openAPIServer("lib/protocol"))
+	mux.HandleFunc("/openapiv2/", openAPIServer("/usr/local/share/safescale"))
 	
 
 	var opts []gwruntime.ServeMuxOption
@@ -142,7 +142,7 @@ func work(c *cli.Context) {
 	mux.Handle("/", gw)
 
 	s := &http.Server{
-		Addr:    "localhost:8080",
+		Addr:    listen,
 		Handler: allowCORS(mux),
 	}
 	go func() {
