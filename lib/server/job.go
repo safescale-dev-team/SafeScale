@@ -19,7 +19,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/CS-SI/SafeScale/lib/utils/data"
 	"sync"
 	"time"
 
