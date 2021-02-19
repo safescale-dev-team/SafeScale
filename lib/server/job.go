@@ -105,7 +105,7 @@ func NewJob(ctx context.Context, cancel context.CancelFunc, svc iaas.Service, de
 			}
 	
 			if id = u[0]; id == "" {
-				return nil, fail.InvalidParameterError("ctx", "does not contain a valid grpc uuid")
+				return nil, fail.InvalidParameterError("ctx", "does not contain a valid gRPC uuid")
 			}
 		}
 	}

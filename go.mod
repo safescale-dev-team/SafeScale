@@ -24,7 +24,7 @@ require (
 	github.com/gophercloud/gophercloud v0.0.0-20190509032623-7892efa714f1
 	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/gregoryv/gocyclo v0.1.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.1.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.2.0
 	github.com/huandu/xstrings v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jcelliott/lumber v0.0.0-20160324203708-dd349441af25 // indirect
@@ -60,13 +60,13 @@ require (
 	github.com/xrash/smetrics v0.0.0-20170218160415-a3153f7040e9
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5
+	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
 	golang.org/x/sys v0.0.0-20201231184435-2d18734c6014
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/stow v0.2.4
 	google.golang.org/api v0.30.0
-	google.golang.org/genproto v0.0.0-20210106152847-07624b53cd92
-	google.golang.org/grpc v1.34.0
+	google.golang.org/genproto v0.0.0-20210207032614-bba0dbe2a9ea
+	google.golang.org/grpc v1.35.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
