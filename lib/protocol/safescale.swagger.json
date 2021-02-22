@@ -3443,6 +3443,42 @@
         ]
       }
     },
+    "/v1/template/match": {
+      "get": {
+        "operationId": "TemplateService_Match",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/TemplateList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sizing",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TemplateService"
+        ]
+      }
+    },
     "/v1/templates": {
       "get": {
         "operationId": "TemplateService_List",

@@ -306,6 +306,7 @@ font-style: italic;
   <h4><a href="#TemplateService">TemplateService</a></h4>
   <ul>
   <li><a href="#templateServiceList"><code><span class="http-method">get</span> /v1/templates</code></a></li>
+  <li><a href="#templateServiceMatch"><code><span class="http-method">get</span> /v1/template/match</code></a></li>
   </ul>
   <h4><a href="#TenantService">TenantService</a></h4>
   <ul>
@@ -6431,6 +6432,73 @@ font-style: italic;
       <div class="param">all (optional)</div>
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#TemplateList">TemplateList</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "templates" : [ {
+    "disk" : 1,
+    "cores" : 0,
+    "name" : "name",
+    "id" : "id",
+    "gpuCount" : 5,
+    "ram" : 6,
+    "gpuType" : "gpuType"
+  }, {
+    "disk" : 1,
+    "cores" : 0,
+    "name" : "name",
+    "id" : "id",
+    "gpuCount" : 5,
+    "ram" : 6,
+    "gpuType" : "gpuType"
+  } ]
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    A successful response.
+        <a href="#TemplateList">TemplateList</a>
+    <h4 class="field-label">default</h4>
+    An unexpected error response.
+        <a href="#rpcStatus">rpcStatus</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="templateServiceMatch"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /v1/template/match</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">templateServiceMatch</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">tenantId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div><div class="param">sizing (optional)</div>
 
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  default: null </div>
     </div>  <!-- field-items -->
