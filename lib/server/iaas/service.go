@@ -505,33 +505,60 @@ func (svc service) ListTemplatesBySizing(sizing abstract.HostSizingRequirements,
 	}
 
 	for _, t := range reducedTmpls {
-		msg := fmt.Sprintf("Discarded host template '%s' with %d cores, %.01f GB of RAM, %d GPU and %d GB of Disk:", t.Name, t.Cores, t.RAMSize, t.GPUNumber, t.DiskSize)
-		msg += " %s"
-		if sizing.MinCores > 0 && t.Cores < sizing.MinCores {
-			logrus.Debugf(msg, "not enough cores")
-			continue
-		}
-		if sizing.MaxCores > 0 && t.Cores > sizing.MaxCores {
-			logrus.Debugf(msg, "too many cores")
-			continue
-		}
-		if sizing.MinRAMSize > 0.0 && t.RAMSize < sizing.MinRAMSize {
-			logrus.Debugf(msg, "not enough RAM")
-			continue
-		}
-		if sizing.MaxRAMSize > 0.0 && t.RAMSize > sizing.MaxRAMSize {
-			logrus.Debugf(msg, "too many RAM")
-			continue
-		}
-		if t.DiskSize > 0 && sizing.MinDiskSize > 0 && t.DiskSize < sizing.MinDiskSize {
-			logrus.Debugf(msg, "not enough disk")
-			continue
-		}
-		if (sizing.MinGPU <= 0 && t.GPUNumber > 0) || (sizing.MinGPU > 0 && t.GPUNumber > sizing.MinGPU) {
-			logrus.Debugf(msg, "too many GPU")
-			continue
+		msghints := ""
+		match := true
+
+		if sizing.MinCores > 0 {
+			if t.Cores < sizing.MinCores {
+				msghints += "not enough cores"
+				match = false
+			} else if t.Cores > sizing.MaxCores {
+				if msghints!="" {
+					msghints += ", "
+				}
+				msghints += "too many cores"
+				match = false
+			}
 		}
 
+		if sizing.MinRAMSize > 0.0 {
+			if t.RAMSize < sizing.MinRAMSize {
+				if msghints!="" {
+					msghints += ", "
+				}
+				msghints += "not enough RAM"
+				match = false
+			} else if t.RAMSize > sizing.MaxRAMSize {
+				if msghints!="" {
+					msghints += ", "
+				}
+				msghints += "too many RAM"
+				match = false
+			}
+		}
+
+		if t.DiskSize > 0 && sizing.MinDiskSize > 0 && t.DiskSize < sizing.MinDiskSize {
+			if msghints!="" {
+				msghints += ", "
+			}
+			msghints += "not enough disk"
+			match = false
+		}
+
+		if (sizing.MinGPU <= 0 && t.GPUNumber > 0) || (sizing.MinGPU > 0 && t.GPUNumber > sizing.MinGPU) {
+			if msghints!="" {
+				msghints += ", "
+			}
+			msghints += "too many GPU"
+			match = false
+		}
+		
+		if match==false {
+			msg := fmt.Sprintf("Discarded host template '%s' with %d cores, %.01f GB of RAM, %d GPU and %d GB of Disk: %s", t.Name, t.Cores, t.RAMSize, t.GPUNumber, t.DiskSize, msghints)
+			logrus.Debug(msg)
+			continue
+		}
+		
 		if _, ok := scannerTpls[t.ID]; (ok || !askedForSpecificScannerInfo) && t.ID != "" {
 			newT := t
 			selectedTpls = append(selectedTpls, &newT)
