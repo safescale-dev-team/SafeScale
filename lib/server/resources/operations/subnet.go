@@ -508,7 +508,7 @@ func (instance *Subnet) unsafeCreateSubnet(ctx context.Context, req abstract.Sub
 		return xerr
 	}
 
-	subnetGWSG, subnetInternalSG, subnetPublicIPSG, xerr := instance.UnsafeCreateSecurityGroups(ctx, networkInstance, req.KeepOnFailure)
+	subnetGWSG, subnetInternalSG, subnetPublicIPSG, xerr := instance.UnsafeCreateSecurityGroups(ctx, networkInstance, req.KeepOnFailure, int32(req.DefaultSSHPort))
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return xerr

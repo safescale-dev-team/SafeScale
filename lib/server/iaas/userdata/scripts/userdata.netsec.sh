@@ -691,19 +691,27 @@ function configure_as_gateway() {
 		# Dedicated public interface available...
 
 		# Allows ping
-		firewall-offline-cmd --direct --add-rule ipv4 filter INPUT 0 -p icmp -m icmp --icmp-type 8 -s 0.0.0.0/0 -d 0.0.0.0/0 -j ACCEPT
+		sfFirewall --direct --add-rule ipv4 filter INPUT 0 -p icmp -m icmp --icmp-type 8 -s 0.0.0.0/0 -d 0.0.0.0/0 -j ACCEPT
 		# Allows masquerading on public zone
-		firewall-offline-cmd --zone=public --add-masquerade
+		sfFirewall --zone=public --add-masquerade
 	fi
 	# Enables masquerading on trusted zone (mainly for docker networks)
-	firewall-offline-cmd --zone=trusted --add-masquerade
+	sfFirewall --zone=trusted --add-masquerade
 
 	# Allows default services on public zone
-	firewall-offline-cmd --zone=public --add-service=ssh 2>/dev/null
+	sfFirewall --zone=public --add-service=ssh --permanent 2>/dev/null
+
+	# Update ssh port
+	[ ! -f /etc/firewalld/services/ssh.xml ] && [ -f /usr/etc/firewalld/services/ssh.xml ] && cp /usr/etc/firewalld/services/ssh.xml /etc/firewalld/services/ssh.xml
+	[ ! -f /etc/firewalld/services/ssh.xml ] && [ -f /usr/lib/firewalld/services/ssh.xml ] && cp /usr/lib/firewalld/services/ssh.xml /etc/firewalld/services/ssh.xml
+	sed -i -E "s/<port(.*)protocol=\"tcp\"(.*)port=\"([0-9]+)\"(.*)\/>/<port\1protocol=\"tcp\"\2port=\"{{ .SSHPort }}\"\4\/>/gm" /etc/firewalld/services/ssh.xml
+	sed -i -E "s/<port(.*)port=\"([0-9]+)\"(.*)protocol=\"tcp\"(.*)\/>/<port\1port=\"{{ .SSHPort }}\"\3protocol=\"tcp\"\4\/>/gm" /etc/firewalld/services/ssh.xml
+	sfFirewallReload
 
 	sed -i '/^\#*AllowTcpForwarding / s/^.*$/AllowTcpForwarding yes/' /etc/ssh/sshd_config || failure 208 "failure allowing tcp forwarding"
+	sed -i -E 's/(#|)Port\ ([0-9]+)/Port\ {{ .SSHPort }}/g' /etc/ssh/sshd_config || failure 208 "failure changing ssh service port"
 
-	systemctl restart sshd
+	#systemctl restart sshd
 
 	echo "done"
 }
