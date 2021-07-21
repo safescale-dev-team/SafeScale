@@ -1778,7 +1778,6 @@ func (instance *Host) finalizeProvisioning(ctx context.Context, userdataContent 
 			return xerr
 		}
 
-		// @TOTO: Dunno why, SecurityGroup.DeleteRule does not accept sequentials call (not works after first call)
 		var gwame string = gatewaySecurityGroup.GetName()
 		// Remove temporary sg rules (on port 22)
 		for _, rule := range rules {
