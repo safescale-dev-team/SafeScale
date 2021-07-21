@@ -287,8 +287,10 @@ func (sgrs SecurityGroupRules) RemoveRuleByIndex(index int) (SecurityGroupRules,
 		return sgrs, fail.InvalidParameterError("ruleIdx", "cannot be equal or greater to length of 'rules'")
 	}
 
-	newRules := make(SecurityGroupRules, 0, length-1)
-	newRules = append(newRules, sgrs[:index]...)
+	var newRules SecurityGroupRules = make(SecurityGroupRules, 0, length-1)
+	if index > 0 {
+		newRules = append(newRules, sgrs[:index]...)
+	}
 	if index < length-1 {
 		newRules = append(newRules, sgrs[index+1:]...)
 	}
@@ -351,9 +353,9 @@ func (sg *SecurityGroup) SetNetworkID(networkID string) *SecurityGroup {
 
 // NewSecurityGroup ...
 func NewSecurityGroup() *SecurityGroup {
-	return &SecurityGroup{
-		Rules: SecurityGroupRules{},
-	}
+	var asg SecurityGroup = SecurityGroup{}
+	asg.Rules = make(SecurityGroupRules, 0)
+	return &asg
 }
 
 // Clone does a deep-copy of the SecurityGroup
@@ -372,10 +374,15 @@ func (sg *SecurityGroup) Replace(p data.Clonable) data.Clonable {
 
 	src := p.(*SecurityGroup)
 	*sg = *src
-	sg.Rules = make(SecurityGroupRules, 0, len(src.Rules))
+
+	var cloneRule *SecurityGroupRule
+	var cloneRules SecurityGroupRules = make(SecurityGroupRules, 0)
 	for _, v := range src.Rules {
-		sg.Rules = append(sg.Rules, v.Clone().(*SecurityGroupRule))
+		cloneRule = v.Clone().(*SecurityGroupRule)
+		cloneRules = append(cloneRules, cloneRule)
 	}
+	sg.Rules = cloneRules
+
 	return sg
 }
 
