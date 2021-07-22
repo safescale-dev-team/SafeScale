@@ -280,11 +280,12 @@ func (sgrs SecurityGroupRules) IndexOfRuleByID(id string) (int, fail.Error) {
 }
 
 // RemoveRuleByIndex removes a rule identified by its index and returns the corresponding SecurityGroupRules
-func (sgrs SecurityGroupRules) RemoveRuleByIndex(index int) (SecurityGroupRules, fail.Error) {
+func (sgrs SecurityGroupRules) RemoveRuleByIndex(index int) fail.Error {
+
 	// Remove corresponding rule in asg, willingly maintaining order
 	length := len(sgrs)
 	if index >= length {
-		return sgrs, fail.InvalidParameterError("ruleIdx", "cannot be equal or greater to length of 'rules'")
+		return fail.InvalidParameterError("ruleIdx", "cannot be equal or greater to length of 'rules'")
 	}
 
 	var newRules SecurityGroupRules = make(SecurityGroupRules, 0, length-1)
@@ -294,7 +295,8 @@ func (sgrs SecurityGroupRules) RemoveRuleByIndex(index int) (SecurityGroupRules,
 	if index < length-1 {
 		newRules = append(newRules, sgrs[index+1:]...)
 	}
-	return newRules, nil
+	sgrs = newRules
+	return nil
 }
 
 // SecurityGroup represents a security group
