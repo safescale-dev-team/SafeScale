@@ -280,26 +280,20 @@ func (sgrs SecurityGroupRules) IndexOfRuleByID(id string) (int, fail.Error) {
 }
 
 // RemoveRuleByIndex removes a rule identified by its index and returns the corresponding SecurityGroupRules
-func (sgrs SecurityGroupRules) RemoveRuleByIndex(index int) fail.Error {
-
-	// Remove corresponding rule in asg, willingly maintaining order
-	length := len(sgrs)
-	if index >= length {
+func (sg *SecurityGroup) RemoveRuleByIndex(index int) fail.Error {
+	var length int = len(sg.Rules);
+	if index < 0 || index >= length {
 		return fail.InvalidParameterError("ruleIdx", "cannot be equal or greater to length of 'rules'")
 	}
-
-	var newRules SecurityGroupRules = make(SecurityGroupRules, 0, length-1)
-	if index > 0 {
-		newRules = append(newRules, sgrs[:index]...)
-	}
-	if index < length-1 {
-		newRules = append(newRules, sgrs[index+1:]...)
-	}
-	sgrs = newRules
+	var newRules SecurityGroupRules = make(SecurityGroupRules, 0)
+	if index > 0 { newRules = append(newRules, sg.Rules[:index]...)	}
+	if index < length-1 { newRules = append(newRules, sg.Rules[index+1:]...) }
+	sg.Rules = newRules;
+	// Dunno why, but with self pointer reaffect, update correctly propagate through scopes
+	*sg = *sg
 	return nil
 }
 
-// SecurityGroup represents a security group
 // Note: by design, security group names must be unique tenant-wide
 type SecurityGroup struct {
 	ID               string             `json:"id"`                    // ID of the group
