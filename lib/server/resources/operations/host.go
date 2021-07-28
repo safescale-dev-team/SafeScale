@@ -1778,31 +1778,18 @@ func (instance *Host) finalizeProvisioning(ctx context.Context, userdataContent 
 			return xerr
 		}
 
-		// @TOTO: Dunno why, SecurityGroup.DeleteRule does not accept sequentials call (not works after first call)
 		var gwame string = gatewaySecurityGroup.GetName()
-		gatewaySecurityGroup.Alter(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
-			asg, ok := clonable.(*abstract.SecurityGroup)
-			if !ok {
-				return fail.InconsistentError("'*abstract.SecurityGroup' expected, '%s' provided", reflect.TypeOf(clonable).String())
-			}
-			var newRules []*abstract.SecurityGroupRule
-			// Remove temporary sg rules (on port 22)
-			for _, rule := range rules {
-				if rule.PortFrom == 22 && rule.Direction == securitygroupruledirection.Ingress {
-					logrus.Infof("Remove temporary gateway securitygroup '%s' rule '%s'", gwame, rule.Description)
-					// remove
-					_, xerr := gatewaySecurityGroup.GetService().DeleteRuleFromSecurityGroup(asg, rule)
-					if xerr != nil {
-						logrus.Debugf("Fail to remove temporary gateway securitygroup '%s' rule '%s': '%s'", gwame, rule.Description, xerr)
-					}
-				} else {
-					// preserve
-					newRules = append(newRules, rule)
+		// Remove temporary sg rules (on port 22)
+		for _, rule := range rules {
+			if rule.PortFrom == 22 && rule.Direction == securitygroupruledirection.Ingress {
+				logrus.Infof("Remove temporary gateway securitygroup '%s' rule '%s'", gwame, rule.Description)
+				// remove
+				xerr := gatewaySecurityGroup.DeleteRule(ctx, rule)
+				if xerr != nil {
+					logrus.Debugf("Fail to remove temporary gateway securitygroup '%s' rule '%s': '%s'", gwame, rule.Description, xerr)
 				}
 			}
-			asg.Rules = newRules
-			return nil
-		})
+		}
 
 	}
 
