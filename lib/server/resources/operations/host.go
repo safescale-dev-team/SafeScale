@@ -41,7 +41,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/installmethod"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/ipversion"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/networkproperty"
-	"github.com/CS-SI/SafeScale/lib/server/resources/enums/securitygroupruledirection"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/securitygroupstate"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/subnetproperty"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/converters"
@@ -889,15 +888,9 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 	}()
 
 	// Make sure ssh port wanted is set
-	if !userdataContent.IsGateway {
-		if hostReq.SSHPort > 0 {
-			ahf.Core.SSHPort = hostReq.SSHPort
-		} else {
-			ahf.Core.SSHPort = 22
-		}
+	if hostReq.SSHPort > 0 {
+		ahf.Core.SSHPort = hostReq.SSHPort
 	} else {
-		// Always init ssh port to 22 for gw
-		userdataContent.SSHPort = "22"
 		ahf.Core.SSHPort = 22
 	}
 
@@ -1054,11 +1047,6 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 			instance.undoUpdateSubnets(hostReq, &xerr)
 		}
 	}()
-
-	// Set ssh port from given one (applied after netsec setup)
-	if userdataContent.IsGateway {
-		userdataContent.SSHPort = strconv.Itoa(int(hostReq.SSHPort))
-	}
 
 	xerr = instance.finalizeProvisioning(ctx, userdataContent)
 	xerr = debug.InjectPlannedFail(xerr)
@@ -1706,92 +1694,6 @@ func (instance *Host) finalizeProvisioning(ctx context.Context, userdataContent 
 	// Reboot Host
 	command := "sudo systemctl reboot"
 	_, _, _, _ = instance.UnsafeRun(ctx, command, outputs.COLLECT, 10*time.Second, 30*time.Second)
-
-	logrus.Infof("finalizing Host provisioning of '%s': rebooting", instance.GetName())
-
-	// Update SSHPort 22 to given one if !=22
-	// If is, require update sg, remove temporary rule wich allow port 22 for phase 1/2 ssh connexions
-	if userdataContent.IsGateway && userdataContent.SSHPort != "22" {
-
-		var gatewaySecurityGroup resources.SecurityGroup
-		var rules []*abstract.SecurityGroupRule
-
-		xerr = instance.Alter(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
-
-			// Update SSHPort of the Host with given one
-			ah, ok := clonable.(*abstract.HostCore)
-
-			logrus.Infof("Host '%s' change ssh port from '22' to '%s'", ah.Name, userdataContent.SSHPort)
-
-			if !ok {
-				return fail.InconsistentError("'*abstract.HostCore' expected, '%s' provided", reflect.TypeOf(clonable).String())
-			}
-			port, err := strconv.Atoi(userdataContent.SSHPort)
-			if err != nil {
-				return fail.InconsistentError("SSHPort '%s' is not a integer", userdataContent.SSHPort)
-			}
-			ah.SSHPort = uint32(port)
-			instance.sshProfile.Port = port
-
-			// Extract temporary gateway security group rule
-			svc := instance.GetService()
-			props.Inspect(hostproperty.NetworkV2, func(clonable data.Clonable) fail.Error {
-				hnV2, ok := clonable.(*propertiesv2.HostNetworking)
-				if !ok {
-					return fail.InconsistentError("'*propertiesv2.HostNetworking' expected, '%s' provided", reflect.TypeOf(clonable).String())
-				}
-				if !hnV2.Single && hnV2.DefaultSubnetID != "" {
-
-					subnet, xerr := LoadSubnet(svc, "", hnV2.DefaultSubnetID)
-					if xerr != nil {
-						return xerr
-					}
-
-					subnet.Review(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
-						sn, ok := clonable.(*abstract.Subnet)
-						if !ok {
-							return fail.InconsistentError("'*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
-						}
-						var xerr fail.Error
-						gatewaySecurityGroup, xerr = LoadSecurityGroup(svc, sn.GWSecurityGroupID)
-						if xerr != nil {
-							return fail.Wrap(xerr, "failed to query Subnet '%s' Security Group '%s'", sn.GetName(), sn.GWSecurityGroupID)
-						}
-
-						return gatewaySecurityGroup.Inspect(func(clonable data.Clonable, _ *serialize.JSONProperties) fail.Error {
-							asg, ok := clonable.(*abstract.SecurityGroup)
-							if !ok {
-								return fail.InconsistentError("'*abstract.SecurityGroup' expected, '%s' provided", reflect.TypeOf(clonable).String())
-							}
-							rules = asg.Rules
-							return nil
-						})
-					})
-				}
-				return nil
-			})
-
-			return nil
-		})
-		xerr = debug.InjectPlannedFail(xerr)
-		if xerr != nil {
-			return xerr
-		}
-
-		var gwame string = gatewaySecurityGroup.GetName()
-		// Remove temporary sg rules (on port 22)
-		for _, rule := range rules {
-			if rule.PortFrom == 22 && rule.Direction == securitygroupruledirection.Ingress {
-				logrus.Infof("Remove temporary gateway securitygroup '%s' rule '%s'", gwame, rule.Description)
-				// remove
-				xerr := gatewaySecurityGroup.DeleteRule(ctx, rule)
-				if xerr != nil {
-					logrus.Debugf("Fail to remove temporary gateway securitygroup '%s' rule '%s': '%s'", gwame, rule.Description, xerr)
-				}
-			}
-		}
-
-	}
 
 	_, xerr = instance.waitInstallPhase(ctx, userdata.PHASE2_NETWORK_AND_SECURITY, 0)
 	xerr = debug.InjectPlannedFail(xerr)

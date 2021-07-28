@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -66,8 +65,6 @@ type Content struct {
 	ConfIF bool
 	// IsGateway, if set to true, activate IP forwarding
 	IsGateway bool
-	// Define Gateway SSHport
-	SSHPort string
 	// PublicIP contains a public IP binded to the host
 	PublicIP string
 	// AddGateway, if set to true, configure default gateway
@@ -197,7 +194,6 @@ func (ud *Content) Prepare(options stacks.ConfigurationOptions, request abstract
 	// ud.ConfIF = !autoHostNetworkInterfaces
 	ud.IsGateway = request.IsGateway /*&& request.Subnets[0].Name != abstract.SingleHostNetworkName*/
 	ud.AddGateway = !request.IsGateway && !request.PublicIP && !useLayer3Networking && ip != "" && !useNATService
-	ud.SSHPort = strconv.Itoa(int(request.SSHPort))
 	ud.DNSServers = dnsList
 	ud.CIDR = cidr
 	ud.DefaultRouteIP = ip

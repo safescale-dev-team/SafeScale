@@ -182,8 +182,8 @@ func (instance *Subnet) unsafeHasVirtualIP() (bool, fail.Error) {
 	return found, xerr
 }
 
-func (instance *Subnet) UnsafeCreateSecurityGroups(ctx context.Context, networkInstance resources.Network, keepOnFailure bool, defaultSSHPort int32) (subnetGWSG, subnetInternalSG, subnetPublicIPSG resources.SecurityGroup, xerr fail.Error) {
-	subnetGWSG, xerr = instance.createGWSecurityGroup(ctx, networkInstance, keepOnFailure, defaultSSHPort)
+func (instance *Subnet) UnsafeCreateSecurityGroups(ctx context.Context, networkInstance resources.Network, keepOnFailure bool) (subnetGWSG, subnetInternalSG, subnetPublicIPSG resources.SecurityGroup, xerr fail.Error) {
+	subnetGWSG, xerr = instance.createGWSecurityGroup(ctx, networkInstance, keepOnFailure)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, nil, nil, xerr
@@ -227,7 +227,7 @@ func (instance *Subnet) UnsafeCreateSecurityGroups(ctx context.Context, networkI
 }
 
 // createGWSecurityGroup creates a Security Group to be applied to gateways of the Subnet
-func (instance *Subnet) createGWSecurityGroup(ctx context.Context, network resources.Network, keepOnFailure bool, defaultSSHPort int32) (_ resources.SecurityGroup, xerr fail.Error) {
+func (instance *Subnet) createGWSecurityGroup(ctx context.Context, network resources.Network, keepOnFailure bool) (_ resources.SecurityGroup, xerr fail.Error) {
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -267,7 +267,7 @@ func (instance *Subnet) createGWSecurityGroup(ctx context.Context, network resou
 		{
 			Description: "[ingress][ipv4][tcp] Allow SSH",
 			Direction:   securitygroupruledirection.Ingress,
-			PortFrom:    defaultSSHPort,
+			PortFrom:    22,
 			EtherType:   ipversion.IPv4,
 			Protocol:    "tcp",
 			Sources:     []string{"0.0.0.0/0"},
@@ -276,7 +276,7 @@ func (instance *Subnet) createGWSecurityGroup(ctx context.Context, network resou
 		{
 			Description: "[ingress][ipv6][tcp] Allow SSH",
 			Direction:   securitygroupruledirection.Ingress,
-			PortFrom:    defaultSSHPort,
+			PortFrom:    22,
 			EtherType:   ipversion.IPv6,
 			Protocol:    "tcp",
 			Sources:     []string{"::/0"},
@@ -303,34 +303,6 @@ func (instance *Subnet) createGWSecurityGroup(ctx context.Context, network resou
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
-	}
-
-	if defaultSSHPort != 22 {
-		rules := abstract.SecurityGroupRules{
-			{
-				Description: "[ingress][ipv4][tcp] Temporary Allow SSH",
-				Direction:   securitygroupruledirection.Ingress,
-				PortFrom:    22,
-				EtherType:   ipversion.IPv4,
-				Protocol:    "tcp",
-				Sources:     []string{"0.0.0.0/0"},
-				Targets:     []string{sg.GetID()},
-			},
-			{
-				Description: "[ingress][ipv6][tcp] Temporary Allow SSH",
-				Direction:   securitygroupruledirection.Ingress,
-				PortFrom:    22,
-				EtherType:   ipversion.IPv6,
-				Protocol:    "tcp",
-				Sources:     []string{"::/0"},
-				Targets:     []string{sg.GetID()},
-			},
-		}
-		xerr = sg.AddRules(ctx, rules)
-		xerr = debug.InjectPlannedFail(xerr)
-		if xerr != nil {
-			return nil, xerr
-		}
 	}
 
 	return sg, nil
