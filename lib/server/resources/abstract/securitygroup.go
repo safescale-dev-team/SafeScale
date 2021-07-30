@@ -281,16 +281,14 @@ func (sgrs SecurityGroupRules) IndexOfRuleByID(id string) (int, fail.Error) {
 
 // RemoveRuleByIndex removes a rule identified by its index and returns the corresponding SecurityGroupRules
 func (sg *SecurityGroup) RemoveRuleByIndex(index int) fail.Error {
-	var length int = len(sg.Rules);
+	length := len(sg.Rules);
 	if index < 0 || index >= length {
 		return fail.InvalidParameterError("ruleIdx", "cannot be equal or greater to length of 'rules'")
 	}
-	var newRules SecurityGroupRules = make(SecurityGroupRules, 0)
+	newRules := make(SecurityGroupRules, 0)
 	if index > 0 { newRules = append(newRules, sg.Rules[:index]...)	}
 	if index < length-1 { newRules = append(newRules, sg.Rules[index+1:]...) }
 	sg.Rules = newRules;
-	// Dunno why, but with self pointer reaffect, update correctly propagate through scopes
-	*sg = *sg
 	return nil
 }
 
