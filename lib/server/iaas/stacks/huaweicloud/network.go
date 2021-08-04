@@ -333,7 +333,7 @@ func (s stack) CreateSubnet(req abstract.SubnetRequest) (subnet *abstract.Subnet
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return nullAS, xerr
 		}
@@ -559,7 +559,7 @@ func (s stack) DeleteSubnet(id string) fail.Error {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// If subnet is not found, considered as a success
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 			return nil
 		default:
 			return xerr

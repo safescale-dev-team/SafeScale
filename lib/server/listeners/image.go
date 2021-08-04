@@ -56,7 +56,7 @@ func (s *ImageListener) List(ctx context.Context, in *protocol.ImageListRequest)
 		}
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "/images/list")
+	job, err := PrepareJob(ctx, in.GetTenantId(), "image list")
 	if err != nil {
 		return nil, err
 	}

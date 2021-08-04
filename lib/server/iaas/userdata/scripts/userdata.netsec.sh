@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
 #
@@ -53,7 +53,7 @@ export -f failure
 LOGFILE=/opt/safescale/var/log/user_data.netsec.log
 
 ### All output to one file and all output to the screen
-exec > >(tee -a ${LOGFILE} /opt/safescale/var/log/ss.log) 2>&1
+exec > >(tee -a ${LOGFILE} /var/log/ss.log) 2>&1
 set -x
 
 # Tricks BashLibrary's waitUserData to believe the current phase 'netsec' is already done (otherwise will deadlock)
@@ -66,32 +66,32 @@ function reset_fw() {
 	case $LINUX_KIND in
 	ubuntu)
 		echo "Reset firewall"
-		sfApt update &>/dev/null || failure 206 "failure running apt update"
-		sfApt install -q -y iptables 2>&1 || failure 206 "failure updating iptables"
-		sfApt install -q -y firewalld 2>&1 || failure 206 "failure updating firewalld"
+		sfApt update &>/dev/null || return 1
+		sfApt install -q -y iptables 2>&1 || return 1
+		sfApt install -q -y firewalld 2>&1 || return 1
 
 		echo "Stopping ufw"
-		systemctl stop ufw || failure 206 "failure stopping ufw"
-		systemctl disable ufw || failure 206 "failure disabling ufw"
-		sfApt purge -q -y ufw 2>&1 || failure 206 "failure purging ufw"
+		systemctl stop ufw || return 1
+		systemctl disable ufw || return 1
+		sfApt purge -q -y ufw 2>&1 || return 1
 		;;
 	debian)
 		echo "Reset firewall"
-		sfApt update &>/dev/null || failure 206 "failure running apt update"
-		sfApt install -q -y iptables 2>&1 || failure 206 "failure updating iptables"
-		sfApt install -q -y firewalld 2>&1 || failure 206 "failure updating firewalld"
+		sfApt update &>/dev/null || return 1
+		sfApt install -q -y iptables 2>&1 || return 1
+		sfApt install -q -y firewalld 2>&1 || return 1
 
 		echo "Stopping ufw"
 		systemctl stop ufw || true    # set to true to fix issues
 		systemctl disable ufw || true # set to true to fix issues
-		sfApt purge -q -y ufw 2>&1 || failure 206 "failure purging ufw"
+		sfApt purge -q -y ufw 2>&1 || return 1
 		;;
 
 	redhat | rhel | centos | fedora)
 		# firewalld may not be installed
 		if ! systemctl is-active firewalld &>/dev/null; then
 			if ! systemctl status firewalld &>/dev/null; then
-				yum install -q -y firewalld || failure 206 "failure updating firewalld"
+				yum install -q -y firewalld || return 1
 			fi
 		fi
 		;;
@@ -107,28 +107,28 @@ function reset_fw() {
 	# Attach Internet interface or source IP to zone public if host is gateway
 	[ ! -z $PU_IF ] && {
 		# sfFirewallAdd --zone=public --add-interface=$PU_IF || return 1
-		firewall-offline-cmd --zone=public --add-interface=$PU_IF || failure 206 "firewall-offline-cmd failed with $? adding interfaces"
+		firewall-offline-cmd --zone=public --add-interface=$PU_IF || (echo "firewall-offline-cmd failed with $?" && return 1)
 	}
 	{{- if or .PublicIP .IsGateway }}
 	[[ -z ${PU_IF} ]] && {
 		# sfFirewallAdd --zone=public --add-source=${PU_IP}/32 || return 1
-		firewall-offline-cmd --zone=public --add-source=${PU_IP}/32 || failure 206 "firewall-offline-cmd failed with $? adding sources"
+		firewall-offline-cmd --zone=public --add-source=${PU_IP}/32 || (echo "firewall-offline-cmd failed with $?" && return 1)
 	}
 	{{- end }}
 
 	# Sets the default target of packets coming from public interface to DROP
-	firewall-offline-cmd --zone=public --set-target=DROP || failure 206 "firewall-offline-cmd failed with $? dropping public"
+	firewall-offline-cmd --zone=public --set-target=DROP || (echo "firewall-offline-cmd failed with $?" && return 1)
 
 	# Attach LAN interfaces to zone trusted
 	[[ ! -z ${PR_IFs} ]] && {
 		for i in $PR_IFs; do
 			# sfFirewallAdd --zone=trusted --add-interface=$PR_IFs || return 1
-			firewall-offline-cmd --zone=trusted --add-interface=$PR_IFs || failure 206 "firewall-offline-cmd failed with $? attaching lan to trusted"
+			firewall-offline-cmd --zone=trusted --add-interface=$PR_IFs || (echo "firewall-offline-cmd failed with $?" && return 1)
 		done
 	}
 	# Attach lo interface to zone trusted
 	# sfFirewallAdd --zone=trusted --add-interface=lo || return 1
-	firewall-offline-cmd --zone=trusted --add-interface=lo || failure 206 "firewall-offline-cmd failed with $? adding lo to trusted"
+	firewall-offline-cmd --zone=trusted --add-interface=lo || (echo "firewall-offline-cmd failed with $?" && return 1)
 
 	# Allow service ssh on public zone
 	op=-1
@@ -142,17 +142,19 @@ function reset_fw() {
 	fi
 
 	if [[ $op -ne 0 ]]; then
-		failure 206 "firewall-offline-cmd failed with $op adding ssh service"
+		echo "firewall-offline-cmd failed with $op"
+		return 1
 	fi
 
-	sfService enable firewalld &>/dev/null || failure 206 "service firewalld enable failed with $?"
-	sfService start firewalld &>/dev/null || failure 206 "service firewalld start failed with $?"
+	sfService enable firewalld &>/dev/null || (echo "service firewalld enable failed with $?" && return 1)
+	sfService start firewalld &>/dev/null || (echo "service firewalld start failed with $?" && return 1)
 
 	sop=-1
 	firewall-cmd --runtime-to-permanent && sop=$? || sop=$?
 	if [[ $sop -ne 0 ]]; then
 		if [[ $sop -ne 31 ]]; then
-			failure 206 "saving rules with firewall-cmd failed with $sop"
+			echo "saving rules with firewall-cmd failed with $sop"
+			return 1
 		fi
 	fi
 
@@ -636,6 +638,32 @@ function check_for_ip() {
 }
 export -f check_for_ip
 
+# Checks network is set correctly
+# - DNS and routes (by pinging a FQDN)
+# - IP address on "physical" interfaces
+function check_for_network() {
+	NETROUNDS=12
+	REACHED=0
+
+	for i in $(seq $NETROUNDS); do
+		if which wget; then
+			wget -T 10 -O /dev/null www.google.com &>/dev/null && REACHED=1 && break
+		else
+			ping -n -c1 -w10 -i5 www.google.com && REACHED=1 && break
+		fi
+	done
+
+	[ $REACHED -eq 0 ] && echo "Unable to reach network" && return 1
+
+	[ ! -z "$PU_IF" ] && {
+		sfRetry 3m 10 check_for_ip $PU_IF || return 1
+	}
+	for i in $PR_IFs; do
+		sfRetry 3m 10 check_for_ip $i || return 1
+	done
+	return 0
+}
+
 function check_for_network_refined() {
 	NETROUNDS=$1
 	REACHED=0
@@ -658,14 +686,6 @@ function check_for_network_refined() {
 		sfRetry 3m 10 check_for_ip $i || return 1
 	done
 	return 0
-}
-
-# Checks network is set correctly
-# - DNS and routes (by pinging a FQDN)
-# - IP address on "physical" interfaces
-function check_for_network() {
-	check_for_network_refined 12
-	return $?
 }
 
 function configure_as_gateway() {
@@ -912,9 +932,7 @@ function install_packages() {
 function no_daily_update() {
 	case $LINUX_KIND in
 	debian | ubuntu)
-		# If it's not there, nothing to do
-		systemctl list-units --all apt-daily.service | egrep -q 'apt-daily' || return 0
-
+		# TODO: Check for errors, also look other cloud distros
 		# first kill apt-daily
 		systemctl stop apt-daily.service
 		systemctl kill --kill-who=all apt-daily.service
@@ -926,9 +944,7 @@ function no_daily_update() {
 			sleep 1
 		done
 		;;
-	redhat | fedora | centos)
-		# If it's not there, nothing to do
-		systemctl list-units --all yum-cron.service | egrep -q 'yum-cron' || return 0
+	redhat | centos)
 		systemctl stop yum-cron.service
 		systemctl kill --kill-who=all yum-cron.service
 

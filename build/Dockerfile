@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV BUILD_ENV docker
 ARG BRANCH_NAME
 ARG GOVERSION=1.16.2
-ARG PROTOVERSION=3.17.3
+ARG PROTOVERSION=3.6.1
 
 # -----------------
 # Standard packages
@@ -54,7 +54,7 @@ ENV PATH $PATH:/usr/local/go/bin:/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbi
 RUN rm /tmp/go$GOVERSION.linux-amd64.tar.gz
 
 # ----------------------
-# Install Protoc (Version 3.17.3 by default)
+# Install Protoc (Version 3.6.1 by default)
 # ----------------------
 RUN wget https://github.com/google/protobuf/releases/download/v$PROTOVERSION/protoc-$PROTOVERSION-linux-x86_64.zip \
 && unzip -d /usr/local/protoc protoc-$PROTOVERSION-linux-x86_64.zip \

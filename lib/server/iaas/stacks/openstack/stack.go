@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
-	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 
@@ -214,7 +213,7 @@ func New(auth stacks.AuthenticationOptions, authScope *gophercloud.AuthScope, cf
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return nil, xerr
 		}
@@ -236,7 +235,7 @@ func New(auth stacks.AuthenticationOptions, authScope *gophercloud.AuthScope, cf
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return nil, xerr
 		}

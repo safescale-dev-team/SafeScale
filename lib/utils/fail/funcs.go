@@ -42,6 +42,13 @@ func AddConsequence(err error, cons error) error {
 	return err
 }
 
+// Ignore logs an error that's considered not important by the caller
+func Ignore(err error) {
+	if err != nil {
+		logrus.Debugf("ignoring error [%s]", err)
+	}
+}
+
 // Consequences returns the list of consequences
 func Consequences(err error) []error {
 	if err != nil {

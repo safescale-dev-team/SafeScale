@@ -570,7 +570,7 @@ func (w *worker) Proceed(ctx context.Context, v data.Map, s resources.FeatureSet
 			stepKey:   stepKey,
 			stepMap:   stepMap,
 			variables: v,
-		}, concurrency.InheritParentIDOption)
+		})
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			return outcomes, xerr
@@ -615,6 +615,10 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 		return nil, fail.InvalidParameterError("params", "can't be nil")
 	}
 
+	if task.Aborted() {
+		return nil, fail.AbortedError(nil, "aborted")
+	}
+
 	var (
 		anon interface{}
 		ok   bool
@@ -632,15 +636,6 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 	}
 	if p.variables == nil {
 		return nil, fail.InvalidParameterCannotBeNilError("params[variables]")
-	}
-
-	xerr = task.AppendToID(fmt.Sprintf("/feature/%s/%s/target/%s/step/%s", w.feature.GetName(), strings.ToLower(w.action.String()), strings.ToLower(w.target.TargetType().String()), p.stepName))
-	if xerr != nil {
-		return nil, xerr
-	}
-
-	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
 	}
 
 	defer fail.OnExitLogError(&xerr, fmt.Sprintf("executed step '%s::%s'", w.action.String(), p.stepName))
@@ -803,7 +798,7 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 		YamlKey:            p.stepKey,
 		Serial:             serial,
 	}
-	r, xerr := stepInstance.Run(task, hostsList, p.variables, w.settings)
+	r, xerr := stepInstance.Run(task.GetContext(), hostsList, p.variables, w.settings)
 	// If an error occurred, do not execute the remaining steps, fail immediately
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -1064,7 +1059,7 @@ func (w *worker) setReverseProxy(ctx context.Context) (xerr fail.Error) {
 				controller: primaryKongController,
 				rule:       r.(map[interface{}]interface{}),
 				variables:  &primaryGatewayVariables,
-			}, concurrency.InheritParentIDOption)
+			})
 			xerr = debug.InjectPlannedFail(xerr)
 			if xerr != nil {
 				return fail.Wrap(xerr, "failed to apply proxy rules")
@@ -1105,7 +1100,7 @@ func (w *worker) setReverseProxy(ctx context.Context) (xerr fail.Error) {
 					controller: secondaryKongController,
 					rule:       rule,
 					variables:  &secondaryGatewayVariables,
-				}, concurrency.InheritParentIDOption)
+				})
 				if errOp == nil {
 					_, errOp = tS.Wait()
 				}
@@ -1383,7 +1378,7 @@ func (w *worker) setNetworkingSecurity(ctx context.Context) (xerr fail.Error) {
 					switch xerr.(type) {
 					case *fail.ErrDuplicate:
 						// This rule already exists, considered as a success and continue
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 					default:
 						return xerr
 					}
@@ -1424,7 +1419,7 @@ func (w *worker) setNetworkingSecurity(ctx context.Context) (xerr fail.Error) {
 							switch xerr.(type) {
 							case *fail.ErrDuplicate:
 								// This rule already exists, considered as a success and continue
-								debug.IgnoreError(xerr)
+								fail.Ignore(xerr)
 							default:
 								return xerr
 							}

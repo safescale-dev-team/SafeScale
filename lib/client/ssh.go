@@ -69,24 +69,13 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 
 	// Create the command
 	retryErr := retry.WhileUnsuccessfulDelay1SecondWithNotify(
-		func() (innerErr error) {
+		func() error {
 			sshCmd, innerXErr := sshCfg.NewCommand(ctx, command)
 			if innerXErr != nil {
 				return innerXErr
 			}
 
-			defer func(cmd *system.SSHCommand) {
-				derr := cmd.Close()
-				if derr != nil {
-					if innerErr == nil {
-						innerErr = derr
-					} else {
-						innerXErr = fail.ConvertError(innerErr)
-						_ = innerXErr.AddConsequence(fail.Wrap(derr, "failed to close SSH tunnel"))
-						innerErr = innerXErr
-					}
-				}
-			}(sshCmd)
+			defer func() { _ = sshCmd.Close() }()
 
 			retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(ctx, outs, executionTimeout)
 			if innerXErr != nil {
@@ -104,7 +93,8 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 			}
 			// If retcode == 255, ssh connection failed, retry
 			if retcode == 255 /*|| !ready*/ {
-				return fail.NotAvailableError("Remote SSH server on Host '%s' is not available, failed to connect", sshCfg.Hostname)
+				logrus.Warnf("Remote SSH server on Host '%s' is not available, retrying", sshCfg.Hostname)
+				return fail.NotAvailableError("failed to connect")
 			}
 			return nil
 		},
@@ -257,7 +247,7 @@ func (s ssh) Copy(from, to string, connectionTimeout, executionTimeout time.Dura
 			}
 			// If retcode == 255, ssh connection failed, retry
 			if retcode == 255 {
-				xerr = fail.NewError("failure copying '%s' to '%s': failed to connect to '%s'", toPath, hostTo, hostTo)
+				xerr = fail.NewError("failed to connect")
 				return xerr
 			}
 			return nil
@@ -335,8 +325,16 @@ func (s ssh) CreateTunnel(name string, localPort int, remotePort int, timeout ti
 
 	return retry.WhileUnsuccessfulWhereRetcode255Delay5SecondsWithNotify(
 		func() error {
-			_, _, innerErr := sshCfg.CreateTunneling()
-			return innerErr
+			tunnels, _, err := sshCfg.CreateTunneling()
+			if err != nil {
+				for _, t := range tunnels {
+					if nerr := t.Close(); nerr != nil {
+						logrus.Errorf("error closing ssh tunnel: %v", nerr)
+					}
+				}
+				return fail.Wrap(err, "unable to create command")
+			}
+			return nil
 		},
 		temporal.GetConnectSSHTimeout(),
 		func(t retry.Try, v verdict.Enum) {

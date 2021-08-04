@@ -1118,7 +1118,7 @@ func (instance *Subnet) undoBindInternalSecurityGroupToGateway(ctx context.Conte
 	}
 }
 
-// deleteSubnetAndConfirm deletes the Subnet identified by 'id' and wait for deletion confirmation
+// deleteSubnetAndConfirm deletes the Subnet idnetified by 'id' and wait for deletion confirmation
 func (instance *Subnet) deleteSubnetAndConfirm(id string) fail.Error {
 	svc := instance.GetService()
 	xerr := svc.DeleteSubnet(id)
@@ -1698,16 +1698,16 @@ func (instance *Subnet) Delete(ctx context.Context) (xerr fail.Error) {
 	// Leave a chance to abort
 	taskStatus, _ := task.GetStatus()
 	if taskStatus == concurrency.ABORTED {
-		return fail.AbortedError(nil)
-	}
+			return fail.AbortedError(nil)
+		}
 
 	xerr = instance.Alter(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
 		as, ok := clonable.(*abstract.Subnet)
 		if !ok {
-			return fail.InconsistentError("'*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
-		}
+				return fail.InconsistentError("'*abstract.Subnet' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
 
-		// 1st delete gateway(s)
+			// 1st delete gateway(s)
 		gwIDs, innerXErr := instance.deleteGateways(as)
 		if innerXErr != nil {
 			return innerXErr
@@ -1780,7 +1780,7 @@ func (instance *Subnet) Delete(ctx context.Context) (xerr fail.Error) {
 						switch innerXErr.(type) {
 						case *fail.ErrNotFound:
 							// Security Group not found, consider this as a success
-							debug.IgnoreError(innerXErr)
+							fail.Ignore(innerXErr)
 						default:
 							return innerXErr
 						}
@@ -1789,7 +1789,7 @@ func (instance *Subnet) Delete(ctx context.Context) (xerr fail.Error) {
 					switch innerXErr.(type) {
 					case *fail.ErrNotFound:
 						// Security Group not found, consider this as a success
-						debug.IgnoreError(innerXErr)
+						fail.Ignore(innerXErr)
 					default:
 						return innerXErr
 					}
@@ -1857,7 +1857,7 @@ func (instance *Subnet) deleteGateways(subnet *abstract.Subnet) (ids []string, x
 				case *fail.ErrNotFound:
 					// missing gateway is considered as a successful deletion, continue
 					logrus.Tracef("host instance not found, gateway deletion considered as a success")
-					debug.IgnoreError(xerr)
+					fail.Ignore(xerr)
 				default:
 					return ids, xerr
 				}
@@ -1874,7 +1874,7 @@ func (instance *Subnet) deleteGateways(subnet *abstract.Subnet) (ids []string, x
 					case *fail.ErrNotFound:
 						// missing gateway is considered as a successful deletion, continue
 						logrus.Tracef("host instance not found, relaxed gateway deletion considered as a success")
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 					default:
 						return ids, xerr
 					}
@@ -1900,16 +1900,15 @@ func (instance *Subnet) unbindSecurityGroups(ctx context.Context, sgs *propertie
 			switch xerr.(type) {
 			case *fail.ErrNotFound:
 				// consider a Security Group not found as a successful unbind
-				debug.IgnoreError(xerr)
+				fail.Ignore(xerr)
 			default:
 				return xerr
 			}
-		} else {
-			//goland:noinspection ALL
-			defer func(sgInstance resources.SecurityGroup) {
-				sgInstance.Released()
-			}(rsg)
 		}
+		//goland:noinspection ALL
+		defer func(sgInstance resources.SecurityGroup) {
+			sgInstance.Released()
+		}(rsg)
 
 		if rsg != nil {
 			xerr = rsg.UnbindFromSubnet(ctx, instance)
@@ -1918,7 +1917,7 @@ func (instance *Subnet) unbindSecurityGroups(ctx context.Context, sgs *propertie
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// consider a Security Group not found as a successful unbind
-					debug.IgnoreError(xerr)
+					fail.Ignore(xerr)
 				default:
 					return xerr
 				}
@@ -2339,7 +2338,7 @@ func (instance *Subnet) EnableSecurityGroup(ctx context.Context, rsg resources.S
 					switch innerXErr.(type) {
 					case *fail.ErrDuplicate:
 						// security group already bound to Subnet with the same state, considered as a success
-						debug.IgnoreError(innerXErr)
+						fail.Ignore(innerXErr)
 					default:
 						return innerXErr
 					}
@@ -2419,7 +2418,7 @@ func (instance *Subnet) DisableSecurityGroup(ctx context.Context, sg resources.S
 					switch innerXErr.(type) {
 					case *fail.ErrNotFound:
 						// security group not bound to Subnet, considered as a success
-						debug.IgnoreError(innerXErr)
+						fail.Ignore(innerXErr)
 					default:
 						return innerXErr
 					}

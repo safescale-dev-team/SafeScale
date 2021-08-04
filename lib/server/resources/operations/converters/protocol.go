@@ -164,7 +164,6 @@ func ClusterRequestFromProtocolToAbstract(in *protocol.ClusterCreateRequest) (_ 
 	}
 
 	out := abstract.ClusterRequest{
-		Tenant:                  in.GetTenantId(),
 		Name:                    in.Name,
 		CIDR:                    in.Cidr,
 		Domain:                  in.Domain,

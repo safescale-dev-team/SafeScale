@@ -36,7 +36,6 @@ type Job interface {
 	GetName() string
 	GetContext() context.Context
 	GetTask() concurrency.Task
-	GetTenant() string
 	GetService() iaas.Service
 	GetDuration() time.Duration
 	String() string
@@ -104,7 +103,7 @@ func NewJob(ctx context.Context, cancel context.CancelFunc, svc iaas.Service, de
 		return nil, xerr
 	}
 
-	if xerr = task.SetID(id+description); xerr != nil {
+	if xerr = task.SetID("job-task:" + id); xerr != nil {
 		return nil, xerr
 	}
 
@@ -148,15 +147,6 @@ func (j job) GetName() string {
 	}
 
 	return j.uuid
-}
-
-// GetTenant returns the tenant to use
-func (j job) GetTenant() string {
-	if j.isNull() {
-		return ""
-	}
-
-	return j.tenant
 }
 
 // GetContext returns the context of the job (should be the same than the one of the task)

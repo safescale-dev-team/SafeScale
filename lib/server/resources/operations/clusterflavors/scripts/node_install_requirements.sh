@@ -1,5 +1,3 @@
-#!/bin/bash -x
-
 # Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +97,7 @@ export -f install_common_requirements
 case $(sfGetFact "linux_kind") in
     debian|ubuntu)
         sfRetry 3m 5 "sfApt update && sfApt install -y wget curl time jq unzip" || sfFail 192 "Problem installing node common requirements"
-        curl -kqSsL --fail -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
+        curl -kqSsL -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
         unzip rclone-current-linux-amd64.zip && \
         cp rclone-*-linux-amd64/rclone /usr/local/bin && \
         mkdir -p /usr/local/share/man/man1 && \

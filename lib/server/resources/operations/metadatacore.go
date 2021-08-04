@@ -626,7 +626,7 @@ func (c *MetadataCore) reload() (xerr fail.Error) {
 				}
 				return nil
 			},
-			2*temporal.GetMetadataTimeout(),
+			temporal.GetContextTimeout(),
 		)
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {

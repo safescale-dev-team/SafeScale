@@ -331,7 +331,7 @@ func (instance *SecurityGroup) Create(ctx context.Context, networkID, name, desc
 		switch xerr.(type) {
 		case *fail.ErrNotFound, *fail.ErrNotAvailable:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return fail.Wrap(xerr, "failed to check if Security Group name '%s' is already used", name)
 		}
@@ -908,7 +908,7 @@ func (instance *SecurityGroup) BindToHost(ctx context.Context, rh resources.Host
 				if xerr != nil {
 					switch xerr.(type) {
 					case *fail.ErrDuplicate:
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 						// continue
 					default:
 						return xerr
@@ -921,7 +921,7 @@ func (instance *SecurityGroup) BindToHost(ctx context.Context, rh resources.Host
 				if xerr != nil {
 					switch xerr.(type) {
 					case *fail.ErrNotFound:
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 						// continue
 					default:
 						return xerr
@@ -972,7 +972,7 @@ func (instance *SecurityGroup) UnbindFromHost(ctx context.Context, rh resources.
 			if innerXErr := instance.GetService().UnbindSecurityGroupFromHost(instance.GetID(), hostID); innerXErr != nil {
 				switch innerXErr.(type) {
 				case *fail.ErrNotFound:
-					debug.IgnoreError(innerXErr)
+					fail.Ignore(innerXErr)
 					return nil
 				default:
 					return innerXErr
@@ -1036,7 +1036,7 @@ func (instance *SecurityGroup) UnbindFromHostByReference(ctx context.Context, ho
 				if innerXErr := instance.GetService().UnbindSecurityGroupFromHost(instance.GetID(), hostID); innerXErr != nil {
 					switch innerXErr.(type) {
 					case *fail.ErrNotFound:
-						debug.IgnoreError(innerXErr)
+						fail.Ignore(innerXErr)
 						return nil
 					default:
 						return innerXErr
@@ -1221,7 +1221,7 @@ func (instance *SecurityGroup) UnbindFromSubnet(ctx context.Context, rs resource
 				switch innerXErr.(type) {
 				case *fail.ErrNotFound:
 					// consider a Security Group not found as a successful unbind, and continue to update metadata
-					debug.IgnoreError(innerXErr)
+					fail.Ignore(innerXErr)
 				default:
 					return innerXErr
 				}
@@ -1284,7 +1284,7 @@ func (instance *SecurityGroup) UnbindFromSubnetByReference(ctx context.Context, 
 					switch innerXErr.(type) {
 					case *fail.ErrNotFound:
 						// consider a Security Group not found as a successful unbind, and continue to update metadata
-						debug.IgnoreError(innerXErr)
+						fail.Ignore(innerXErr)
 					default:
 						return innerXErr
 					}

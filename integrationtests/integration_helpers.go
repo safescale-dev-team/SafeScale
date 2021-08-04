@@ -24,9 +24,7 @@ type HostInfo struct {
 // IsSafescaledLaunched ...
 func IsSafescaledLaunched() (bool, error) {
 	cmd := "ps -ef | grep safescaled | grep -v grep"
-	proc := exec.Command("bash", "-c", cmd)
-	proc.SysProcAttr = getSyscallAttrs()
-	out, err := proc.Output()
+	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return false, err
 	}
@@ -36,9 +34,7 @@ func IsSafescaledLaunched() (bool, error) {
 // CanBeRun ...
 func CanBeRun(command string) (bool, error) {
 	cmd := "which " + command
-	proc := exec.Command("bash", "-c", cmd)
-	proc.SysProcAttr = getSyscallAttrs()
-	out, err := proc.Output()
+	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return false, err
 	}
@@ -48,9 +44,7 @@ func CanBeRun(command string) (bool, error) {
 // GetTaggedOutput ...
 func GetTaggedOutput(command string, tag string) (string, error) {
 	fmt.Printf("%sRunning [%s]\n", tag, command)
-	proc := exec.Command("bash", "-c", command)
-	proc.SysProcAttr = getSyscallAttrs()
-	out, err := proc.CombinedOutput()
+	out, err := exec.Command("bash", "-c", command).CombinedOutput()
 	if err != nil {
 		return string(out), err
 	}

@@ -116,27 +116,6 @@ func newTaskGroup(ctx context.Context, parentTask Task, options ...data.Immutabl
 			t, err = NewTaskWithParent(p.task)
 		}
 	}
-
-	if len(options) > 0 {
-		for _, v := range options {
-			switch v.Key() {
-			case keywordInheritParentIDOption:
-				// this option orders to copy ParentTask.ID to children; the latter are responsible to update their own ID
-				value, ok := v.Value().(bool)
-				if ok && value && parentTask != nil {
-					id, xerr := parentTask.GetID()
-					if xerr != nil {
-						return nil, xerr
-					}
-
-					xerr = t.SetID(id)
-					if xerr != nil {
-						return nil, xerr
-					}
-				}
-			}
-		}
-	}
 	tg = &taskGroup{
 		task:     t.(*task),
 		children: subTasks{
@@ -203,15 +182,6 @@ func (instance *taskGroup) SetID(id string) fail.Error {
 	return instance.task.SetID(id)
 }
 
-// AppendTOID ...
-func (instance *taskGroup) AppendToID(id string) fail.Error {
-	if instance.isNull() {
-		return fail.InvalidInstanceError()
-	}
-
-	return instance.task.AppendToID(id)
-}
-
 // StartInSubtask starts an action in a subtask
 func (instance *taskGroup) StartInSubtask(action TaskAction, params TaskParameters, options ...data.ImmutableKeyValue) (Task, fail.Error) {
 	if instance.isNull() {
@@ -246,19 +216,7 @@ func (instance *taskGroup) Start(action TaskAction, params TaskParameters, optio
 	if len(options) > 0 {
 		for _, v := range options {
 			switch v.Key() {
-			case keywordInheritParentIDOption:
-				value, ok := v.Value().(bool)
-				if ok && value {
-					id, xerr := instance.task.GetID()
-					if xerr != nil {
-						return nil, xerr
-					}
-					xerr = subtask.SetID(id)
-					if xerr != nil {
-						return nil, xerr
-					}
-				}
-			case "normalize_error":
+			case "normalizeError":
 				newChild.normalizeError = v.Value().(func(error) error)
 			default:
 			}
@@ -364,7 +322,7 @@ func (instance *taskGroup) WaitGroup() (map[string]TaskResult, fail.Error) {
 				}
 			}
 
-			if doneWaitCount >= doneWaitSize {
+			if /*stop || */ doneWaitCount >= doneWaitSize {
 				break
 			}
 
@@ -475,40 +433,34 @@ func (instance *taskGroup) WaitGroupFor(duration time.Duration) (bool, map[strin
 	if err != nil {
 		return false, nil, err
 	}
+	if taskStatus != RUNNING {
+		return false, nil, fail.InvalidRequestError("cannot wait task group '%s': not running (%d)", tid, taskStatus)
+	}
 
-	switch taskStatus {
-	case READY:
-		return false, nil, fail.InconsistentError("cannot wait TaskGroup '%s': not started", tid)
-	case DONE, TIMEOUT:
-		return true, instance.result, nil
-	case RUNNING, ABORTED:
-		c := make(chan struct{})
-		go func() {
-			results, err = instance.WaitGroup()
-			c <- struct{}{} // done
-			close(c)
-		}()
+	c := make(chan struct{})
+	go func() {
+		results, err = instance.WaitGroup()
+		c <- struct{}{} // done
+		close(c)
+	}()
 
-		if duration > 0 {
-			select {
-			case <-time.After(duration):
-				tout := fail.TimeoutError(nil, duration, fmt.Sprintf("timeout of %s waiting for task group '%s'", duration, tid))
-				abErr := instance.Abort()
-				if abErr != nil {
-					_ = tout.AddConsequence(abErr)
-				}
-				return false, nil, tout
-			case <-c:
-				return true, results, err
+	if duration > 0 {
+		select {
+		case <-time.After(duration):
+			tout := fail.TimeoutError(nil, duration, fmt.Sprintf("timeout of %s waiting for task group '%s'", duration, tid))
+			abErr := instance.Abort()
+			if abErr != nil {
+				_ = tout.AddConsequence(abErr)
 			}
-		}
-
-		select { // nolint
+			return false, nil, tout
 		case <-c:
 			return true, results, err
 		}
-	default:
-		return false, nil, fail.InvalidRequestError("cannot wait task group '%s': not running (%d)", tid, taskStatus)
+	}
+
+	select { // nolint
+	case <-c:
+		return true, results, err
 	}
 }
 

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
 #
@@ -56,7 +56,7 @@ mkdir -p /opt/safescale/var/run /opt/safescale/var/state /opt/safescale/var/tmp 
 LOGFILE=/opt/safescale/var/log/user_data.init.log
 
 ### All output to one file and all output to the screen
-exec > >(tee -a ${LOGFILE} /opt/safescale/var/log/ss.log) 2>&1
+exec > >(tee -a ${LOGFILE} /var/log/ss.log) 2>&1
 set -x
 
 LINUX_KIND=
@@ -203,9 +203,7 @@ function disable_services() {
 function no_daily_update() {
 	case $LINUX_KIND in
 	debian | ubuntu)
-		# If it's not there, nothing to do
-		systemctl list-units --all apt-daily.service | egrep -q 'apt-daily' || return 0
-
+		# TODO: Check for errors, also look other cloud distros
 		# first kill apt-daily
 		systemctl stop apt-daily.service
 		systemctl kill --kill-who=all apt-daily.service
@@ -217,10 +215,7 @@ function no_daily_update() {
 			sleep 1
 		done
 		;;
-	redhat | fedora | centos)
-		# If it's not there, nothing to do
-		systemctl list-units --all yum-cron.service | egrep -q 'yum-cron' || return 0
-
+	redhat | centos)
 		systemctl stop yum-cron.service
 		systemctl kill --kill-who=all yum-cron.service
 
@@ -242,10 +237,10 @@ put_hostname_in_hosts
 disable_cloudinit_network_autoconf
 disable_services
 
+no_daily_update
+
 secure_sshd
 create_user
-
-no_daily_update
 
 touch /etc/cloud/cloud-init.disabled
 

@@ -42,6 +42,57 @@ func generateNilNewError() *errorCore {
 	return nil
 }
 
+func TestInternalUsage(t *testing.T) {
+	e := newError(nil, nil, "nothing to see")
+	e.CauseFormatter(
+		func(e Error) string {
+			return "toto"
+		})
+	origin := fmt.Errorf("whatever")
+	done := e.TrySetCause(origin)
+	if e.Cause() != origin {
+		t.Fail()
+	}
+	if !done {
+		t.Fail()
+	}
+}
+
+func TestInternalUsageWithNilCheck(t *testing.T) {
+	defer func() {
+		if x := recover(); x != nil {
+			t.Fail()
+		}
+	}()
+	e := generateNilNewError()
+	e.CauseFormatter(
+		func(e Error) string {
+			return "toto"
+		})
+	done := e.TrySetCause(fmt.Errorf("whatever")) // it's a nil, cannot be done
+	if done {
+		t.Fail()
+	}
+}
+
+func TestInternalUsageWithoutNilCheck(t *testing.T) {
+	defer func() {
+		if x := recover(); x != nil {
+			t.Fail()
+		}
+	}()
+	e := generateNilNewError()
+	e.CauseFormatter(
+		func(e Error) string {
+			return "toto"
+		})
+	e.TrySetCause(fmt.Errorf("whatever"))
+	forced := e.ForceSetCause(fmt.Errorf("it takes"))
+	if forced == nil {
+		t.Fail()
+	}
+}
+
 func TestNormalUsage(t *testing.T) {
 	av := TimeoutError(nil, 2*time.Minute, "ouch")
 	if av != nil {
@@ -130,6 +181,15 @@ func TestFromPointerUsage(t *testing.T) {
 			func(e Error) string {
 				return "toto"
 			})
+	}
+}
+
+func TestForceSetCause(t *testing.T) {
+	av := generateErrTimeout()
+	_ = av.ForceSetCause(fmt.Errorf("the cause"))
+	_ = av.ForceSetCause(fmt.Errorf("the strange cause"))
+	if !strings.Contains(av.Cause().Error(), "strange") {
+		t.Fail()
 	}
 }
 
@@ -528,24 +588,5 @@ func TestNotUncategorizedError(t *testing.T) {
 	}
 	if !strings.Contains(tk, "something") {
 		t.Fail()
-	}
-}
-
-// typos adding consequences -> infinite loops
-func TestNiceLoop(t *testing.T) {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		aerr := AbortedError(fmt.Errorf("this broke my heart"))
-		_ = aerr.AddConsequence(aerr)
-
-		broken := aerr.Error() // It works until we make the call
-		_ = broken
-		return
-	}()
-	failed := waitTimeout(&wg, 500*time.Millisecond)
-	if failed { // It never ended
-		t.FailNow()
 	}
 }

@@ -338,23 +338,14 @@ func (handler *sshHandler) Run(hostRef, cmd string) (retCode int, stdOut string,
 }
 
 // run executes command on the host
-func (handler *sshHandler) runWithTimeout(ssh *system.SSHConfig, cmd string, duration time.Duration) (_ int, _ string, _ string, xerr fail.Error) {
+func (handler *sshHandler) runWithTimeout(ssh *system.SSHConfig, cmd string, duration time.Duration) (int, string, string, fail.Error) {
 	// Create the command
 	sshCmd, xerr := ssh.NewCommand(handler.job.GetTask().GetContext(), cmd)
 	if xerr != nil {
 		return 0, "", "", xerr
 	}
 
-	defer func() {
-		derr := sshCmd.Close()
-		if derr != nil {
-			if xerr == nil {
-				xerr = derr
-			} else {
-				_ = xerr.AddConsequence(fail.Wrap(derr, "failed to close SSH tunnel"))
-			}
-		}
-	}()
+	defer func() { _ = sshCmd.Close() }()
 
 	return sshCmd.RunWithTimeout(handler.job.GetTask().GetContext(), outputs.DISPLAY, duration)
 }

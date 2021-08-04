@@ -38,23 +38,8 @@ JSONTOML := github.com/pelletier/go-toml
 BUILD_TAGS = 
 export BUILD_TAGS
 
-all: logclean ground getdevdeps mod sdk generate lib mintest cli minimock err vet
+all: logclean ground getdevdeps mod sdk generate lib mintest cli err vet
 	@printf "%b" "$(OK_COLOR)$(OK_STRING) Build SUCCESSFUL $(NO_COLOR)\n";
-
-allcover: all
-	@(cd cli/safescale && $(MAKE) $(@))
-	@(cd cli/safescaled && $(MAKE) $(@))
-
-release: logclean ground getdevdeps mod releasetags sdk generate lib mintest cli minimock err vet releasearchive
-	@printf "%b" "$(OK_COLOR)$(OK_STRING) Build for release SUCCESSFUL $(NO_COLOR)\n";
-
-releasetags:
-	@echo "settings go build tags for release"
-	@$(eval BUILD_TAGS = "release,$(BUILD_TAGS)")
-
-releasearchive:
-	@printf "%b" "$(OK_COLOR)$(OK_STRING) Creating release archive $(NO_COLOR)\n";
-	@tar -zcf safescale-$(VERSION)-$(shell $(GO) env GOOS)-$(shell $(GO) env GOARCH).tar.gz cli/safescale/safescale cli/safescaled/safescaled
 
 fastall: begin
 	@printf "%b" "$(OK_COLOR)$(OK_STRING) Fast Build assumes all dependencies are already there and code generation is also up to date $(NO_COLOR)\n";
@@ -160,8 +145,8 @@ ifneq ($(STRICT),1)
 		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading protoc-gen-go...\n" && $(GO) get github.com/golang/protobuf/protoc-gen-go@v1.3.2 &>/dev/null && $(GO) install github.com/golang/protobuf/protoc-gen-go@v1.3.2 &>/dev/null; \
 	fi
 	@$(WHICH) minimock > /dev/null; if [ $$? -ne 0 ]; then \
-		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading minimock...\n" && $(GO) get $(MINIMOCK)@v3.0.9 &>/dev/null || true; \
-		$(GO) install $(MINIMOCK)@v3.0.9 &>/dev/null || true; \
+		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading minimock...\n" && $(GO) get $(MINIMOCK)@v3.0.8 &>/dev/null || true; \
+		$(GO) install $(MINIMOCK)@v3.0.8 &>/dev/null || true; \
 	fi
 	@$(WHICH) errcheck > /dev/null; if [ $$? -ne 0 ]; then \
 		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading errcheck...\n" && $(GO) get $(ERRCHECK)@v1.6.0 &>/dev/null || true; \
@@ -176,7 +161,7 @@ ifneq ($(STRICT),1)
 		$(GO) install $(LINTER)@v0.0.0-20201208152925-83fdc39ff7b5 &>/dev/null || true; \
 	fi
 	@$(WHICH) ruleguard > /dev/null; if [ $$? -ne 0 ]; then \
-		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading ruleguard...\n" && $(GO) get $(RULES)@v0.3.4 && $(GO) get $(RULES_DSL)@v0.3.6 &>/dev/null || true; \
+		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading ruleguard...\n" && $(GO) get $(RULES)@v0.3.4 && $(GO) get $(RULES_DSL)@v0.3.2 &>/dev/null || true; \
 		$(GO) install $(RULES)@v0.3.4 &>/dev/null || true; \
 	fi
 	@$(WHICH) gogrep > /dev/null; if [ $$? -ne 0 ]; then \
@@ -208,7 +193,7 @@ else
 		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading protoc-gen-go...\n" && $(GO) get github.com/golang/protobuf/protoc-gen-go@v1.3.2 &>/dev/null && $(GO) install github.com/golang/protobuf/protoc-gen-go &>/dev/null; \
 	fi
 	@$(WHICH) minimock > /dev/null; if [ $$? -ne 0 ]; then \
-		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading minimock...\n" && $(GO) get $(MINIMOCK)@v3.0.9 &>/dev/null || true; \
+		printf "%b" "$(OK_COLOR)$(INFO_STRING) Downloading minimock...\n" && $(GO) get $(MINIMOCK)@v3.0.8 &>/dev/null || true; \
 		$(GO) install $(MINIMOCK) &>/dev/null || true; \
 	fi
 	@$(WHICH) errcheck > /dev/null; if [ $$? -ne 0 ]; then \
@@ -278,7 +263,6 @@ conveystop:
 	@(ps -ef | grep goconvey | grep -v grep | grep 8082 | awk {'print $2'} | xargs kill -9 || true)
 
 generate: sdk
-	@sleep 5
 	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running code generation, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";
 	@$(RM) ./generation_results.log || true
 	@$(GO) generate -run stringer ./... 2>&1 | $(TEE) -a generation_results.log
@@ -313,12 +297,12 @@ gofmt: begin
 
 err: begin generate
 	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running errcheck, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";
-	@$(GO) list ./... | grep -v mock | grep -v rules | grep -v cli | xargs errcheck | $(TEE) err_results.log
+	@$(GO) list ./... | grep -v mock | grep -v cli | xargs errcheck | $(TEE) err_results.log
 	@if [ -s ./err_results.log ]; then printf "%b" "$(ERROR_COLOR)$(ERROR_STRING) errcheck FAILED !$(NO_COLOR)\n";exit 1;else printf "%b" "$(OK_COLOR)$(OK_STRING) CONGRATS. NO PROBLEMS DETECTED ! $(NO_COLOR)\n";fi;
 
 vet: begin generate
 	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running vet checks, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";
-	@$(GO) list ./... | grep -v mock | grep -v rules | grep -v cli | xargs $(GO) vet | $(TEE) vet_results.log
+	@$(GO) list ./... | grep -v mock | grep -v cli | xargs $(GO) vet | $(TEE) vet_results.log
 	@if [ -s ./vet_results.log ]; then printf "%b" "$(ERROR_COLOR)$(ERROR_STRING) vet FAILED !$(NO_COLOR)\n";exit 1;else printf "%b" "$(OK_COLOR)$(OK_STRING) CONGRATS. NO PROBLEMS DETECTED ! $(NO_COLOR)\n";fi
 
 semgrep: begin generate
@@ -326,18 +310,13 @@ semgrep: begin generate
 	@ruleguard -c=0 -rules build/rules/ruleguard.rules.$(CERR).go ./... | $(TEE) semgrep_results.log
 	@if [ -s ./semgrep_results.log ]; then printf "%b" "$(ERROR_COLOR)$(ERROR_STRING) semgrep FAILED !$(NO_COLOR)\n";exit 1;else printf "%b" "$(OK_COLOR)$(OK_STRING) CONGRATS. NO PROBLEMS DETECTED ! $(NO_COLOR)\n";fi
 
-minimock: begin generate
-	@$(GO) generate -run minimock ./... > /dev/null 2>&1 | $(TEE) -a generation_results.log
+minimock:
+	@$(GO) generate -run minimock ./... 2>&1 | $(TEE) -a generation_results.log
 
 metalint: begin generate
 	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running metalint checks, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";
 	@($(WHICH) golangci-lint > /dev/null || (echo "golangci-lint not installed in your system" && exit 1))
-	@$(GO) list ./... | cut -c 28- | grep -v mocks | grep -v test | grep -v cli | xargs golangci-lint --color never --enable=unused --enable=unparam --enable=deadcode --enable=gocyclo --enable=varcheck --enable=staticcheck --enable=structcheck --enable=typecheck --enable=maligned --enable=errcheck --enable=ineffassign --enable=interfacer --enable=unconvert --enable=goconst --enable=gosec --enable=megacheck --enable=gocritic --enable=depguard --enable=dogsled --enable=funlen --enable=gochecknoglobals run || true
-
-metalint-mini: begin generate
-	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running metalint checks, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";
-	@($(WHICH) golangci-lint > /dev/null || (echo "golangci-lint not installed in your system" && exit 1))
-	@$(GO) list ./... | cut -c 28- | grep -v mocks | grep -v test | grep -v cli | xargs golangci-lint --color never--enable=deadcode --enable=staticcheck --enable=structcheck --enable=typecheck --enable=errcheck --enable=ineffassign --enable=interfacer --enable=unconvert --enable=megacheck --enable=gocritic --enable=depguard --enable=dogsled run || true
+	@$(GO) list ./... | cut -c 28- | grep -v mocks | grep -v cli | xargs golangci-lint --color never --enable=unused --enable=unparam --enable=deadcode --enable=gocyclo --enable=varcheck --enable=staticcheck --enable=structcheck --enable=typecheck --enable=maligned --enable=errcheck --enable=ineffassign --enable=interfacer --enable=unconvert --enable=goconst --enable=gosec --enable=megacheck --enable=gocritic --enable=depguard --enable=dogsled --enable=funlen --enable=gochecknoglobals run || true
 
 metalint-full: begin generate
 	@printf "%b" "$(OK_COLOR)$(INFO_STRING) Running metalint checks, $(NO_COLOR)target $(OBJ_COLOR)$(@)$(NO_COLOR)\n";

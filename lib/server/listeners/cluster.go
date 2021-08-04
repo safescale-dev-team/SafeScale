@@ -18,10 +18,8 @@ package listeners
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
-	"github.com/CS-SI/SafeScale/lib/utils/concurrency"
 	"github.com/asaskevich/govalidator"
 	googleprotobuf "github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
@@ -61,7 +59,7 @@ func (s *ClusterListener) List(ctx context.Context, in *protocol.Reference) (hl 
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "/clusters/list")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster list")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -98,22 +96,19 @@ func (s *ClusterListener) Create(ctx context.Context, in *protocol.ClusterCreate
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	name := in.GetName()
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/create", name))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster create")
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	// Propagate task id to the context
+	name := in.GetName()
 	task := job.GetTask()
-	ctx = context.WithValue(task.GetContext(), concurrency.KeyForTaskInContext, task)
-
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("listeners.cluster"), "('%s')", name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.New(job.GetService())
+	rc, xerr := clusterfactory.New(job.GetService())
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -123,16 +118,12 @@ func (s *ClusterListener) Create(ctx context.Context, in *protocol.ClusterCreate
 		return nil, xerr
 	}
 
-	if req.Tenant == "" {
-		req.Tenant = job.GetTenant()
-	}
-
-	xerr = instance.Create(ctx, req)
+	xerr = rc.Create(task.GetContext(), req)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	return instance.ToProtocol()
+	return rc.ToProtocol()
 }
 
 // State returns the status of a cluster
@@ -158,7 +149,7 @@ func (s *ClusterListener) State(ctx context.Context, in *protocol.Reference) (ht
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/state", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster state")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -169,12 +160,12 @@ func (s *ClusterListener) State(ctx context.Context, in *protocol.Reference) (ht
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), ref)
+	rc, xerr := clusterfactory.Load(job.GetService(), ref)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	st, xerr := instance.GetState()
+	st, xerr := rc.GetState()
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -205,7 +196,7 @@ func (s *ClusterListener) Inspect(ctx context.Context, in *protocol.Reference) (
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/inspect", ref))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "cluster inspect")
 	if err != nil {
 		return nil, err
 	}
@@ -216,12 +207,12 @@ func (s *ClusterListener) Inspect(ctx context.Context, in *protocol.Reference) (
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), ref)
+	rc, xerr := clusterfactory.Load(job.GetService(), ref)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	return instance.ToProtocol()
+	return rc.ToProtocol()
 }
 
 // Start ...
@@ -245,7 +236,7 @@ func (s *ClusterListener) Start(ctx context.Context, in *protocol.Reference) (em
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/start", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster start")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -256,12 +247,12 @@ func (s *ClusterListener) Start(ctx context.Context, in *protocol.Reference) (em
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), ref)
+	rc, xerr := clusterfactory.Load(job.GetService(), ref)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	return empty, instance.Start(task.GetContext())
+	return empty, rc.Start(task.GetContext())
 }
 
 // Stop shutdowns a entire cluster (including the gateways)
@@ -288,7 +279,7 @@ func (s *ClusterListener) Stop(ctx context.Context, in *protocol.Reference) (emp
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/stop", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster stop")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -299,12 +290,11 @@ func (s *ClusterListener) Stop(ctx context.Context, in *protocol.Reference) (emp
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), ref)
+	rc, xerr := clusterfactory.Load(job.GetService(), ref)
 	if xerr != nil {
 		return nil, xerr
 	}
-
-	return empty, instance.Stop(task.GetContext())
+	return empty, rc.Stop(task.GetContext())
 }
 
 // Delete a cluster
@@ -331,7 +321,7 @@ func (s *ClusterListener) Delete(ctx context.Context, in *protocol.ClusterDelete
 		return empty, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/delete", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "cluster delete")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -342,12 +332,12 @@ func (s *ClusterListener) Delete(ctx context.Context, in *protocol.ClusterDelete
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), ref)
+	rc, xerr := clusterfactory.Load(job.GetService(), ref)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	return empty, instance.Delete(task.GetContext(), in.GetForce())
+	return empty, rc.Delete(task.GetContext(), in.GetForce())
 }
 
 // Expand adds node(s) to a cluster
@@ -374,7 +364,7 @@ func (s *ClusterListener) Expand(ctx context.Context, in *protocol.ClusterResize
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/expand", ref))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "cluster expand")
 	if err != nil {
 		return nil, err
 	}
@@ -394,12 +384,12 @@ func (s *ClusterListener) Expand(ctx context.Context, in *protocol.ClusterResize
 		sizing.Image = in.GetImageId()
 	}
 
-	instance, xerr := clusterfactory.Load(job.GetService(), in.GetName())
+	rc, xerr := clusterfactory.Load(job.GetService(), in.GetName())
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	resp, xerr := instance.AddNodes(task.GetContext(), uint(in.Count), *sizing)
+	resp, xerr := rc.AddNodes(task.GetContext(), uint(in.Count), *sizing)
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -441,7 +431,7 @@ func (s *ClusterListener) Shrink(ctx context.Context, in *protocol.ClusterResize
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/shrink", clusterName))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "host delete")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -505,7 +495,7 @@ func (s *ClusterListener) ListNodes(ctx context.Context, in *protocol.Reference)
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/nodes/list", ref))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "cluster node list")
 	if err != nil {
 		return nil, err
 	}
@@ -516,12 +506,12 @@ func (s *ClusterListener) ListNodes(ctx context.Context, in *protocol.Reference)
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), in.GetName())
+	rc, xerr := clusterfactory.Load(job.GetService(), in.GetName())
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	list, xerr := instance.ListNodes(task.GetContext())
+	list, xerr := rc.ListNodes(task.GetContext())
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -566,7 +556,7 @@ func (s *ClusterListener) InspectNode(ctx context.Context, in *protocol.ClusterN
 		return nil, fail.InvalidRequestError("neither name nor id of node is provided")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/node/%s/inspect", clusterName, nodeRef))
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster node inspect")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -605,7 +595,7 @@ func (s *ClusterListener) DeleteNode(ctx context.Context, in *protocol.ClusterNo
 	}
 	nodeRef, nodeRefLabel := srvutils.GetReference(in.GetHost()) // If NodeRef is empty string, asks to delete the last added node
 
-	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/node/%s/delete", clusterName, nodeRef))
+	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster node delete")
 	if err != nil {
 		return empty, err
 	}
@@ -648,7 +638,7 @@ func (s *ClusterListener) StopNode(ctx context.Context, in *protocol.ClusterNode
 		return nil, status.Errorf(codes.FailedPrecondition, "neither name nor id of node is provided")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/node/%s/stop", clusterName, nodeRef))
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster node stop")
 	if xerr != nil {
 		return empty, xerr
 	}
@@ -690,7 +680,7 @@ func (s *ClusterListener) StartNode(ctx context.Context, in *protocol.ClusterNod
 		return nil, fail.InvalidRequestError("neither name nor id of node is provided")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/node/%s/start", clusterName, nodeRef))
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster node start")
 	if xerr != nil {
 		return empty, xerr
 	}
@@ -731,7 +721,7 @@ func (s *ClusterListener) StateNode(ctx context.Context, in *protocol.ClusterNod
 		return nil, fail.InvalidRequestError("neither name nor id of node is provided")
 	}
 
-	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/node/%s/state", clusterName, nodeRef))
+	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster node state")
 	if err != nil {
 		return nil, err
 	}
@@ -768,7 +758,7 @@ func (s *ClusterListener) ListMasters(ctx context.Context, in *protocol.Referenc
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/masters/list", clusterName))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "cluster master list")
 	if err != nil {
 		return nil, err
 	}
@@ -779,21 +769,19 @@ func (s *ClusterListener) ListMasters(ctx context.Context, in *protocol.Referenc
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), clusterName)
+	rc, xerr := clusterfactory.Load(job.GetService(), clusterName)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	list, xerr := instance.ListMasters(task.GetContext())
+	list, xerr := rc.ListMasters(task.GetContext())
 	if xerr != nil {
 		return nil, xerr
 	}
-
 	out, xerr := converters.IndexedListOfClusterNodesFromResourceToProtocol(list)
 	if xerr != nil {
 		return nil, xerr
 	}
-
 	return out, nil
 }
 
@@ -821,7 +809,7 @@ func (s *ClusterListener) FindAvailableMaster(ctx context.Context, in *protocol.
 		return nil, fail.InvalidRequestError("cluster name is missing")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/cluster/%s/master/available", clusterName))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "cluster master list")
 	if err != nil {
 		return nil, err
 	}
@@ -832,21 +820,18 @@ func (s *ClusterListener) FindAvailableMaster(ctx context.Context, in *protocol.
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(job.GetService(), clusterName)
+	rc, xerr := clusterfactory.Load(job.GetService(), clusterName)
 	if xerr != nil {
 		return nil, xerr
 	}
-
-	master, xerr := instance.FindAvailableMaster(task.GetContext())
+	master, xerr := rc.FindAvailableMaster(task.GetContext())
 	if xerr != nil {
 		return nil, xerr
 	}
-
 	out, xerr := master.ToProtocol()
 	if xerr != nil {
 		return nil, xerr
 	}
-
 	return out, nil
 }
 
@@ -878,7 +863,7 @@ func (s *ClusterListener) InspectMaster(ctx context.Context, in *protocol.Cluste
 		return nil, fail.InvalidRequestError("neither name nor id of master is provided")
 	}
 
-	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/cluster/%s/master/%s/inspect", clusterName, masterRef))
+	job, err := PrepareJob(ctx, in.GetHost().GetTenantId(), "cluster master inspect")
 	if err != nil {
 		return nil, err
 	}
@@ -890,13 +875,13 @@ func (s *ClusterListener) InspectMaster(ctx context.Context, in *protocol.Cluste
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
-	instance, xerr := clusterfactory.Load(svc, clusterName)
+	rc, xerr := clusterfactory.Load(svc, clusterName)
 	if xerr != nil {
 		return nil, xerr
 	}
 
 	var masterID string
-	xerr = instance.Inspect(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
+	xerr = rc.Inspect(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
 		return props.Inspect(clusterproperty.NodesV3, func(clonable data.Clonable) fail.Error {
 			nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
 			if !ok {

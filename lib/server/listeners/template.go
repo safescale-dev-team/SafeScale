@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	srvutils "github.com/CS-SI/SafeScale/lib/server/utils"
 	"github.com/asaskevich/govalidator"
 	scribble "github.com/nanobox-io/golang-scribble"
 	"github.com/sirupsen/logrus"
@@ -55,7 +54,7 @@ func (s *TemplateListener) List(ctx context.Context, in *protocol.TemplateListRe
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "/templates/list")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "template list")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -154,7 +153,7 @@ func (s *TemplateListener) Match(ctx context.Context, in *protocol.TemplateMatch
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "/template/match")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "template match")
 
 	if xerr != nil {
 		return nil, xerr
@@ -206,14 +205,13 @@ func (s *TemplateListener) Inspect(ctx context.Context, in *protocol.TemplateIns
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	ref, _ := srvutils.GetReference(in.GetTemplate())
-	job, xerr := PrepareJob(ctx, in.GetTemplate().GetTenantId(), fmt.Sprintf("template/%s/inspect", ref))
+	job, xerr := PrepareJob(ctx, "", "template inspect")
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.template"), "('%s')", ref).WithStopwatch().Entering()
+	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.template"), "('%s')", job.GetService().GetName()).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -234,7 +232,7 @@ func (s *TemplateListener) Inspect(ctx context.Context, in *protocol.TemplateIns
 		return nil, fail.ConvertError(err)
 	}
 
-	at, xerr := svc.FindTemplateByName(ref)
+	at, xerr := svc.FindTemplateByName(in.GetTemplate().GetName())
 	if xerr != nil {
 		return nil, xerr
 	}

@@ -78,13 +78,11 @@ func (instance *Host) UnsafeRun(ctx context.Context, cmd string, outs outputs.En
 				xerr = fail.ConvertError(cerr)
 			}
 		case *fail.ErrTimeout:
-			if cerr := xerr.Cause(); cerr != nil {
-				switch cerr.(type) {
-				case *fail.ErrTimeout:
-					xerr = fail.Wrap(cerr, "failed to execute command on Host '%s' in %s", hostName, temporal.FormatDuration(executionTimeout))
-				default:
-					xerr = fail.Wrap(cerr, "failed to connect by SSH to Host '%s' after %s", hostName, temporal.FormatDuration(connectionTimeout))
-				}
+			switch xerr.Cause().(type) {
+			case *fail.ErrTimeout:
+				xerr = fail.Wrap(xerr.Cause(), "failed to execute command on Host '%s' in %s", hostName, temporal.FormatDuration(executionTimeout))
+			default:
+				xerr = fail.Wrap(xerr.Cause(), "failed to connect by SSH to Host '%s' after %s", hostName, temporal.FormatDuration(connectionTimeout))
 			}
 		}
 	}
@@ -118,17 +116,15 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 				return innerXErr
 			}
 
-			// Do not forget to close the command (allowing to close SSH tunnels and free process)
-			defer func(cmd *system.SSHCommand) {
-				derr := cmd.Close()
-				if derr != nil {
+			defer func() {
+				if derr := sshCmd.Close(); derr != nil {
 					if innerXErr == nil {
 						innerXErr = derr
 					} else {
-						_ = innerXErr.AddConsequence(fail.Wrap(derr, "failed to close SSH tunnel"))
+						_ = innerXErr.AddConsequence(fail.Wrap(derr, "failed to close SSHCommand"))
 					}
 				}
-			}(sshCmd)
+			}()
 
 			retcode = -1
 			if retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(ctx, outs, timeout); innerXErr != nil {
@@ -143,7 +139,7 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 			}
 			// If retcode == 255, ssh connection failed
 			if retcode == 255 {
-				return fail.NotAvailableError("failed to execute command '%s': failed to connect", cmd)
+				return fail.NotAvailableError("failed to connect")
 			}
 			return nil
 		},
@@ -153,7 +149,7 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrTimeout:
-			xerr = fail.Wrap(xerr.Cause(), "failed to execute command '%s' after '%s'", cmd, temporal.FormatDuration(timeout))
+			xerr = fail.Wrap(xerr.Cause(), "failed to execute command after %s", temporal.FormatDuration(timeout))
 		case *retry.ErrStopRetry:
 			if xerr.Cause() != nil {
 				xerr = fail.ConvertError(xerr.Cause())

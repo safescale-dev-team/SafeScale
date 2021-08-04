@@ -66,6 +66,8 @@ const (
 	hostKind = "host"
 	// hostsFolderName is the technical name of the container used to store networks info
 	hostsFolderName = "hosts"
+
+	// defaultHostSecurityGroupNamePattern = "safescale-sg_host_%s.%s.%s" // safescale-sg_host_<hostname>.<subnet name>.<network name>; should be unique across a tenant
 )
 
 var (
@@ -312,7 +314,7 @@ func (instance *Host) updateCachedInformation() fail.Error {
 						switch xerr.(type) {
 						case *fail.ErrNotFound:
 							// continue
-							debug.IgnoreError(xerr)
+							fail.Ignore(xerr)
 						default:
 							return xerr
 						}
@@ -706,7 +708,7 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return nil, fail.Wrap(xerr, "failed to check if Host '%s' already exists", hostReq.ResourceName)
 		}
@@ -722,7 +724,7 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return nil, fail.Wrap(xerr, "failed to check if Host resource name '%s' is already used", hostReq.ResourceName)
 		}
@@ -739,7 +741,7 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// continue
-					debug.IgnoreError(xerr)
+					fail.Ignore(xerr)
 				default:
 					return nil, xerr
 				}
@@ -1023,10 +1025,8 @@ func (instance *Host) Create(ctx context.Context, hostReq abstract.HostRequest, 
 			}
 
 			parts := strings.Split(status, ",")
-			if len(parts) >= 3 {
-				systemV1.Type = parts[1]
-				systemV1.Flavor = parts[2]
-			}
+			systemV1.Type = parts[1]
+			systemV1.Flavor = parts[2]
 			systemV1.Image = hostReq.ImageID
 			return nil
 		})
@@ -1347,7 +1347,7 @@ func (instance *Host) unbindDefaultSecurityGroupIfNeeded(networkID string) fail.
 			switch innerXErr.(type) {
 			case *fail.ErrNotFound:
 				// ignore this error
-				debug.IgnoreError(innerXErr)
+				fail.Ignore(innerXErr)
 			default:
 				return innerXErr
 			}
@@ -1355,7 +1355,7 @@ func (instance *Host) unbindDefaultSecurityGroupIfNeeded(networkID string) fail.
 			switch innerXErr.(type) {
 			case *fail.ErrNotFound:
 				// Consider a security group not found as a successful unbind
-				debug.IgnoreError(innerXErr)
+				fail.Ignore(innerXErr)
 			default:
 				return fail.Wrap(innerXErr, "failed to unbind Security Group '%s' from Host", sgName)
 			}
@@ -1973,13 +1973,6 @@ func (instance *Host) Delete(ctx context.Context) (xerr fail.Error) {
 func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 	defer fail.OnPanic(&xerr)
 
-	if instance == nil || instance.IsNull() {
-		return fail.InvalidInstanceError()
-	}
-	if ctx == nil {
-		return fail.InvalidParameterCannotBeNilError("ctx")
-	}
-
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -2007,7 +2000,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 				if count > 0 {
 					// clients found, checks if these clients already exists...
 					for _, hostID := range hostShare.ClientsByID {
-						instance, inErr := LoadHost(svc, hostID, HostLightOption)
+						instance, inErr := LoadHost(svc, hostID)
 						if inErr == nil {
 							instance.Released()
 							return fail.NotAvailableError("Host '%s' exports %d share%s and at least one share is mounted", instance.GetName(), shareCount, strprocess.Plural(uint(shareCount)))
@@ -2197,7 +2190,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 					switch derr.(type) {
 					case *fail.ErrNotFound:
 						// Consider that a Security Group that cannot be loaded or is not bound as a success
-						debug.IgnoreError(derr)
+						fail.Ignore(derr)
 					default:
 						errors = append(errors, derr)
 					}
@@ -2222,7 +2215,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 					case *fail.ErrNotFound:
 						// A Host not found is considered as a successful deletion
 						logrus.Tracef("Host not found, deletion considered as a success")
-						debug.IgnoreError(derr)
+						fail.Ignore(derr)
 					default:
 						return fail.Wrap(derr, "cannot delete Host")
 					}
@@ -2245,7 +2238,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 						switch stateErr.(type) {
 						case *fail.ErrNotFound:
 							// If Host is not found anymore, consider this as a success
-							debug.IgnoreError(stateErr)
+							fail.Ignore(stateErr)
 							return nil
 						default:
 							return stateErr
@@ -2269,7 +2262,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 				switch innerXErr.(type) {
 				case *fail.ErrNotFound:
 					// continue
-					debug.IgnoreError(innerXErr)
+					fail.Ignore(innerXErr)
 				default:
 					return innerXErr
 				}
@@ -2306,7 +2299,7 @@ func (instance *Host) RelaxedDeleteHost(ctx context.Context) (xerr fail.Error) {
 		if _, ok := xerr.(*fail.ErrNotFound); !ok {
 			return xerr
 		}
-		debug.IgnoreError(xerr)
+		fail.Ignore(xerr)
 		logrus.Tracef("core instance not found, deletion considered as a success")
 	}
 
@@ -3276,7 +3269,7 @@ func (instance *Host) EnableSecurityGroup(ctx context.Context, sg resources.Secu
 				if xerr != nil {
 					switch xerr.(type) {
 					case *fail.ErrDuplicate:
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 						// continue
 					default:
 						return xerr
@@ -3373,7 +3366,7 @@ func (instance *Host) DisableSecurityGroup(ctx context.Context, rsg resources.Se
 				if xerr != nil {
 					switch xerr.(type) {
 					case *fail.ErrNotFound:
-						debug.IgnoreError(xerr)
+						fail.Ignore(xerr)
 						// continue
 					default:
 						return xerr

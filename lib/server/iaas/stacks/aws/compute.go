@@ -923,7 +923,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// a host not found is considered as a successful deletion, continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return xerr
 		}
@@ -957,7 +957,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 		if xerr != nil {
 			switch xerr.(type) {
 			case *fail.ErrNotFound:
-				debug.IgnoreError(xerr)
+				fail.Ignore(xerr)
 				// continue
 			default:
 				return xerr
@@ -980,7 +980,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// A missing volume is considered as a successful deletion
-					debug.IgnoreError(xerr)
+					fail.Ignore(xerr)
 				default:
 					logrus.Warnf("failed to delete volume %s", volume)
 				}
@@ -994,7 +994,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// A missing keypair is considered as a successful deletion
-					debug.IgnoreError(xerr)
+					fail.Ignore(xerr)
 				default:
 					return fail.Wrap(xerr, "error deleting keypair '%s'", keyPairName)
 				}

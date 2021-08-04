@@ -1,10 +1,10 @@
-# Building SafeScale for Ubuntu
+# Building SafeScale for Centos
 
 ## Prepare environment
 ```
-sudo apt-get update -y
-sudo apt-get install -y build-essential make wget unzip vim git
-sudo apt-get install -y golang
+sudo yum -y check-update
+sudo yum groupinstall -y "Development Tools"
+sudo yum install -y wget unzip vim git
 ```
 
 ## Install GO 1.14.4
@@ -14,7 +14,7 @@ sudo tar -C /usr/local -xzf go1.14.4.linux-amd64.tar.gz
 rm ./go1.14.4.linux-amd64.tar.gz
 ```
 
-## Install Protoc 3.6.1
+## Install Protoc 3.6
 ```
 PROTOCZIP=$(echo "protoc-3.6.1-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m).zip")
 wget https://github.com/google/protobuf/releases/download/v3.6.1/$PROTOCZIP

@@ -72,10 +72,7 @@ func (rfc Item) Upload(ctx context.Context, host resources.Host) (xerr fail.Erro
 
 	retryErr := retry.WhileUnsuccessful(
 		func() error {
-			retcode, iout, ierr, xerr := host.Push(ctx, rfc.Local, rfc.Remote, rfc.RemoteOwner, rfc.RemoteRights, temporal.GetExecutionTimeout())
-			if iout != "" || ierr != "" {
-				logrus.Debugf("Ignoring '%s' and '%s'", iout, ierr)
-			}
+			retcode, _, _, xerr := host.Push(ctx, rfc.Local, rfc.Remote, rfc.RemoteOwner, rfc.RemoteRights, temporal.GetExecutionTimeout())
 			xerr = debug.InjectPlannedFail(xerr)
 			if xerr != nil {
 				return xerr
@@ -172,7 +169,7 @@ func (rfh *RemoteFilesHandler) Upload(ctx context.Context, host resources.Host) 
 }
 
 // Cleanup executes the removal of remote files.
-// NOTE: Removal of local files is the responsibility of the caller, not the RemoteFilesHandler.
+// NOTE: Removal of local files is the responsability of the caller, not the RemoteFilesHandler.
 // TODO: allow to cleanup on many hosts
 func (rfh *RemoteFilesHandler) Cleanup(ctx context.Context, host resources.Host) fail.Error {
 	for _, v := range rfh.items {

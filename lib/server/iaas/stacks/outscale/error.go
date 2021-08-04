@@ -71,8 +71,6 @@ func qualifyFromCode(code, details string) fail.Error {
 			details = "invalid parameter"
 		}
 		return fail.InvalidRequestError(details)
-	case "5009":
-		return fail.NotFoundError("availability zone not found")
 	case "5020":
 		return fail.NotFoundError("security group not found")
 	case "5057":
@@ -89,20 +87,18 @@ func qualifyFromCode(code, details string) fail.Error {
 		return fail.DuplicateError("a Security Group with this name already exists")
 	case "9011":
 		return fail.DuplicateError("a keypair with this name already exists")
-	case "9029": // this means the network has associated resources still in use, we have to delete those first
-		return fail.InvalidRequestError("the network is still in use")
+	case "9029":
+		return fail.NotAvailableError("the network is still in use")
 	case "9044":
 		return fail.InvalidRequestError("not included in VPC Targets")
 	case "9058":
 		return fail.DuplicateError("network already exist")
-	case "10010":
-		return fail.OverloadError("host quota exceeded")
 	case "10022":
-		return fail.OverloadError("network/VPC quota exceeded")
+		return fail.OverloadError("VPC quota exceeded")
 	case "10023":
 		return fail.OverloadError("internet gateway quota exceeded")
 	case "10029":
-		return fail.OverloadError("cpu core quota exceeded")
+		return fail.OverloadError("CPU quota exceeded")
 	case "10042":
 		return fail.OverloadError("memory quota exceeded")
 	}

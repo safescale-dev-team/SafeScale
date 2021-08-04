@@ -19,10 +19,8 @@ package listeners
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
-	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	// "github.com/asaskevich/govalidator"
 	googleprotobuf "github.com/golang/protobuf/ptypes/empty"
 
@@ -71,7 +69,7 @@ func (s *FeatureListener) List(ctx context.Context, in *protocol.FeatureListRequ
 		return empty, fail.InvalidParameterError("in.TargetRef", "neither Name nor ID fields are provided")
 	}
 
-	job, err := PrepareJob(ctx, in.GetTargetRef().GetTenantId(), "/features/list")
+	job, err := PrepareJob(ctx, in.GetTargetRef().GetTenantId(), "feature list")
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +77,7 @@ func (s *FeatureListener) List(ctx context.Context, in *protocol.FeatureListRequ
 	task := job.GetTask()
 	svc := job.GetService()
 
-	tracer := debug.NewTracer(task, tracing.ShouldTrace("listeners.feature"), "(%s, %s)", targetType, targetRefLabel).WithStopwatch().Entering()
+	tracer := debug.NewTracer(task, true /*tracing.ShouldTrace("listeners.feature")*/, "(%s, %s)", targetType, targetRefLabel).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -132,7 +130,7 @@ func (s *FeatureListener) Check(ctx context.Context, in *protocol.FeatureActionR
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/check/%s/%s", featureName, targetType, targetRef))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "feature check")
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +138,7 @@ func (s *FeatureListener) Check(ctx context.Context, in *protocol.FeatureActionR
 	task := job.GetTask()
 	svc := job.GetService()
 
-	tracer := debug.NewTracer(task, tracing.ShouldTrace("listeners.feature"), "(%d, %s, %s)", targetType, targetRefLabel, featureName).WithStopwatch().Entering()
+	tracer := debug.NewTracer(task, true /*tracing.ShouldTrace("listeners.feature")*/, "(%d, %s, %s)", targetType, targetRefLabel, featureName).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer func() {
 		if err != nil {
@@ -233,7 +231,7 @@ func (s *FeatureListener) Add(ctx context.Context, in *protocol.FeatureActionReq
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/add/%s/%s", featureName, targetType, targetRef))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "feature add")
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +309,7 @@ func (s *FeatureListener) Remove(ctx context.Context, in *protocol.FeatureAction
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/remove/%s/%s", featureName, targetType, targetRef))
+	job, err := PrepareJob(ctx, in.GetTenantId(), "feature remove")
 	if err != nil {
 		return empty, err
 	}

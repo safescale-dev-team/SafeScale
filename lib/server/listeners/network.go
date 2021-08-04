@@ -67,7 +67,7 @@ func (s *NetworkListener) Create(ctx context.Context, in *protocol.NetworkCreate
 		return nil, fail.InvalidRequestError("network name cannot be empty string")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/network/%s/create", networkName))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("network create '%s'", networkName))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -177,7 +177,7 @@ func (s *NetworkListener) List(ctx context.Context, in *protocol.NetworkListRequ
 		}
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "/networks/list")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "network list")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -235,7 +235,7 @@ func (s *NetworkListener) Inspect(ctx context.Context, in *protocol.Reference) (
 		return nil, fail.InvalidRequestError("neither name nor id given as reference")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/network/%s/inspect", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "networkInstance inspect")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -282,7 +282,7 @@ func (s *NetworkListener) Delete(ctx context.Context, in *protocol.Reference) (e
 		return empty, fail.InvalidRequestError("neither name nor id given as reference")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/network/%s/delete", ref))
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "delete network")
 	if xerr != nil {
 		return nil, xerr
 	}

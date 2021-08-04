@@ -24,6 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+
 	"github.com/CS-SI/SafeScale/lib/server/resources"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/hostproperty"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/installaction"
@@ -38,7 +41,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/serialize"
 	"github.com/CS-SI/SafeScale/lib/utils/template"
 	"github.com/CS-SI/SafeScale/lib/utils/temporal"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -242,8 +244,13 @@ type step struct {
 }
 
 // Run executes the step on all the concerned hosts
-func (is *step) Run(task concurrency.Task, hosts []resources.Host, v data.Map, s resources.FeatureSettings) (outcomes resources.UnitResults, xerr fail.Error) {
+func (is *step) Run(ctx context.Context, hosts []resources.Host, v data.Map, s resources.FeatureSettings) (outcomes resources.UnitResults, xerr fail.Error) {
 	outcomes = &unitResults{}
+	task, xerr := concurrency.TaskFromContext(ctx)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return outcomes, xerr
+	}
 
 	if task.Aborted() {
 		return outcomes, fail.AbortedError(nil, "aborted")
@@ -293,11 +300,10 @@ func (is *step) Run(task concurrency.Task, hosts []resources.Host, v data.Map, s
 			if xerr != nil {
 				return nil, xerr
 			}
-
-			subtask, xerr := concurrency.NewTaskWithParent(task, concurrency.InheritParentIDOption)
-			xerr = debug.InjectPlannedFail(xerr)
-			if xerr != nil {
-				return nil, xerr
+			subtask, err := concurrency.NewTaskWithParent(task)
+			err = debug.InjectPlannedFail(err)
+			if err != nil {
+				return nil, err
 			}
 
 			outcome, xerr := subtask.Run(is.taskRunOnHost, runOnHostParameters{Host: h, Variables: cloneV})
@@ -430,11 +436,6 @@ func (is *step) taskRunOnHost(task concurrency.Task, params concurrency.TaskPara
 	}
 	if task == nil {
 		return nil, fail.InvalidParameterCannotBeNilError("task")
-	}
-
-	xerr = task.AppendToID(fmt.Sprintf("/host/%s", p.Host.GetName()))
-	if xerr != nil {
-		return nil, xerr
 	}
 
 	if task.Aborted() {

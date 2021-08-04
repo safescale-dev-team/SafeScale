@@ -260,7 +260,7 @@ func (instance *Network) Create(ctx context.Context, req abstract.NetworkRequest
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			debug.IgnoreError(xerr)
+			fail.Ignore(xerr)
 		default:
 			return xerr
 		}
@@ -465,7 +465,7 @@ func (instance *Network) Delete(ctx context.Context) (xerr fail.Error) {
 						switch xerr.(type) {
 						case *fail.ErrNotFound:
 							// Subnet is already deleted, considered as a success and continue
-							debug.IgnoreError(xerr)
+							fail.Ignore(xerr)
 						default:
 							return xerr
 						}
