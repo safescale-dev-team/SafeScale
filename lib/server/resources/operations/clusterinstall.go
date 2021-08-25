@@ -773,6 +773,62 @@ func (instance *Cluster) installRemoteDesktop(ctx context.Context) (xerr fail.Er
 	return nil
 }
 
+// installRemoteDesktop installs feature ansible on all masters of the Cluster
+func (instance *Cluster) installAnsible(ctx context.Context) (xerr fail.Error) {
+	defer fail.OnPanic(&xerr)
+
+	identity, xerr := instance.unsafeGetIdentity()
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	disabled := false
+	xerr = instance.Inspect(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
+		return props.Inspect(clusterproperty.FeaturesV1, func(clonable data.Clonable) fail.Error {
+			featuresV1, ok := clonable.(*propertiesv1.ClusterFeatures)
+			if !ok {
+				return fail.InconsistentError("'*propertiesv1.ClusterFeatures' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
+
+			_, disabled = featuresV1.Disabled["ansible"]
+			return nil
+		})
+	})
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	if !disabled {
+		logrus.Debugf("[Cluster %s] adding feature 'ansible'", identity.Name)
+
+		feat, xerr := NewFeature(instance.GetService(), "ansible")
+		xerr = debug.InjectPlannedFail(xerr)
+		if xerr != nil {
+			return xerr
+		}
+
+		// Adds ansible feature on Cluster (ie masters)
+		vars := data.Map{
+			"Username": "cladm",
+			"Password": identity.AdminPassword,
+		}
+		r, xerr := feat.Add(ctx, instance, vars, resources.FeatureSettings{})
+		xerr = debug.InjectPlannedFail(xerr)
+		if xerr != nil {
+			return xerr
+		}
+
+		if !r.Successful() {
+			msg := r.AllErrorMessages()
+			return fail.NewError("[Cluster %s] failed to add 'ansible' failed: %s", identity.Name, msg)
+		}
+		logrus.Debugf("[Cluster %s] feature 'ansible' added successfully", identity.Name)
+	}
+	return nil
+}
+
 // install proxycache-client feature if not disabled
 func (instance *Cluster) installProxyCacheClient(ctx context.Context, host resources.Host, hostLabel string) (xerr fail.Error) {
 	defer fail.OnPanic(&xerr)
