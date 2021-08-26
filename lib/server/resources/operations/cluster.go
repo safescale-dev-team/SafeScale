@@ -2825,17 +2825,17 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 	logrus.Infoln("???? Update ansible inventory")
 
 	// Check incoming parameters
-	if rc == nil || rc.IsNull() {
-		return fail.InvalidInstanceError()
-	}
 	if ctx == nil {
 		return fail.InvalidParameterCannotBeNilError("ctx")
+	}
+	if rc == nil || rc.IsNull() {
+		return fail.InvalidInstanceError()
 	}
 
 	logrus.Infoln("???? Collect data")
 
 	// Collect data
-	var found bool = false
+	var featureAnsibleInstalled bool = false
 	var masters []resources.Host
 	var params map[string]interface{} = map[string]interface{}{
 		"ClusterName":          "",
@@ -2859,13 +2859,13 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 			if !ok {
 				return fail.InconsistentError("`propertiesv1.ClusterFeatures' expected, '%s' provided", reflect.TypeOf(clonable).String())
 			}
-			_, found = featuresV1.Installed["ansible"]
+			_, featureAnsibleInstalled = featuresV1.Installed["ansible"]
 			return nil
 		})
 		if xerr != nil {
 			return xerr
 		}
-		if !found {
+		if !featureAnsibleInstalled {
 			return nil
 		}
 
@@ -2936,10 +2936,10 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		return xerr
 	}
 
-	logrus.Infoln("Collect data !", found, len(masters))
+	logrus.Infoln("Collect data !", featureAnsibleInstalled, len(masters))
 
 	// Feature ansible found ?
-	if !found {
+	if !featureAnsibleInstalled {
 		return nil
 	}
 	// Has at least one master ?
@@ -2975,11 +2975,11 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 	if err != nil {
 		return fail.Wrap(ferr, "failed to execute template")
 	}
-	resultString := dataBuffer.String()
+	//resultString := dataBuffer.String()
 
 	// --------- Upload file for each master --------------
 	rfcItem := remotefile.Item{
-		//Local:        utils.TempFolder + "/" + fileName,
+		Local:        utils.TempFolder + "/" + fileName,
 		Remote:       utils.BaseFolder + "/etc/ansible/inventory/_inventory.py",
 		RemoteOwner:  "root:safescale",
 		RemoteRights: "o+rwx,gu+rx-w", // a+rx-w
@@ -2996,12 +2996,11 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		logrus.Infoln("Upload to ", masters[master])
 
 		// Remove temporary new inventory
-		cmd = "[[ -f " + rfcItem.Remote + " ]] && sudo rm -f " + rfcItem.Remote
-		retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
+		// cmd = "[[ -f " + rfcItem.Remote + " ]] && sudo rm -f " + rfcItem.Remote
+		// retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
 
 		// Upload new inventory
-		xerr = rfcItem.UploadString(ctx, resultString, masters[master])
-		_ = os.Remove(rfcItem.Local)
+		xerr = rfcItem.Upload(ctx, masters[master])
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			errors = append(errors, xerr)
@@ -3013,6 +3012,7 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		logrus.Infoln(cmd, retcode, stdout, stderr, xerr)
 
 	}
+	_ = os.Remove(rfcItem.Local)
 
 	if len(errors) > 0 {
 		return errors[0]
