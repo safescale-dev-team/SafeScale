@@ -56,7 +56,7 @@ class SafescaleInventory():
 
     # ./all.py --host <hostname>
     def load_inventory_data_host(self, host: str) -> dict:
-        host = self.trim(host, '\s\t\r\n\'\"');
+        host = self.trim(host, '\s\t\r\n\'\"')
         data = self.load_inventory_data()
         if host in data['_meta']['hostvars']:
             return data['_meta']['hostvars'][host]
@@ -68,7 +68,7 @@ class SafescaleInventory():
     # Load .yml data from current file (docstring), and extract groups (no keep "all")
     def load_safescale_embed_inventories_groups_data(self) -> dict:
         f = open(__file__,"r")
-        status = 0;
+        status = 0
         lines = f.readlines()
         data = []
         for line in lines:
@@ -89,7 +89,7 @@ class SafescaleInventory():
 
     # Load .yml data from files in current directory, merge it, and extract groups (no keep "all")
     def load_files_inventories_groups_data(self, path: str) -> dict:
-        scriptfile  = os.path.abspath(__file__);
+        scriptfile  = os.path.abspath(__file__)
         files       = self.listfile(path)
         merge       = {}
         for file in files:
@@ -208,7 +208,7 @@ class SafescaleInventory():
     def merge_hostvars(self, hostvars1: dict, hostvars2: dict) -> dict:
         for hostname in hostvars2:
             if hostname in hostvars1:
-                self.error("Host \""+hostname+"\ already exists, merge rejected");
+                self.error("Host \""+hostname+"\ already exists, merge rejected")
             else:
                hostvars1[hostname] = hostvars2[hostname]
         return hostvars1
@@ -218,7 +218,7 @@ class SafescaleInventory():
     # Trim
     def trim(self, source: str, trimChars: str) -> str:
         return re.sub('^['+trimChars+']+', '',
-               re.sub('['+trimChars+']+$', '', source));
+               re.sub('['+trimChars+']+$', '', source))
       
     # Recursive list files in directory
     def listfile(self, path: str) -> list:
