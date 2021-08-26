@@ -51,6 +51,7 @@ import (
 	propertiesv2 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v2"
 	propertiesv3 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v3"
 	"github.com/CS-SI/SafeScale/lib/utils"
+	"github.com/CS-SI/SafeScale/lib/utils/cli/enums/outputs"
 	"github.com/CS-SI/SafeScale/lib/utils/concurrency"
 	"github.com/CS-SI/SafeScale/lib/utils/data"
 	"github.com/CS-SI/SafeScale/lib/utils/data/cache"
@@ -2821,17 +2822,21 @@ func realizeTemplate(box *rice.Box, tmplName string, data map[string]interface{}
 // Regenerate ansible inventoty
 func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 
-	found, xerr := rc.IsFeatureInstalled(ctx, "ansible")
-	if xerr != nil {
-		return xerr
+	logrus.Infoln("???? Update ansible inventory")
+
+	// Check incoming parameters
+	if rc == nil || rc.IsNull() {
+		return fail.InvalidInstanceError()
 	}
-	if !found {
-		return nil
+	if ctx == nil {
+		return fail.InvalidParameterCannotBeNilError("ctx")
 	}
 
-	logrus.Infoln("Update ansible inventory")
+	logrus.Infoln("???? Collect data")
 
-	// --------- Collect ansible inventory template parameters --------------
+	// Collect data
+	var found bool = false
+	var masters []resources.Host
 	var params map[string]interface{} = map[string]interface{}{
 		"ClusterName":          "",
 		"ClusterAdminUsername": "cladm",
@@ -2843,11 +2848,30 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		"ClusterMasters":       resources.IndexedListOfClusterNodes{},
 		"ClusterNodes":         resources.IndexedListOfClusterNodes{},
 	}
-	var masters []resources.Host
 
-	var networkCfg *propertiesv3.ClusterNetwork
-	xerr = rc.Review(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
-		return props.Inspect(clusterproperty.NetworkV3, func(clonable data.Clonable) fail.Error {
+	//rc.lock.RLock()
+	//xerr := rc.Inspect(
+	xerr := rc.Review(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
+
+		// Check if feature ansible is installed
+		xerr := props.Inspect(clusterproperty.FeaturesV1, func(clonable data.Clonable) fail.Error {
+			featuresV1, ok := clonable.(*propertiesv1.ClusterFeatures)
+			if !ok {
+				return fail.InconsistentError("`propertiesv1.ClusterFeatures' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
+			_, found = featuresV1.Installed["ansible"]
+			return nil
+		})
+		if xerr != nil {
+			return xerr
+		}
+		if !found {
+			return nil
+		}
+
+		// Collect get network config
+		var networkCfg *propertiesv3.ClusterNetwork
+		xerr = props.Inspect(clusterproperty.NetworkV3, func(clonable data.Clonable) fail.Error {
 			networkV3, ok := clonable.(*propertiesv3.ClusterNetwork)
 			if !ok {
 				return fail.InconsistentError("'*propertiesv3.ClusterNetwork' expected, '%s' provided", reflect.TypeOf(clonable).String())
@@ -2855,25 +2879,15 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 			networkCfg = networkV3
 			return nil
 		})
-	})
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		return xerr
-	}
-	/*
-		networkCfg, xerr := rc.GetNetworkConfig()
-		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			return xerr
 		}
-	*/
 
-	xerr = rc.Inspect(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
+		// Collect template data, list masters hosts
 		aci, ok := clonable.(*abstract.ClusterIdentity)
 		if !ok {
 			return fail.InconsistentError("'*abstract.ClusterIdentity' expected, '%s' provided", reflect.TypeOf(clonable).String())
 		}
-
 		params["Clustername"] = aci.Name
 		params["ClusterAdminUsername"] = "cladm"
 		params["ClusterAdminPassword"] = aci.AdminPassword
@@ -2883,7 +2897,6 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 			params["SecondaryGatewayIP"] = networkCfg.SecondaryGatewayIP
 			params["SecondaryGatewayPort"] = "22"
 		}
-
 		return props.Inspect(clusterproperty.NodesV3, func(clonable data.Clonable) fail.Error {
 
 			nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
@@ -2917,68 +2930,92 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 
 		})
 	})
+	//rc.lock.RUnlock()
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return xerr
 	}
 
-	// Update inventory is there is at least one master in cluster to update
-	if len(masters) > 0 {
+	logrus.Infoln("Collect data !", found, len(masters))
 
-		// --------- Load template box --------------
-		anon := ansibleTemplateBox.Load()
-		if anon == nil {
-			// Note: path MUST be literal for rice to work
-			b, err := rice.FindBox("../operations/scripts/")
-			if err != nil {
-				return fail.Wrap(err, "failed to load template")
-			}
-			ansibleTemplateBox.Store(b)
-			logrus.Debugf("loaded feature \"ansible\" inventory.py template")
-			anon = ansibleTemplateBox.Load()
-		}
-		box := anon.(*rice.Box)
-		tmplString, err := box.String("ansible_inventory.py")
+	// Feature ansible found ?
+	if !found {
+		return nil
+	}
+	// Has at least one master ?
+	if len(masters) == 0 {
+		return nil
+	}
 
-		// --------- Build ansible inventory --------------
-		var fileName string = "cluster-inventory-" + params["Clustername"].(string)
-		tmplCmd, err := template.Parse(fileName, tmplString)
+	logrus.Infoln("Update ansible inventory !")
+
+	// --------- Load template box --------------
+	anon := ansibleTemplateBox.Load()
+	if anon == nil {
+		// Note: path MUST be literal for rice to work
+		b, err := rice.FindBox("../operations/scripts/")
 		if err != nil {
-			return fail.Wrap(err, "failed to parse template")
+			return fail.Wrap(err, "failed to load template")
 		}
-		dataBuffer := bytes.NewBufferString("")
-		ferr := tmplCmd.Execute(dataBuffer, params)
-		if err != nil {
-			return fail.Wrap(ferr, "failed to execute template")
+		ansibleTemplateBox.Store(b)
+		logrus.Debugf("loaded feature \"ansible\" inventory.py template")
+		anon = ansibleTemplateBox.Load()
+	}
+	box := anon.(*rice.Box)
+	tmplString, err := box.String("ansible_inventory.py")
+
+	// --------- Build ansible inventory --------------
+	var fileName string = "cluster-inventory-" + params["Clustername"].(string)
+	tmplCmd, err := template.Parse(fileName, tmplString)
+	if err != nil {
+		return fail.Wrap(err, "failed to parse template")
+	}
+	dataBuffer := bytes.NewBufferString("")
+	ferr := tmplCmd.Execute(dataBuffer, params)
+	if err != nil {
+		return fail.Wrap(ferr, "failed to execute template")
+	}
+	resultString := dataBuffer.String()
+
+	// --------- Upload file for each master --------------
+	rfcItem := remotefile.Item{
+		//Local:        utils.TempFolder + "/" + fileName,
+		Remote:       utils.BaseFolder + "/etc/ansible/inventory/_inventory.py",
+		RemoteOwner:  "root:safescale",
+		RemoteRights: "o+rwx,gu+rx-w", // a+rx-w
+	}
+	logrus.Infoln("Upload new inventory to masters")
+
+	var cmd string
+	var retcode int
+	var stdout string
+	var stderr string
+	var errors []fail.Error
+	for master := range masters {
+
+		logrus.Infoln("Upload to ", masters[master])
+
+		// Remove temporary new inventory
+		cmd = "[[ -f " + rfcItem.Remote + " ]] && sudo rm -f " + rfcItem.Remote
+		retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
+
+		// Upload new inventory
+		xerr = rfcItem.UploadString(ctx, resultString, masters[master])
+		_ = os.Remove(rfcItem.Local)
+		xerr = debug.InjectPlannedFail(xerr)
+		if xerr != nil {
+			errors = append(errors, xerr)
 		}
-		resultString := dataBuffer.String()
 
-		// --------- Upload file for each master --------------
-		// utils.TempFolder + "/" + fileName,
-		// ${SF_ETCDIR}/ansible/inventory/inventory.py
+		// Test result
+		cmd = "ansible-inventory -i inventory/_inventory.py --list"
+		retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
+		logrus.Infoln(cmd, retcode, stdout, stderr, xerr)
 
-		//BaseFolder+"/etc/ansible/inventory/inventory.py"
+	}
 
-		rfcItem := remotefile.Item{
-			Remote:       "/opt/safescale/etc/ansible/inventory/_inventory.py",
-			RemoteOwner:  "root:safescale",
-			RemoteRights: "o+rwx,g+r-x,u+r--", // a+rx-w
-		}
-		logrus.Debugf("upload new inventory to masters")
-		for master := range masters {
-			logrus.Infoln("Upload", masters[master])
-			xerr = rfcItem.UploadString(ctx, resultString, masters[master])
-			_ = os.Remove(rfcItem.Local)
-			xerr = debug.InjectPlannedFail(xerr)
-			if xerr != nil {
-				return xerr
-			}
-		}
-
-		logrus.Infoln("##### resultString", len(resultString))
-
-	} else {
-		logrus.Infoln("no master in cluster to update")
+	if len(errors) > 0 {
+		return errors[0]
 	}
 
 	return nil
@@ -3132,7 +3169,6 @@ func (instance *Cluster) deleteHosts(task concurrency.Task, hosts []resources.Ho
 
 // ToProtocol converts instance to protocol.ClusterResponse message
 func (instance *Cluster) ToProtocol() (_ *protocol.ClusterResponse, xerr fail.Error) {
-
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
 	}
