@@ -81,7 +81,7 @@ func (rfc Item) Upload(ctx context.Context, host resources.Host) (xerr fail.Erro
 				// If retcode == 1 (general copy error), retry. It may be a temporary network incident
 				if retcode == 1 {
 					// File may exist on target, try to remote it
-					_, _, _, xerr = host.Run(ctx, fmt.Sprintf("sudo rm -f %s", rfc.Remote), outputs.COLLECT, temporal.GetLongOperationTimeout(), temporal.GetExecutionTimeout())
+					_, _, _, xerr = host.Run(ctx, fmt.Sprintf("[[ -f %s ]] && sudo rm -f %s", rfc.Remote, rfc.Remote), outputs.COLLECT, temporal.GetLongOperationTimeout(), temporal.GetExecutionTimeout())
 					if xerr == nil {
 						return fail.NewError("file may exist on remote with inappropriate access rights, deleted it and retrying")
 					}
