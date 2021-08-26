@@ -562,13 +562,15 @@ func (instance *Cluster) Create(ctx context.Context, req abstract.ClusterRequest
 	}
 
 	instance.lock.Lock()
-	defer instance.lock.Unlock()
-
+	defer func() {
+		instance.lock.Unlock()
+		if xerr != nil {
+			updateClusterInventory(ctx, instance)
+		}
+	}()
 	_, xerr = task.Run(instance.taskCreateCluster, req)
 	if xerr != nil {
 		return xerr
-	} else {
-		defer updateClusterInventory(ctx, instance)
 	}
 	return nil
 }
@@ -1248,7 +1250,12 @@ func (instance *Cluster) AddNodes(ctx context.Context, count uint, def abstract.
 
 	// make sure no other parallel actions interferes
 	instance.lock.Lock()
-	defer instance.lock.Unlock()
+	defer func() {
+		instance.lock.Unlock()
+		if xerr != nil {
+			updateClusterInventory(ctx, instance)
+		}
+	}()
 
 	xerr = instance.beingRemoved()
 	xerr = debug.InjectPlannedFail(xerr)
@@ -1342,8 +1349,6 @@ func (instance *Cluster) AddNodes(ctx context.Context, count uint, def abstract.
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
-	} else {
-		defer updateClusterInventory(ctx, instance)
 	}
 
 	return hosts, nil
@@ -2210,6 +2215,8 @@ func (instance *Cluster) deleteMaster(ctx context.Context, host resources.Host) 
 			if derr != nil {
 				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to restore master '%s' in Cluster metadata", ActionFromError(xerr), master.Name))
 			}
+		} else {
+			updateClusterInventory(ctx, instance)
 		}
 	}()
 
@@ -2225,8 +2232,6 @@ func (instance *Cluster) deleteMaster(ctx context.Context, host resources.Host) 
 		default:
 			return xerr
 		}
-	} else {
-		defer updateClusterInventory(ctx, instance)
 	}
 	return nil
 }
@@ -2309,6 +2314,8 @@ func (instance *Cluster) deleteNode(ctx context.Context, node *propertiesv3.Clus
 				logrus.Errorf("failed to restore node ownership in Cluster")
 				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to restore node ownership in Cluster metadata", ActionFromError(xerr)))
 			}
+		} else {
+			updateClusterInventory(ctx, instance)
 		}
 	}()
 
@@ -2340,8 +2347,6 @@ func (instance *Cluster) deleteNode(ctx context.Context, node *propertiesv3.Clus
 			default:
 				return innerXErr
 			}
-		} else {
-			defer updateClusterInventory(ctx, instance)
 		}
 		return nil
 	})
@@ -2995,16 +3000,15 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 
 		logrus.Infoln("Upload to ", masters[master])
 
-		// Remove temporary new inventory
-		// cmd = "[[ -f " + rfcItem.Remote + " ]] && sudo rm -f " + rfcItem.Remote
-		// retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
-
 		// Upload new inventory
 		xerr = rfcItem.Upload(ctx, masters[master])
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			errors = append(errors, xerr)
 		}
+
+		//chown -R {{ .ClusterAdminUsername }}:root ${SF_ETCDIR}/ansible
+		//chmod -R ug+rw-x,o+r-wx ${SF_ETCDIR}/ansible
 
 		// Test result
 		cmd = "ansible-inventory -i inventory/_inventory.py --list"
@@ -3320,9 +3324,20 @@ func (instance *Cluster) Shrink(ctx context.Context, count uint) (_ []*propertie
 		return emptySlice, fail.AbortedError(nil, "aborted")
 	}
 
+	var (
+		removedNodes []*propertiesv3.ClusterNode
+		errors       []error
+		toRemove     []uint
+	)
+
 	// make sure no other parallel actions interferes
 	instance.lock.Lock()
-	defer instance.lock.Unlock()
+	defer func() {
+		instance.lock.Unlock()
+		if xerr == nil && len(errors) == 0 {
+			defer updateClusterInventory(ctx, instance)
+		}
+	}()
 
 	xerr = instance.beingRemoved()
 	xerr = debug.InjectPlannedFail(xerr)
@@ -3336,11 +3351,6 @@ func (instance *Cluster) Shrink(ctx context.Context, count uint) (_ []*propertie
 		return emptySlice, xerr
 	}
 
-	var (
-		removedNodes []*propertiesv3.ClusterNode
-		errors       []error
-		toRemove     []uint
-	)
 	xerr = instance.Alter(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
 		return props.Alter(clusterproperty.NodesV3, func(clonable data.Clonable) (innerXErr fail.Error) {
 			nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
@@ -3411,8 +3421,6 @@ func (instance *Cluster) Shrink(ctx context.Context, count uint) (_ []*propertie
 	}
 	if len(errors) > 0 {
 		return emptySlice, fail.NewErrorList(errors)
-	} else {
-		defer updateClusterInventory(ctx, instance)
 	}
 
 	return removedNodes, nil
