@@ -467,7 +467,7 @@ func (instance *volume) Create(ctx context.Context, req abstract.VolumeRequest) 
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
 		default:
 			return fail.Wrap(xerr, "failed to check if Volume '%s' already exists", req.Name)
 		}
@@ -483,7 +483,7 @@ func (instance *volume) Create(ctx context.Context, req abstract.VolumeRequest) 
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
 		default:
 			return fail.Wrap(xerr, "failed to check if Volume name '%s' is already used", req.Name)
 		}

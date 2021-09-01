@@ -417,7 +417,7 @@ func (instance *Host) ComplementFeatureParameters(_ context.Context, v data.Map)
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
 		default:
 			return xerr
 		}

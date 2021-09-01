@@ -117,8 +117,8 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 	}
 
 	var (
-		iterations, retcode int
-		stdout, stderr      string
+		iterations, retcode        int
+		stdout, stderr string
 	)
 	xerr := retry.WhileUnsuccessful(
 		func() error {
@@ -130,15 +130,17 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 				return innerXErr
 			}
 
-			defer func() {
-				if derr := sshCmd.Close(); derr != nil {
+			// Do not forget to close the command (allowing to close SSH tunnels and free process)
+			defer func(cmd *system.SSHCommand) {
+				derr := cmd.Close()
+				if derr != nil {
 					if innerXErr == nil {
 						innerXErr = derr
 					} else {
-						_ = innerXErr.AddConsequence(fail.Wrap(derr, "failed to close SSHCommand"))
+						_ = innerXErr.AddConsequence(fail.Wrap(derr, "failed to close SSH tunnel"))
 					}
 				}
-			}()
+			}(sshCmd)
 
 			retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(ctx, outs, timeout)
 			if innerXErr != nil {
@@ -152,7 +154,7 @@ func run(ctx context.Context, ssh *system.SSHConfig, cmd string, outs outputs.En
 			}
 			// If retcode == 255, ssh connection failed
 			if retcode == 255 {
-				return fail.NotAvailableError("failed to connect")
+				return fail.NotAvailableError("failed to execute command '%s': failed to connect", cmd)
 			}
 			return nil
 		},

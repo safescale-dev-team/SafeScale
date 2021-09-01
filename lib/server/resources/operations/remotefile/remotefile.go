@@ -184,7 +184,7 @@ func (rfh *RemoteFilesHandler) Upload(ctx context.Context, host resources.Host) 
 }
 
 // Cleanup executes the removal of remote files.
-// NOTE: Removal of local files is the responsability of the caller, not the RemoteFilesHandler.
+// NOTE: Removal of local files is the responsibility of the caller, not the RemoteFilesHandler.
 // TODO: allow to cleanup on many hosts
 func (rfh *RemoteFilesHandler) Cleanup(ctx context.Context, host resources.Host) fail.Error {
 	for _, v := range rfh.items {
