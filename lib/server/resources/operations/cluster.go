@@ -562,16 +562,13 @@ func (instance *Cluster) Create(ctx context.Context, req abstract.ClusterRequest
 	}
 
 	instance.lock.Lock()
-	defer func() {
-		instance.lock.Unlock()
-		if xerr != nil {
-			updateClusterInventory(ctx, instance)
-		}
-	}()
 	_, xerr = task.Run(instance.taskCreateCluster, req)
+	instance.lock.Unlock()
 	if xerr != nil {
 		return xerr
 	}
+	// @TODO status: testing
+	updateClusterInventory(ctx, instance)
 	return nil
 }
 
@@ -1253,6 +1250,7 @@ func (instance *Cluster) AddNodes(ctx context.Context, count uint, def abstract.
 	defer func() {
 		instance.lock.Unlock()
 		if xerr != nil {
+			// @TODO status: pending
 			updateClusterInventory(ctx, instance)
 		}
 	}()
@@ -1422,7 +1420,13 @@ func (instance *Cluster) DeleteLastNode(ctx context.Context) (node *propertiesv3
 
 	// make sure no other parallel actions interferes
 	instance.lock.Lock()
-	defer instance.lock.Unlock()
+	defer func() {
+		instance.lock.Unlock()
+		if xerr == nil {
+			// @TODO pending
+			updateClusterInventory(ctx, instance)
+		}
+	}()
 
 	xerr = instance.beingRemoved()
 	xerr = debug.InjectPlannedFail(xerr)
@@ -1465,7 +1469,6 @@ func (instance *Cluster) DeleteLastNode(ctx context.Context) (node *propertiesv3
 	if xerr != nil {
 		return nil, xerr
 	}
-
 	return node, nil
 }
 
@@ -1498,7 +1501,13 @@ func (instance *Cluster) DeleteSpecificNode(ctx context.Context, hostID string, 
 
 	// make sure no other parallel actions interferes
 	instance.lock.Lock()
-	defer instance.lock.Unlock()
+	defer func() {
+		instance.lock.Unlock()
+		if xerr == nil {
+			// @TODO pending
+			updateClusterInventory(ctx, instance)
+		}
+	}()
 
 	xerr = instance.beingRemoved()
 	xerr = debug.InjectPlannedFail(xerr)
@@ -1542,7 +1551,6 @@ func (instance *Cluster) DeleteSpecificNode(ctx context.Context, hostID string, 
 	if xerr != nil {
 		return xerr
 	}
-
 	return instance.deleteNode(ctx, node, selectedMaster.(*Host))
 }
 
@@ -2215,8 +2223,6 @@ func (instance *Cluster) deleteMaster(ctx context.Context, host resources.Host) 
 			if derr != nil {
 				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to restore master '%s' in Cluster metadata", ActionFromError(xerr), master.Name))
 			}
-		} else {
-			updateClusterInventory(ctx, instance)
 		}
 	}()
 
@@ -2314,8 +2320,6 @@ func (instance *Cluster) deleteNode(ctx context.Context, node *propertiesv3.Clus
 				logrus.Errorf("failed to restore node ownership in Cluster")
 				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to restore node ownership in Cluster metadata", ActionFromError(xerr)))
 			}
-		} else {
-			updateClusterInventory(ctx, instance)
 		}
 	}()
 
@@ -2854,8 +2858,6 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		"ClusterNodes":         resources.IndexedListOfClusterNodes{},
 	}
 
-	//rc.lock.RLock()
-	//xerr := rc.Inspect(
 	xerr := rc.Review(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
 
 		// Check if feature ansible is installed
@@ -2935,7 +2937,6 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 
 		})
 	})
-	//rc.lock.RUnlock()
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return xerr
@@ -2996,9 +2997,15 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 	var stdout string
 	var stderr string
 	var errors []fail.Error
+
 	for master := range masters {
 
-		logrus.Infoln("Upload to ", masters[master])
+		logrus.Infoln("Update master ", masters[master].GetName())
+
+		// Remove possible junks
+		cmd = "[[ -f " + rfcItem.Remote + "]] && sudo rm -f " + rfcItem.Remote
+		retcode, stdout, stderr, xerr = masters[master].Run(ctx, cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), temporal.GetDefaultDelay())
+		logrus.Infoln(cmd, retcode, stdout, stderr, xerr)
 
 		// Upload new inventory
 		xerr = rfcItem.Upload(ctx, masters[master])
@@ -3006,6 +3013,10 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 		if xerr != nil {
 			errors = append(errors, xerr)
 		}
+
+		// chown root
+		// chgrp {{ .ClusterAdminUsername }}
+		// chmod 0751
 
 		//chown -R {{ .ClusterAdminUsername }}:root ${SF_ETCDIR}/ansible
 		//chmod -R ug+rw-x,o+r-wx ${SF_ETCDIR}/ansible
@@ -3019,7 +3030,11 @@ func updateClusterInventory(ctx context.Context, rc *Cluster) fail.Error {
 	_ = os.Remove(rfcItem.Local)
 
 	if len(errors) > 0 {
-		return errors[0]
+		var msg string = "Fail to update ansible inventories\n"
+		for _, v := range errors {
+			msg += "  " + v.Error() + "\n"
+		}
+		return fail.NewError(msg)
 	}
 
 	return nil
@@ -3335,7 +3350,8 @@ func (instance *Cluster) Shrink(ctx context.Context, count uint) (_ []*propertie
 	defer func() {
 		instance.lock.Unlock()
 		if xerr == nil && len(errors) == 0 {
-			defer updateClusterInventory(ctx, instance)
+			// @TODO status: pending
+			updateClusterInventory(ctx, instance)
 		}
 	}()
 
