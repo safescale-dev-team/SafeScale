@@ -18,6 +18,7 @@ package listeners
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/asaskevich/govalidator"
 	googleprotobuf "github.com/golang/protobuf/ptypes/empty"
@@ -65,13 +66,13 @@ func (s *ShareListener) Create(ctx context.Context, in *protocol.ShareDefinition
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "share create")
+	shareName := in.GetName()
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/share/%s/create", shareName))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	shareName := in.GetName()
 	hostRef, hostRefLabel := srvutils.GetReference(in.GetHost())
 	sharePath := in.GetPath()
 	shareType := in.GetType()
@@ -130,13 +131,13 @@ func (s *ShareListener) Delete(ctx context.Context, in *protocol.Reference) (emp
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "share delete")
+	shareName := in.GetName()
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/share/%s/delete", shareName))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	shareName := in.GetName()
 	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.share"), "('%s')", shareName).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
@@ -172,7 +173,7 @@ func (s *ShareListener) List(ctx context.Context, in *protocol.Reference) (_ *pr
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "share list")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), "/shares/list")
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -218,14 +219,14 @@ func (s *ShareListener) Mount(ctx context.Context, in *protocol.ShareMountDefini
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "share mount")
+	hostRef, hostRefLabel := srvutils.GetReference(in.GetHost())
+	shareRef, _ := srvutils.GetReference(in.GetShare())
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/share/%s/host/%s/mount", shareRef, hostRef))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	hostRef, hostRefLabel := srvutils.GetReference(in.GetHost())
-	shareRef, _ := srvutils.GetReference(in.GetShare())
 	hostPath := in.GetPath()
 	shareType := in.GetType()
 	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.share"), "(%s, '%s', '%s', %s)", hostRefLabel, shareRef, hostPath, shareType).WithStopwatch().Entering()
@@ -261,14 +262,14 @@ func (s *ShareListener) Unmount(ctx context.Context, in *protocol.ShareMountDefi
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "share unmount")
+	hostRef, hostRefLabel := srvutils.GetReference(in.GetHost())
+	shareRef, _ := srvutils.GetReference(in.GetShare())
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/share/%s/host/%s/unmount", shareRef, hostRef))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	hostRef, hostRefLabel := srvutils.GetReference(in.GetHost())
-	shareRef, _ := srvutils.GetReference(in.GetShare())
 	hostPath := in.GetPath()
 	shareType := in.GetType()
 	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.share"), "(%s, '%s', '%s', %s)", hostRefLabel, shareRef, hostPath, shareType).WithStopwatch().Entering()
@@ -302,14 +303,14 @@ func (s *ShareListener) Inspect(ctx context.Context, in *protocol.Reference) (sm
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "share inspect")
+	shareRef, _ := srvutils.GetReference(in)
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/share/%s/inspect", shareRef))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 	task := job.Task()
 
-	shareRef, _ := srvutils.GetReference(in)
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("listeners.share"), "('%s')", shareRef).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())

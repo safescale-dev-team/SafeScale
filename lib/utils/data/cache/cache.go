@@ -108,8 +108,8 @@ func (instance *cache) Entry(key string) (*Entry, fail.Error) {
 				// reservation expired, clean up
 				xerr := instance.reservationExpired(key)
 				if xerr != nil {
-					return nil, xerr
-				}
+						return nil, xerr
+					}
 
 				return nil, fail.Wrap(fail.TimeoutError(nil, reservation.timeout, "reservation for entry with key '%s' in %s cache has expired", key, instance.GetName()), "failed to find entry '%s' in %s cache", key, instance.GetName())
 			}
@@ -158,13 +158,13 @@ func (instance *cache) Reserve(key string, timeout time.Duration) (xerr fail.Err
 // unsafeReserveEntry is the workforce of ReserveEntry, without locking
 func (instance *cache) unsafeReserveEntry(key string, timeout time.Duration) (xerr fail.Error) {
 	if _, ok := instance.reserved[key]; ok {
-		return fail.NotAvailableError("the entry '%s' of cache %s is already reserved", key, instance.GetName())
+		return fail.NotAvailableError("the entry '%s' of %s cache is already reserved", key, instance.GetName())
 	}
 	if _, ok := instance.cache[key]; ok {
-		return fail.DuplicateError(callstack.DecorateWith("", "", fmt.Sprintf("there is already an entry with key '%s' in the cache %s", key, instance.GetName()), 0))
+		return fail.DuplicateError(callstack.DecorateWith("", "", fmt.Sprintf("there is already an entry with key '%s' in the %s cache", key, instance.GetName()), 0))
 	}
 
-	content := newReservation(key /*, timeout*/)
+	content := newReservation(key/*, timeout*/)
 	content.timeout = timeout
 	ce := newEntry(content)
 	pce := &ce
@@ -319,7 +319,7 @@ func (instance *cache) unsafeFreeEntry(key string) fail.Error {
 	return nil
 }
 
-const reservationTimeoutForAddition = 5 * time.Second
+const reservationTimeoutForAddition = 5*time.Second
 
 // Add adds a content in cache
 func (instance *cache) Add(content Cacheable) (_ *Entry, xerr fail.Error) {

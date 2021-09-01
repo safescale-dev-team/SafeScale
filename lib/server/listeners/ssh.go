@@ -71,7 +71,7 @@ func (s *SSHListener) Run(ctx context.Context, in *protocol.SshCommand) (sr *pro
 
 	command := in.GetCommand()
 
-	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), "ssh run")
+	job, xerr := PrepareJob(ctx, in.GetHost().GetTenantId(), fmt.Sprintf("/ssh/run/host/%s", hostRef))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -121,19 +121,6 @@ func (s *SSHListener) Copy(ctx context.Context, in *protocol.SshCopyCommand) (sr
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "ssh copy")
-	if xerr != nil {
-		return nil, xerr
-	}
-	defer job.Close()
-	task := job.GetTask()
-
-	source := in.Source
-	dest := in.Destination
-	tracer := debug.NewTracer(task, true, "('%s', '%s')", source, dest).WithStopwatch().Entering()
-	defer tracer.Exiting()
-	defer fail.OnExitLogError(&err, tracer.TraceMessage())
-
 	var (
 		pull                bool
 		hostRef             string
@@ -141,6 +128,9 @@ func (s *SSHListener) Copy(ctx context.Context, in *protocol.SshCopyCommand) (sr
 		retcode             int
 		stdout, stderr      string
 	)
+
+	source := in.Source
+	dest := in.Destination
 
 	// If source contains remote host, we pull
 	parts := strings.Split(source, ":")

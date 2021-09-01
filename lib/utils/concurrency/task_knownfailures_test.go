@@ -25,8 +25,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
-
-	"github.com/CS-SI/SafeScale/lib/utils/fail"
 )
 
 // This imitates some of the code found in cluster.go
@@ -35,10 +33,7 @@ func TestRealCharge(t *testing.T) {
 	require.NotNil(t, overlord)
 	require.Nil(t, err)
 
-	_, err = single.StartInSubtask(func(t Task, parameters TaskParameters) (TaskResult, fail.Error) {
-		time.Sleep(time.Duration(3) * time.Second)
-		return "Ahhhh", nil
-	}, nil)
+	theID, err := overlord.GetID()
 	require.Nil(t, err)
 	require.NotEmpty(t, theID)
 
@@ -108,10 +103,6 @@ func TestRealCharges(t *testing.T) {
 			break
 		}
 	}
-	end := time.Since(begin)
-
-	require.Nil(t, res)
-	// require.NotNil(t, err)
 
 	fast, res, xerr := overlord.WaitFor(280 * time.Millisecond)
 	if len(res.(map[string]TaskResult)) == 0 {

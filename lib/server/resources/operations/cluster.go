@@ -47,6 +47,7 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/clusterflavors/boh"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/clusterflavors/k8s"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/converters"
+	"github.com/CS-SI/SafeScale/lib/server/resources/operations/remotefile"
 	propertiesv1 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v1"
 	propertiesv2 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v2"
 	propertiesv3 "github.com/CS-SI/SafeScale/lib/server/resources/properties/v3"
@@ -1089,7 +1090,7 @@ func (instance *Cluster) AddNodes(ctx context.Context, count uint, def abstract.
 		return nil, fail.InvalidParameterError("count", "must be an int > 0")
 	}
 
-	tgo, xerr := concurrency.TaskFromContext(ctx)
+	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		switch xerr.(type) {
@@ -1103,13 +1104,8 @@ func (instance *Cluster) AddNodes(ctx context.Context, count uint, def abstract.
 		}
 	}
 
-	if tgo.Aborted() {
+	if task.Aborted() {
 		return nil, fail.AbortedError(nil, "aborted")
-	}
-
-	task, err := concurrency.NewTaskGroupWithParent(tgo)
-	if err != nil {
-		return nil, err
 	}
 
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%d)", count)
@@ -2278,7 +2274,7 @@ func (instance *Cluster) deleteMaster(ctx context.Context, host resources.Host) 
 		case *fail.ErrNotFound:
 			// master seems already deleted, so consider it as a success
 			logrus.Tracef("master not found, deletion considered successful")
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
 		default:
 			return xerr
 		}
@@ -2414,8 +2410,8 @@ func (instance *Cluster) deleteNode(ctx context.Context, node *propertiesv3.Clus
 				return xerr
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 // Delete deletes the Cluster
@@ -2556,7 +2552,7 @@ func (instance *Cluster) delete(ctx context.Context) (xerr fail.Error) {
 			if n, ok := all[v]; ok {
 				foundSomething = true
 				completedOptions := append(options, concurrency.AmendID(fmt.Sprintf("/node/%s/delete", n.Name)))
-				_, xerr = tg.Start(instance.taskDeleteNode, taskDeleteNodeParameters{node: n, nodeLoadMethod: HostLightOption }, completedOptions...)
+				_, xerr = tg.Start(instance.taskDeleteNode, taskDeleteNodeParameters{node: n, nodeLoadMethod: HostLightOption}, completedOptions...)
 				xerr = debug.InjectPlannedFail(xerr)
 				if xerr != nil {
 					cleaningErrors = append(cleaningErrors, fail.Wrap(xerr, "failed to start deletion of Host '%s'", n.Name))
@@ -2649,7 +2645,7 @@ func (instance *Cluster) delete(ctx context.Context) (xerr fail.Error) {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// missing Network and Subnet is considered as a successful deletion, continue
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
 		default:
 			return xerr
 		}
@@ -3477,11 +3473,6 @@ func (instance *Cluster) Shrink(ctx context.Context, count uint) (_ []*propertie
 		return emptySlice, xerr
 	}
 
-	var (
-		removedNodes []*propertiesv3.ClusterNode
-		errors       []error
-		toRemove     []uint
-	)
 	xerr = instance.Alter(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
 		return props.Alter(clusterproperty.NodesV3, func(clonable data.Clonable) (innerXErr fail.Error) {
 			nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)

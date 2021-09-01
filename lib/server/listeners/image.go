@@ -54,7 +54,7 @@ func (s *ImageListener) List(ctx context.Context, in *protocol.ImageListRequest)
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "image list")
+	job, err := PrepareJob(ctx, in.GetTenantId(), "/images/list")
 	if err != nil {
 		return nil, err
 	}

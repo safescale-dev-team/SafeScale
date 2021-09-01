@@ -18,6 +18,7 @@ package listeners
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 
@@ -66,7 +67,7 @@ func (s *VolumeListener) List(ctx context.Context, in *protocol.VolumeListReques
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "volume list")
+	job, err := PrepareJob(ctx, in.GetTenantId(), "/volumes/list")
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +118,13 @@ func (s *VolumeListener) Create(ctx context.Context, in *protocol.VolumeCreateRe
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "volume create")
+	name := in.GetName()
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/volume/%s/create", name))
 	if xerr != nil {
 		return nil, xerr
 	}
 	defer job.Close()
 
-	name := in.GetName()
 	speed := in.GetSpeed()
 	size := in.GetSize()
 	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.volume"), "('%s', %s, %d)", name, speed.String(), size).WithStopwatch().Entering()
@@ -180,7 +181,7 @@ func (s *VolumeListener) Attach(ctx context.Context, in *protocol.VolumeAttachme
 		doNotFormatStr = "FORMAT"
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetVolume().GetTenantId(), "volume attach")
+	job, xerr := PrepareJob(ctx, in.GetVolume().GetTenantId(), fmt.Sprintf("/volume/%s/host/%s/attach", volumeRef, hostRef))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -230,7 +231,7 @@ func (s *VolumeListener) Detach(ctx context.Context, in *protocol.VolumeDetachme
 		return empty, fail.InvalidRequestError("neither name nor id given as reference for host")
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetVolume().GetTenantId(), "volume detach")
+	job, xerr := PrepareJob(ctx, in.GetVolume().GetTenantId(), fmt.Sprintf("/volume/%s/host/%s/detach", volumeRef, hostRef))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -273,7 +274,7 @@ func (s *VolumeListener) Delete(ctx context.Context, in *protocol.Reference) (em
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "volume delete")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/volume/%s/delete", ref))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -315,7 +316,7 @@ func (s *VolumeListener) Inspect(ctx context.Context, in *protocol.Reference) (_
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, in.GetTenantId(), "volume inspect")
+	job, xerr := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/volume/%s/inspect", ref))
 	if xerr != nil {
 		return nil, xerr
 	}

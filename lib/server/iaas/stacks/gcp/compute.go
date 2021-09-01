@@ -475,7 +475,7 @@ func (s stack) InspectHost(hostParam stacks.HostParameter) (host *abstract.HostF
 			switch xerr.(type) {
 			case *fail.ErrNotFound:
 				// continue
-				fail.Ignore(xerr)
+				debug.IgnoreError(xerr)
 			default:
 				return nullAHF, xerr
 			}

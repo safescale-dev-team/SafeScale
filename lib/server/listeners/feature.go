@@ -19,8 +19,10 @@ package listeners
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
+	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	// "github.com/asaskevich/govalidator"
 	googleprotobuf "github.com/golang/protobuf/ptypes/empty"
 
@@ -32,7 +34,6 @@ import (
 	srvutils "github.com/CS-SI/SafeScale/lib/server/utils"
 	"github.com/CS-SI/SafeScale/lib/utils/data"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
-	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 )
 
@@ -150,7 +151,7 @@ func (s *FeatureListener) Check(ctx context.Context, in *protocol.FeatureActionR
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "feature check")
+	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/check/%s/%s", featureName, targetType, targetRef))
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +255,7 @@ func (s *FeatureListener) Add(ctx context.Context, in *protocol.FeatureActionReq
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "feature add")
+	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/add/%s/%s", featureName, targetType, targetRef))
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +336,7 @@ func (s *FeatureListener) Remove(ctx context.Context, in *protocol.FeatureAction
 	}
 	featureSettings := converters.FeatureSettingsFromProtocolToResource(in.GetSettings())
 
-	job, err := PrepareJob(ctx, in.GetTenantId(), "feature remove")
+	job, err := PrepareJob(ctx, in.GetTenantId(), fmt.Sprintf("/feature/%s/remove/%s/%s", featureName, targetType, targetRef))
 	if err != nil {
 		return empty, err
 	}

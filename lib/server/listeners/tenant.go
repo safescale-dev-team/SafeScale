@@ -18,6 +18,7 @@ package listeners
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations/metadataupgrade"
 	"github.com/asaskevich/govalidator"
@@ -28,7 +29,6 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/handlers"
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations"
-
 	// "github.com/CS-SI/SafeScale/lib/server/resources/operations/metadataupgrade"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
@@ -152,7 +152,8 @@ func (s *TenantListener) Cleanup(ctx context.Context, in *protocol.TenantCleanup
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, "", "tenant metadata delete")
+	name := in.GetName()
+	job, xerr := PrepareJob(ctx, "", fmt.Sprintf("tenant/%s/metadata/delete", name))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -190,8 +191,7 @@ func (s *TenantListener) Scan(ctx context.Context, in *protocol.TenantScanReques
 	}
 
 	name := in.GetName()
-
-	job, xerr := PrepareJob(ctx, name, "tenant scan")
+	job, xerr := PrepareJob(ctx, "", fmt.Sprintf("/tenant/%s/scan", name))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -228,7 +228,8 @@ func (s *TenantListener) Inspect(ctx context.Context, in *protocol.TenantName) (
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJob(ctx, "", "tenant inspect")
+	name := in.GetName()
+	job, xerr := PrepareJob(ctx, "", fmt.Sprintf("/tenant/%s/inspect", name))
 	if xerr != nil {
 		return nil, xerr
 	}
@@ -261,7 +262,8 @@ func (s *TenantListener) Upgrade(ctx context.Context, in *protocol.TenantUpgrade
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
-	job, xerr := PrepareJobWithoutService(ctx, "tenant metadata upgrade")
+	name := in.GetName()
+	job, xerr := PrepareJobWithoutService(ctx, fmt.Sprintf("/tenant/%s/metadata/upgrade", name))
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -287,7 +289,7 @@ func (s *TenantListener) Upgrade(ctx context.Context, in *protocol.TenantUpgrade
 			switch xerr.(type) {
 			case *fail.ErrForbidden, *fail.ErrNotFound:
 				// continue
-				fail.Ignore(xerr)
+				debug.IgnoreError(xerr)
 			default:
 				return nil, xerr
 			}

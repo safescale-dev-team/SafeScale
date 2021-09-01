@@ -217,6 +217,7 @@ func TestGoodTaskActionCitizen(t *testing.T) {
 		_, xerr := overlord.Start(goodTaskActionCitizen, nil)
 		if xerr != nil {
 			t.Errorf("Unexpected: %s", xerr)
+			t.FailNow()
 		}
 	}
 
@@ -224,7 +225,8 @@ func TestGoodTaskActionCitizen(t *testing.T) {
 	time.Sleep(12 * time.Millisecond)
 	xerr = overlord.Abort()
 	if xerr != nil {
-		t.Fail()
+		t.Errorf("Unable to abort")
+		t.FailNow()
 	}
 
 	end := time.Since(begin)
@@ -245,11 +247,8 @@ func TestGoodTaskActionCitizen(t *testing.T) {
 				}
 
 				if errFound {
-					t.Fail()
-				}
-
-				if len(errList) != 1 {
-					t.Fail()
+					t.Errorf("There should be NO errors")
+					t.FailNow()
 				}
 			}
 		}

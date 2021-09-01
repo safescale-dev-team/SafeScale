@@ -621,10 +621,6 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 		return nil, fail.InvalidParameterError("params", "can't be nil")
 	}
 
-	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
-	}
-
 	var (
 		anon interface{}
 		ok   bool
@@ -811,7 +807,7 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 		YamlKey:            p.stepKey,
 		Serial:             serial,
 	}
-	r, xerr := stepInstance.Run(task.GetContext(), hostsList, p.variables, w.settings)
+	r, xerr := stepInstance.Run(task, hostsList, p.variables, w.settings)
 	// If an error occurred, do not execute the remaining steps, fail immediately
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -1413,7 +1409,7 @@ func (w *worker) setNetworkingSecurity(ctx context.Context) (xerr fail.Error) {
 					switch xerr.(type) {
 					case *fail.ErrDuplicate:
 						// This rule already exists, considered as a success and continue
-						fail.Ignore(xerr)
+						debug.IgnoreError(xerr)
 					default:
 						return xerr
 					}
@@ -1454,7 +1450,7 @@ func (w *worker) setNetworkingSecurity(ctx context.Context) (xerr fail.Error) {
 							switch xerr.(type) {
 							case *fail.ErrDuplicate:
 								// This rule already exists, considered as a success and continue
-								fail.Ignore(xerr)
+								debug.IgnoreError(xerr)
 							default:
 								return xerr
 							}

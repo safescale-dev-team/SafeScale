@@ -639,9 +639,6 @@ func (instance *taskGroup) WaitGroupFor(timeout time.Duration) (bool, TaskGroupR
 	if xerr != nil {
 		return false, nil, xerr
 	}
-	if taskStatus != RUNNING {
-		return false, nil, fail.InvalidRequestError("cannot wait task group '%s': not running (%d)", tid, taskStatus)
-	}
 
 	var waitGroupErr fail.Error
 	results := make(map[string]TaskResult)

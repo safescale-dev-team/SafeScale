@@ -142,15 +142,6 @@ func TestFromPointerUsage(t *testing.T) {
 	}
 }
 
-func TestForceSetCause(t *testing.T) {
-	av := generateErrTimeout()
-	_ = av.ForceSetCause(fmt.Errorf("the cause"))
-	_ = av.ForceSetCause(fmt.Errorf("the strange cause"))
-	if !strings.Contains(av.Cause().Error(), "strange") {
-		t.Fail()
-	}
-}
-
 func TestInterfaceMatching(t *testing.T) {
 	var ok bool
 

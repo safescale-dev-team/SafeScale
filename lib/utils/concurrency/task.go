@@ -166,6 +166,7 @@ func RootTask() (rt Task, xerr fail.Error) {
 		if err != nil {
 			return nil, err
 		}
+
 		newT.id = "0"
 		globalTask.Store(newT)
 		anon = globalTask.Load()
@@ -181,14 +182,16 @@ func VoidTask() (Task, fail.Error) {
 // user-defined type to use as key in context.WithValue()
 type taskContextKey = string
 
-const KeyForTaskInContext taskContextKey = "task"
+const (
+	KeyForTaskInContext taskContextKey = "task"
+)
 
 // TaskFromContext extracts the task instance from context
 // If there is no task in the context, returns a VoidTask()
 func TaskFromContext(ctx context.Context) (Task, fail.Error) {
 	if ctx != nil {
 		if ctxValue := ctx.Value(KeyForTaskInContext); ctxValue != nil {
-			if task, ok := ctxValue.(*task); ok {
+			if task, ok := ctxValue.(Task); ok {
 				return task, nil
 			}
 			return nil, fail.InconsistentError("context value for '%s' is not a 'concurrency.Task'", KeyForTaskInContext)
@@ -199,7 +202,7 @@ func TaskFromContext(ctx context.Context) (Task, fail.Error) {
 	return nil, fail.InvalidParameterCannotBeNilError("ctx")
 }
 
-// NewTask ...
+// NewTask creates a new instance of Task
 func NewTask() (Task, fail.Error) {
 	return newTask(context.Background(), nil)
 }
@@ -210,6 +213,7 @@ func NewUnbreakableTask() (Task, fail.Error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// To be able to For safety, normally the cancel signal capture routine is not started in this case...
 	nt.abortDisengaged = true
 	return nt, nil
@@ -217,11 +221,12 @@ func NewUnbreakableTask() (Task, fail.Error) {
 
 // NewTaskWithParent creates a subtask
 // Such a task can be aborted if the parent one can be
-func NewTaskWithParent(parentTask Task) (Task, fail.Error) {
+func NewTaskWithParent(parentTask Task, options ...data.ImmutableKeyValue) (Task, fail.Error) {
 	if parentTask == nil {
 		return nil, fail.InvalidParameterError("parentTask", "must not be nil")
 	}
-	return newTask(context.Background(), parentTask)
+
+	return newTask(context.Background(), parentTask, options...)
 }
 
 // NewTaskWithContext creates an instance of Task with context
@@ -234,7 +239,7 @@ func NewTaskWithContext(ctx context.Context, options ...data.ImmutableKeyValue) 
 }
 
 // newTask creates a new Task from parentTask or using ctx as parent context
-func newTask(ctx context.Context, parentTask Task) (nt *task, xerr fail.Error) {
+func newTask(ctx context.Context, parentTask Task, options ...data.ImmutableKeyValue) (nt *task, xerr fail.Error) {
 	defer fail.OnPanic(&xerr)
 	var (
 		childContext context.Context
@@ -1016,7 +1021,6 @@ func (instance *task) contextCleanup() {
 		instance.cancel()
 		instance.cancel = nil
 	}
-	return t.result, t.err
 }
 
 // TryWait tries to wait on a task
