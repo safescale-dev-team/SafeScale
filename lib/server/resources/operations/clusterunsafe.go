@@ -172,7 +172,15 @@ func (instance *Cluster) UnsafeListMasterIDs(ctx context.Context) (list data.Ind
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return emptyList, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return emptyList, xerr
+			}
+		default:
+			return emptyList, xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -357,7 +365,15 @@ func (instance *Cluster) UnsafeListNodeIDs(ctx context.Context) (list data.Index
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return emptyList, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return emptyList, xerr
+			}
+		default:
+			return emptyList, xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -398,7 +414,15 @@ func (instance *Cluster) UnsafeFindAvailableNode(ctx context.Context) (node reso
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return nil, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return nil, xerr
+			}
+		default:
+			return nil, xerr
+		}
 	}
 
 	if task.Aborted() {

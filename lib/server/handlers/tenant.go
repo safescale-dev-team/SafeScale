@@ -98,7 +98,7 @@ const (
 	scanNetworkCIDR   string  = "192.168.20.0/24"
 	scanSubnetName    string  = "safescale-scan-subnet"
 	scanSubnetCIDR    string  = "192.168.20.0/26"
-	defaultScanImage  string  = "Ubuntu 18.04"
+	defaultScanImage  string  = "Ubuntu 20.04"
 	scannedHostPrefix string  = "scanhost-"
 	maxParallelScans  float64 = 4.0
 )
@@ -171,12 +171,12 @@ func (handler *tenantHandler) Scan(tenantName string, isDryRun bool, templateNam
 		return nil, fail.InvalidParameterError("tenant name", "cannot be empty string")
 	}
 
-	tracer := debug.NewTracer(handler.job.GetTask(), tracing.ShouldTrace("handlers.tenant")).WithStopwatch().Entering()
+	tracer := debug.NewTracer(handler.job.Task(), tracing.ShouldTrace("handlers.tenant")).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&xerr, tracer.TraceMessage())
 
-	svc := handler.job.GetService()
-	task := handler.job.GetTask()
+	svc := handler.job.Service()
+	task := handler.job.Task()
 
 	isScannable, err := handler.checkScannable()
 	if err != nil {
@@ -233,7 +233,7 @@ func (handler *tenantHandler) Scan(tenantName string, isDryRun bool, templateNam
 	}
 
 	defer func() {
-		derr := network.Delete(task.GetContext())
+		derr := network.Delete(task.Context())
 		if derr != nil {
 			logrus.Warnf("Error deleting network '%s'", network.GetID())
 		}
@@ -315,8 +315,8 @@ func (handler *tenantHandler) Scan(tenantName string, isDryRun bool, templateNam
 
 func (handler *tenantHandler) analyzeTemplate(template abstract.HostTemplate) (xerr fail.Error) {
 
-	svc := handler.job.GetService()
-	task := handler.job.GetTask()
+	svc := handler.job.Service()
+	task := handler.job.Task()
 	tenantName := svc.GetName()
 
 	hostName := scannedHostPrefix + template.Name
@@ -340,7 +340,7 @@ func (handler *tenantHandler) analyzeTemplate(template abstract.HostTemplate) (x
 		Image: defaultScanImage,
 	}
 
-	if _, xerr = host.Create(task.GetContext(), req, def); xerr != nil {
+	if _, xerr = host.Create(task.Context(), req, def); xerr != nil {
 		return fail.Wrap(xerr, "template [%s] host '%s': error creation", template.Name, hostName)
 	}
 
@@ -356,7 +356,7 @@ func (handler *tenantHandler) analyzeTemplate(template abstract.HostTemplate) (x
 		}
 	}()
 
-	_, cout, _, xerr := host.Run(task.GetContext(), cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), 8*time.Minute) // FIXME: hardcoded timeout
+	_, cout, _, xerr := host.Run(task.Context(), cmd, outputs.COLLECT, temporal.GetConnectionTimeout(), 5*temporal.GetContextTimeout())
 	if xerr != nil {
 		return fail.Wrap(xerr, "template [%s] host '%s': failed to run collection script", template.Name, hostName)
 	}
@@ -390,7 +390,7 @@ func (handler *tenantHandler) analyzeTemplate(template abstract.HostTemplate) (x
 }
 
 func (handler *tenantHandler) dryRun(templateNamesToScan []string) (_ *protocol.ScanResultList, xerr fail.Error) {
-	svc := handler.job.GetService()
+	svc := handler.job.Service()
 
 	var resultList []*protocol.ScanResult
 
@@ -420,7 +420,7 @@ func (handler *tenantHandler) dryRun(templateNamesToScan []string) (_ *protocol.
 }
 
 func (handler *tenantHandler) checkScannable() (isScannable bool, xerr fail.Error) {
-	svc := handler.job.GetService()
+	svc := handler.job.Service()
 
 	params := svc.GetTenantParameters()
 
@@ -444,7 +444,7 @@ func (handler *tenantHandler) dumpTemplates() (xerr fail.Error) {
 		Templates []abstract.HostTemplate `json:"templates,omitempty"`
 	}
 
-	svc := handler.job.GetService()
+	svc := handler.job.Service()
 	templates, xerr := svc.ListTemplates(false)
 	if xerr != nil {
 		return xerr
@@ -476,7 +476,7 @@ func (handler *tenantHandler) dumpImages() (xerr fail.Error) {
 		Images []abstract.Image `json:"images,omitempty"`
 	}
 
-	svc := handler.job.GetService()
+	svc := handler.job.Service()
 	images, xerr := svc.ListImages(false)
 	if xerr != nil {
 		return xerr
@@ -500,8 +500,8 @@ func (handler *tenantHandler) dumpImages() (xerr fail.Error) {
 }
 
 func (handler *tenantHandler) getScanNetwork() (network resources.Network, xerr fail.Error) {
-	task := handler.job.GetTask()
-	svc := handler.job.GetService()
+	task := handler.job.Task()
+	svc := handler.job.Service()
 	network, xerr = networkfactory.Load(svc, scanNetworkName)
 	if xerr != nil {
 		if _, ok := xerr.(*fail.ErrNotFound); !ok {
@@ -516,7 +516,7 @@ func (handler *tenantHandler) getScanNetwork() (network resources.Network, xerr 
 			Name: scanNetworkName,
 			CIDR: scanNetworkCIDR,
 		}
-		if xerr = network.Create(task.GetContext(), req); xerr != nil {
+		if xerr = network.Create(task.Context(), req); xerr != nil {
 			return nil, xerr
 		}
 		return network, xerr
@@ -525,8 +525,8 @@ func (handler *tenantHandler) getScanNetwork() (network resources.Network, xerr 
 }
 
 func (handler *tenantHandler) getScanSubnet(networkID string) (subnet resources.Subnet, xerr fail.Error) {
-	task := handler.job.GetTask()
-	svc := handler.job.GetService()
+	task := handler.job.Task()
+	svc := handler.job.Service()
 	subnet, xerr = subnetfactory.Load(svc, scanNetworkName, scanSubnetName)
 	if xerr != nil {
 		if _, ok := xerr.(*fail.ErrNotFound); !ok {
@@ -546,7 +546,7 @@ func (handler *tenantHandler) getScanSubnet(networkID string) (subnet resources.
 		subnetHostSizing := abstract.HostSizingRequirements{
 			MinGPU: -1,
 		}
-		if xerr = subnet.Create(task.GetContext(), req, "", &subnetHostSizing); xerr != nil {
+		if xerr = subnet.Create(task.Context(), req, "", &subnetHostSizing); xerr != nil {
 			return nil, xerr
 		}
 
@@ -636,7 +636,7 @@ func createCPUInfo(output string) (_ *CPUInfo, xerr fail.Error) {
 }
 
 func (handler *tenantHandler) collect() (xerr fail.Error) {
-	svc := handler.job.GetService()
+	svc := handler.job.Service()
 
 	authOpts, xerr := svc.GetAuthenticationOptions()
 	if xerr != nil {

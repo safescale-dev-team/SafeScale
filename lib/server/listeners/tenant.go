@@ -28,6 +28,7 @@ import (
 	"github.com/CS-SI/SafeScale/lib/server/handlers"
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations"
+
 	// "github.com/CS-SI/SafeScale/lib/server/resources/operations/metadataupgrade"
 	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/CS-SI/SafeScale/lib/utils/debug/tracing"
@@ -83,7 +84,8 @@ func (s *TenantListener) Get(ctx context.Context, in *googleprotobuf.Empty) (_ *
 		return nil, fail.InvalidParameterError("ctx", "cannot be nil")
 	}
 
-	if ok, err := govalidator.ValidateStruct(in); err != nil && !ok {
+	ok, err := govalidator.ValidateStruct(in)
+	if err != nil && !ok {
 		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
@@ -93,6 +95,7 @@ func (s *TenantListener) Get(ctx context.Context, in *googleprotobuf.Empty) (_ *
 	if currentTenant == nil {
 		return nil, fail.NotFoundError("no tenant set")
 	}
+
 	return &protocol.TenantName{Name: currentTenant.Name}, nil
 }
 
@@ -145,10 +148,8 @@ func (s *TenantListener) Cleanup(ctx context.Context, in *protocol.TenantCleanup
 	}
 
 	ok, err := govalidator.ValidateStruct(in)
-	if err == nil {
-		if !ok {
-			logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
-		}
+	if err != nil || !ok {
+		logrus.Warnf("Structure validation failure: %v", in) // FIXME: Generate json tags in protobuf
 	}
 
 	job, xerr := PrepareJob(ctx, "", "tenant metadata delete")
@@ -157,8 +158,7 @@ func (s *TenantListener) Cleanup(ctx context.Context, in *protocol.TenantCleanup
 	}
 	defer job.Close()
 
-	name := in.GetName()
-	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
+	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -197,7 +197,7 @@ func (s *TenantListener) Scan(ctx context.Context, in *protocol.TenantScanReques
 	}
 	defer job.Close()
 
-	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
+	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -234,8 +234,7 @@ func (s *TenantListener) Inspect(ctx context.Context, in *protocol.TenantName) (
 	}
 	defer job.Close()
 
-	name := in.GetName()
-	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
+	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -269,8 +268,7 @@ func (s *TenantListener) Upgrade(ctx context.Context, in *protocol.TenantUpgrade
 	}
 	defer job.Close()
 
-	name := in.GetName()
-	tracer := debug.NewTracer(job.GetTask(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
+	tracer := debug.NewTracer(job.Task(), tracing.ShouldTrace("listeners.tenant"), "('%s')", name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 	defer fail.OnExitLogError(&err, tracer.TraceMessage())
 
@@ -296,7 +294,7 @@ func (s *TenantListener) Upgrade(ctx context.Context, in *protocol.TenantUpgrade
 		}
 	}
 
-	xerr = metadataupgrade.Upgrade(svc, currentVersion, operations.MinimumMetadataVersion, false)
+	xerr = metadataupgrade.Upgrade(svc, currentVersion, operations.MinimumMetadataVersion, false, false)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr

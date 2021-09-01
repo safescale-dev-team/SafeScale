@@ -1,4 +1,4 @@
-// +build ignore, !windows
+// +build !release
 
 /*
  * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
@@ -16,11 +16,19 @@
  * limitations under the License.
  */
 
-package gorules
+package main
 
-import "github.com/quasilyte/go-ruleguard/dsl"
-
-// Remove not relesable code
-func notReleasable(m dsl.Matcher) {
-	m.MatchComment(`// TBR:`).Report(`CANNOT be released until all the debug code is gone`)
+// appTrace contains the default parts that we want to trace
+func appTrace() string {
+	return `
+{
+    "concurrency": {
+        "lock": false,
+        "task": false
+    },
+    "ssh": {},
+    "resources": {
+        "cluster": true
+    }
+}`
 }

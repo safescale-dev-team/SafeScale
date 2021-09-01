@@ -66,20 +66,24 @@ function reset_fw() {
 	case $LINUX_KIND in
 	ubuntu)
 		echo "Reset firewall"
-		sfApt update &>/dev/null || return 1
-		sfApt install -q -y iptables 2>&1 || return 1
-		sfApt install -q -y firewalld 2>&1 || return 1
+		sfApt update &>/dev/null || failure 206 "failure running apt update"
+		#sfApt install -q -y iptables 2>&1 || failure 206 "failure installing iptables"
+		sfApt install -q -y firewalld 2>&1 || failure 206 "failure installing firewalld"
 
 		echo "Stopping ufw"
-		systemctl stop ufw || return 1
-		systemctl disable ufw || return 1
-		sfApt purge -q -y ufw 2>&1 || return 1
+		# systemctl stop ufw || failure 206 "failure stopping ufw"
+		systemctl stop ufw || :
+		# systemctl disable ufw || failure 206 "failure disabling ufw"
+		systemctl disable ufw || :
+		# sfApt purge -q -y ufw 2>&1 || failure 206 "failure purging ufw"
+		sfApt purge -q -y ufw 2>&1 || :
 		;;
+
 	debian)
 		echo "Reset firewall"
-		sfApt update &>/dev/null || return 1
-		sfApt install -q -y iptables 2>&1 || return 1
-		sfApt install -q -y firewalld 2>&1 || return 1
+		sfApt update &>/dev/null || failure 206 "failure running apt update"
+		#sfApt install -q -y iptables 2>&1 || failure 206 "failure installing iptables"
+		sfApt install -q -y firewalld 2>&1 || failure 206 "failure installing firewalld"
 
 		echo "Stopping ufw"
 		systemctl stop ufw || true    # set to true to fix issues
@@ -91,7 +95,7 @@ function reset_fw() {
 		# firewalld may not be installed
 		if ! systemctl is-active firewalld &>/dev/null; then
 			if ! systemctl status firewalld &>/dev/null; then
-				yum install -q -y firewalld || return 1
+				yum install -q -y firewalld || failure 206 "failure installing firewalld"
 			fi
 		fi
 		;;
@@ -117,13 +121,13 @@ function reset_fw() {
 	{{- end }}
 
 	# Sets the default target of packets coming from public interface to DROP
-	firewall-offline-cmd --zone=public --set-target=DROP || (echo "firewall-offline-cmd failed with $?" && return 1)
+	firewall-offline-cmd --zone=public --set-target=DROP || failure 206 "firewall-offline-cmd failed with $? dropping public zone"
 
 	# Attach LAN interfaces to zone trusted
 	[[ ! -z ${PR_IFs} ]] && {
 		for i in $PR_IFs; do
 			# sfFirewallAdd --zone=trusted --add-interface=$PR_IFs || return 1
-			firewall-offline-cmd --zone=trusted --add-interface=$PR_IFs || (echo "firewall-offline-cmd failed with $?" && return 1)
+			firewall-offline-cmd --zone=trusted --add-interface=$PR_IFs || failure 206 "firewall-offline-cmd failed with $? adding $PR_IFs to trusted"
 		done
 	}
 	# Attach lo interface to zone trusted
@@ -918,10 +922,10 @@ function early_packages_update() {
 function install_packages() {
 	case $LINUX_KIND in
 	ubuntu | debian)
-		sfApt install -y -qq jq zip time &>/dev/null || failure 213 "failure installing utility packages: jq zip time"
+		sfApt install -y -qq wget curl jq zip unzip time at &>/dev/null || failure 213 "failure installing utility packages: jq zip time at"
 		;;
 	redhat | centos)
-		yum install --enablerepo=epel -y -q wget jq time zip &>/dev/null || failure 214 "failure installing utility packages: jq zip time"
+		yum install --enablerepo=epel -y -q wget curl jq zip unzip time at &>/dev/null || failure 214 "failure installing utility packages: jq zip time at"
 		;;
 	*)
 		failure 215 "Unsupported Linux distribution '$LINUX_KIND'!"

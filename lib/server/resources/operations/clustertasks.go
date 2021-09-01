@@ -46,16 +46,16 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/serialize"
 	"github.com/CS-SI/SafeScale/lib/utils/strprocess"
 	"github.com/CS-SI/SafeScale/lib/utils/temporal"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
 // taskCreateCluster is the TaskAction that creates a Cluster
-func (instance *Cluster) taskCreateCluster(tc concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
+func (instance *Cluster) taskCreateCluster(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+
 	req := params.(abstract.ClusterRequest)
-	task, xerr := concurrency.NewTaskGroupWithParent(tc)
-	if xerr != nil {
-		return nil, xerr
-	}
-	ctx := task.GetContext()
+	ctx := task.Context()
 
 	// Check if Cluster exists in metadata; if yes, error
 	existing, xerr := LoadCluster(instance.GetService(), req.Name)
@@ -95,7 +95,10 @@ func (instance *Cluster) taskCreateCluster(tc concurrency.Task, params concurren
 	}()
 
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Obtain number of nodes to create
@@ -129,45 +132,54 @@ func (instance *Cluster) taskCreateCluster(tc concurrency.Task, params concurren
 		return nil, xerr
 	}
 
-	var rn resources.Network
-	var rs resources.Subnet
+	// Create the Network and Subnet
+	networkInstance, subnetInstance, xerr := instance.createNetworkingResources(task, req, gatewaysDef)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, xerr
+	}
 
 	defer func() {
 		if xerr != nil && !req.KeepOnFailure {
-			if rs != nil && rn != nil {
-				logrus.Debugf("Cleaning up on failure, deleting Subnet '%s'...", rs.GetName())
-				if derr := rs.Delete(context.Background()); derr != nil {
-					switch derr.(type) {
-					case *fail.ErrNotFound:
-						// missing Subnet is considered as a successful deletion, continue
-						fail.Ignore(derr)
-					default:
-						cleanFailure = true
-						logrus.Errorf("Cleaning up on %s, failed to delete Subnet '%s'", ActionFromError(xerr), rs.GetName())
-						_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to delete Subnet", ActionFromError(xerr)))
-					}
-				} else {
-					logrus.Debugf("Cleaning up on %s, successfully deleted Subnet '%s'", ActionFromError(xerr), rs.GetName())
-					if req.NetworkID == "" {
-						logrus.Debugf("Cleaning up on %s, deleting Network '%s'...", ActionFromError(xerr), rn.GetName())
-						if derr := rn.Delete(context.Background()); derr != nil {
-							switch derr.(type) {
-							case *fail.ErrNotFound:
-								// missing Network is considered as a successful deletion, continue
-								fail.Ignore(derr)
-							default:
-								cleanFailure = true
-								logrus.Errorf("cleaning up on %s, failed to delete Network '%s'", ActionFromError(xerr), rn.GetName())
-								_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to delete Network", ActionFromError(xerr)))
-							}
-						} else {
-							logrus.Debugf("Cleaning up on %s, successfully deleted Network '%s'", ActionFromError(xerr), rn.GetName())
+			logrus.Debugf("Cleaning up on failure, deleting Subnet '%s'...", subnetInstance.GetName())
+			if derr := subnetInstance.Delete(context.Background()); derr != nil {
+				switch derr.(type) {
+				case *fail.ErrNotFound:
+					// missing Subnet is considered as a successful deletion, continue
+					debug.IgnoreError(derr)
+				default:
+					cleanFailure = true
+					logrus.Errorf("Cleaning up on %s, failed to delete Subnet '%s'", ActionFromError(xerr), subnetInstance.GetName())
+					_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to delete Subnet", ActionFromError(xerr)))
+				}
+			} else {
+				logrus.Debugf("Cleaning up on %s, successfully deleted Subnet '%s'", ActionFromError(xerr), subnetInstance.GetName())
+				if req.NetworkID == "" {
+					logrus.Debugf("Cleaning up on %s, deleting Network '%s'...", ActionFromError(xerr), networkInstance.GetName())
+					if derr := networkInstance.Delete(context.Background()); derr != nil {
+						switch derr.(type) {
+						case *fail.ErrNotFound:
+							// missing Network is considered as a successful deletion, continue
+							debug.IgnoreError(derr)
+						default:
+							cleanFailure = true
+							logrus.Errorf("cleaning up on %s, failed to delete Network '%s'", ActionFromError(xerr), networkInstance.GetName())
+							_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to delete Network", ActionFromError(xerr)))
 						}
+					} else {
+						logrus.Debugf("Cleaning up on %s, successfully deleted Network '%s'", ActionFromError(xerr), networkInstance.GetName())
 					}
 				}
 			}
 		}
 	}()
+
+	// Creates and configures hosts
+	xerr = instance.createHostResources(task, subnetInstance, *mastersDef, *nodesDef, req.InitialNodeCount, req.KeepOnFailure)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, xerr
+	}
 
 	// Starting from here, exiting with error deletes hosts if req.keepOnFailure is false
 	defer func() {
@@ -175,35 +187,44 @@ func (instance *Cluster) taskCreateCluster(tc concurrency.Task, params concurren
 			// Disable abort signal during the clean up
 			defer task.DisarmAbortSignal()()
 
-			tg, tgerr := concurrency.NewTaskGroup(task)
-			if tgerr != nil {
-				_ = xerr.AddConsequence(tgerr)
-			} else {
-				logrus.Debugf("Cleaning up on failure, deleting Hosts...")
-				var list map[uint]*propertiesv3.ClusterNode
-				derr := instance.Inspect(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
-					return props.Inspect(clusterproperty.NodesV3, func(clonable data.Clonable) fail.Error {
-						nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
-						if !ok {
-							return fail.InconsistentError("'*propertiesv3.ClusterNodes' expected, '%s' provided", reflect.TypeOf(clonable).String())
-						}
-						list = nodesV3.ByNumericalID
-						return nil
-					})
+			logrus.Debugf("Cleaning up on failure, deleting Hosts...")
+			var list map[uint]*propertiesv3.ClusterNode
+			derr := instance.Inspect(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
+				return props.Inspect(clusterproperty.NodesV3, func(clonable data.Clonable) fail.Error {
+					nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
+					if !ok {
+						return fail.InconsistentError("'*propertiesv3.ClusterNodes' expected, '%s' provided", reflect.TypeOf(clonable).String())
+					}
+					list = nodesV3.ByNumericalID
+					return nil
 				})
-				if derr != nil {
-					_ = xerr.AddConsequence(derr)
-				} else {
-					for _, v := range list {
-						if v.ID != "" {
-							if _, derr = tg.StartInSubtask(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: v}); derr != nil {
-								cleanFailure = true
-								_ = xerr.AddConsequence(derr)
-							}
+			})
+			if derr != nil {
+				cleanFailure = true
+				_ = xerr.AddConsequence(derr)
+				return
+			}
+
+			if len(list) > 0 {
+				tg, tgerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/onfailure"))
+				if tgerr != nil {
+					cleanFailure = true
+					_ = xerr.AddConsequence(tgerr)
+					return
+				}
+
+				for _, v := range list {
+					captured := v
+					if captured.ID != "" {
+						_, tgerr = tg.Start(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: captured}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/delete", captured.Name)))
+						if tgerr != nil {
+							cleanFailure = true
+							_ = xerr.AddConsequence(tgerr)
 						}
 					}
 				}
 
+				// FIXME: WaitGroupFor NEEDS more UT
 				if _, _, tgerr = tg.WaitGroupFor(temporal.GetLongOperationTimeout()); tgerr != nil {
 					cleanFailure = true
 					_ = xerr.AddConsequence(tgerr)
@@ -375,30 +396,33 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 ) {
 
 	var (
-		gatewaysDefault *abstract.HostSizingRequirements
-		mastersDefault  *abstract.HostSizingRequirements
-		nodesDefault    *abstract.HostSizingRequirements
-		imageID         string
+		gatewaysDefault     *abstract.HostSizingRequirements
+		mastersDefault      *abstract.HostSizingRequirements
+		nodesDefault        *abstract.HostSizingRequirements
+		imageQuery, imageID string
 	)
 
-	// if task.Aborted() {
-	// 	return nil, nil, nil, fail.AbortedError(nil, "aborted")
-	// }
-
 	// Determine default image
-	imageID = req.NodesDef.Image
-	if imageID == "" && instance.makers.DefaultImage != nil {
-		imageID = instance.makers.DefaultImage(instance)
-	}
-	if imageID == "" {
+
+	imageQuery = req.NodesDef.Image
+	if imageQuery == "" {
 		if cfg, xerr := instance.GetService().GetConfigurationOptions(); xerr == nil {
 			if anon, ok := cfg.Get("DefaultImage"); ok {
-				imageID = anon.(string)
+				imageQuery = anon.(string)
 			}
 		}
 	}
-	if imageID == "" {
-		imageID = "Ubuntu 18.04"
+	if imageQuery == "" && instance.makers.DefaultImage != nil {
+		imageQuery = instance.makers.DefaultImage(instance)
+	}
+	if imageQuery == "" {
+		imageQuery = "Ubuntu 20.04"
+	}
+	svc := instance.GetService()
+	_, imageID, xerr = determineImageID(svc, imageQuery)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, nil, nil, xerr
 	}
 
 	// Determine getGateway sizing
@@ -430,13 +454,13 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 		}
 	}
 
-	svc := instance.GetService()
 	tmpl, xerr := svc.FindTemplateBySizing(*gatewaysDef)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, nil, nil, xerr
 	}
-	gatewaysDef.Template = tmpl.Name
+
+	gatewaysDef.Template = tmpl.ID
 
 	// Determine master sizing
 	if instance.makers.DefaultMasterSizing != nil {
@@ -470,7 +494,7 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 		if xerr != nil {
 			return nil, nil, nil, xerr
 		}
-		mastersDef.Template = tmpl.Name
+		mastersDef.Template = tmpl.ID
 	}
 
 	// Determine node sizing
@@ -507,7 +531,7 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 		if xerr != nil {
 			return nil, nil, nil, xerr
 		}
-		nodesDef.Template = tmpl.Name
+		nodesDef.Template = tmpl.ID
 	}
 
 	// Updates property
@@ -521,7 +545,7 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 			defaultsV2.GatewaySizing = *converters.HostSizingRequirementsFromAbstractToPropertyV2(*gatewaysDef)
 			defaultsV2.MasterSizing = *converters.HostSizingRequirementsFromAbstractToPropertyV2(*mastersDef)
 			defaultsV2.NodeSizing = *converters.HostSizingRequirementsFromAbstractToPropertyV2(*nodesDef)
-			defaultsV2.Image = imageID
+			defaultsV2.Image = imageQuery
 			return nil
 		})
 	})
@@ -534,12 +558,18 @@ func (instance *Cluster) determineSizingRequirements(req abstract.ClusterRequest
 }
 
 // createNetworkingResources creates the network and subnet for the Cluster
-func (instance *Cluster) createNetworkingResources(task concurrency.Task, req abstract.ClusterRequest, gatewaysDef *abstract.HostSizingRequirements) (_ resources.Network, _ resources.Subnet, xerr fail.Error) {
+func (instance *Cluster) createNetworkingResources(task concurrency.Task, req abstract.ClusterRequest, gatewaysDef *abstract.HostSizingRequirements) (_ resources.Network, _ resources.Subnet, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
+
 	if task.Aborted() {
-		return nil, nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, nil, fail.AbortedError(nil, "parent task killed")
 	}
 
-	ctx := task.GetContext()
+	ctx := context.WithValue(task.Context(), concurrency.KeyForTaskInContext, task)
 
 	// Determine if getGateway Failover must be set
 	caps := instance.GetService().GetCapabilities()
@@ -572,7 +602,7 @@ func (instance *Cluster) createNetworkingResources(task concurrency.Task, req ab
 		rn, xerr = NewNetwork(instance.GetService())
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
-			return nil, nil, fail.Wrap(xerr, "failed to instanciate new Network")
+			return nil, nil, fail.Wrap(xerr, "failed to instantiate new Network")
 		}
 
 		xerr = rn.Create(ctx, networkReq)
@@ -615,7 +645,10 @@ func (instance *Cluster) createNetworkingResources(task concurrency.Task, req ab
 	}
 
 	if task.Aborted() {
-		return nil, nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Creates Subnet
@@ -625,7 +658,7 @@ func (instance *Cluster) createNetworkingResources(task concurrency.Task, req ab
 		NetworkID:     rn.GetID(),
 		CIDR:          req.CIDR,
 		HA:            !gwFailoverDisabled,
-		Image:         gatewaysDef.Image,
+		ImageRef:      gatewaysDef.Image,
 		KeepOnFailure: false, // We consider subnet and its gateways as a whole; if any error occurs during the creation of the whole, do keep nothing
 	}
 
@@ -680,7 +713,10 @@ func (instance *Cluster) createNetworkingResources(task concurrency.Task, req ab
 	}()
 
 	if task.Aborted() {
-		return nil, nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Updates again Cluster metadata, propertiesv3.ClusterNetwork, with subnet infos
@@ -745,17 +781,39 @@ func (instance *Cluster) createHostResources(
 	nodesDef abstract.HostSizingRequirements,
 	initialNodeCount uint,
 	keepOnFailure bool,
-) (xerr fail.Error) {
+) (ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
+
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
-	ctx := task.GetContext()
-	startedTasks := []concurrency.Task{}
+
+	ctx := task.Context()
+	var startedTasks []concurrency.Task
+
 	defer func() {
 		if xerr != nil {
-			for _, startedTask := range startedTasks {
-				if !startedTask.Aborted() {
-					cleanErr := startedTask.Abort()
+			// Disable abort signal during the cleanup
+			defer task.DisarmAbortSignal()()
+
+			taskID := func(t concurrency.Task) string {
+				tid, cleanErr := t.ID()
+				if cleanErr != nil {
+					_ = xerr.AddConsequence(cleanErr)
+					tid = "<unknown>"
+				}
+				return tid
+			}
+
+			// On error, instructs Tasks/TaskGroups to abort, to stop as soon as possible
+			for _, v := range startedTasks {
+				if !v.Aborted() {
+					logrus.Warnf("aborting because of %s", xerr.Error())
+					cleanErr := v.Abort()
 					if cleanErr != nil {
 						logrus.Warnf("error aborting tasks spawn by createHostResources: %s", cleanErr.Error())
 					}
@@ -805,7 +863,10 @@ func (instance *Cluster) createHostResources(
 	}
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	masterCount, _, _, xerr := instance.determineRequiredNodes()
@@ -815,16 +876,20 @@ func (instance *Cluster) createHostResources(
 	}
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
-	gwInstallTasks, err := concurrency.NewTaskGroupWithParent(task)
-	if err != nil {
-		return err
+	gwInstallTasks, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/gateway"))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
 	}
 
 	// Step 1: starts gateway installation plus masters creation plus nodes creation
-	_, xerr = gwInstallTasks.StartInSubtask(instance.taskInstallGateway, taskInstallGatewayParameters{primaryGateway})
+	_, xerr = gwInstallTasks.Start(instance.taskInstallGateway, taskInstallGatewayParameters{primaryGateway}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/%s/install", primaryGateway.GetName())))
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return xerr
@@ -832,19 +897,25 @@ func (instance *Cluster) createHostResources(
 	startedTasks = append(startedTasks, gwInstallTasks)
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	if haveSecondaryGateway {
-		_, xerr = gwInstallTasks.StartInSubtask(instance.taskInstallGateway, taskInstallGatewayParameters{secondaryGateway})
+		_, xerr = gwInstallTasks.Start(instance.taskInstallGateway, taskInstallGatewayParameters{secondaryGateway}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/%s/install", secondaryGateway.GetName())))
 		xerr = debug.InjectPlannedFail(xerr)
-		if xerr != nil {
+		if xerr != nil { // no need to abort and wait, the previous defer takes care of that
 			return xerr
 		}
 	}
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Starting from here, delete masters if exiting with error and req.keepOnFailure is not true
@@ -856,39 +927,54 @@ func (instance *Cluster) createHostResources(
 			list, merr := instance.UnsafeListMasters()
 			if merr != nil {
 				_ = xerr.AddConsequence(merr)
-			} else {
-				tg, tgerr := concurrency.NewTaskGroup(task)
+				return
+			}
+
+			if len(list) > 0 {
+				tg, tgerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/onfailure"))
 				if tgerr != nil {
 					_ = xerr.AddConsequence(tgerr)
-				} else {
-					for _, v := range list {
-						if v.ID != "" {
-							if _, derr := tg.StartInSubtask(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: v}); derr != nil {
-								_ = xerr.AddConsequence(derr)
-							}
+					return
+				}
+
+				for _, v := range list {
+					captured := v
+					if captured.ID != "" {
+						_, derr := tg.Start(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: captured}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/delete", captured.Name)))
+						if derr != nil {
+							_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete master '%s'", captured.Name))
 						}
 					}
-					if _, _, derr := tg.WaitGroupFor(temporal.GetLongOperationTimeout()); derr != nil {
-						_ = xerr.AddConsequence(derr)
-					}
+				}
+				if _, _, derr := tg.WaitGroupFor(temporal.GetLongOperationTimeout()); derr != nil {
+					_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to wait for master deletions"))
 				}
 			}
 		}
 	}()
 
-	mastersTask, xerr := task.StartInSubtask(instance.taskCreateMasters, taskCreateMastersParameters{
+	mastersCreateTasks, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/masters"))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	_, xerr = mastersCreateTasks.Start(instance.taskCreateMasters, taskCreateMastersParameters{
 		count:         masterCount,
 		mastersDef:    mastersDef,
 		keepOnFailure: keepOnFailure,
 	})
 	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
+	if xerr != nil { // no need to abort and wait, the previous defer takes care of that
 		return xerr
 	}
 	startedTasks = append(startedTasks, mastersTask)
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Starting from here, if exiting with error, delete nodes
@@ -900,98 +986,149 @@ func (instance *Cluster) createHostResources(
 			list, merr := instance.unsafeListNodes()
 			if merr != nil {
 				_ = xerr.AddConsequence(merr)
-			} else {
-				tg, tgerr := concurrency.NewTaskGroup(task)
+				return
+			}
+
+			if len(list) > 0 {
+				tg, tgerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/onfailure"))
 				if tgerr != nil {
-					_ = xerr.AddConsequence(tgerr)
-				} else {
-					for _, v := range list {
-						if v.ID != "" {
-							if _, derr := tg.StartInSubtask(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: v}); derr != nil {
-								_ = xerr.AddConsequence(derr)
-							}
+					_ = xerr.AddConsequence(fail.Wrap(tgerr, "cleaning up on failure, failed to create TaskGroup"))
+					return
+				}
+
+				for _, v := range list {
+					captured := v
+					if captured.ID != "" {
+						_, derr := tg.Start(instance.taskDeleteNodeOnFailure, taskDeleteNodeOnFailureParameters{node: captured}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/delete", captured.Name)))
+						if derr != nil {
+							_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete node '%s'", captured.Name))
 						}
 					}
-					if _, _, derr := tg.WaitGroupFor(temporal.GetLongOperationTimeout()); derr != nil {
-						_ = xerr.AddConsequence(derr)
-					}
+				}
+				if _, _, derr := tg.WaitGroupFor(temporal.GetLongOperationTimeout()); derr != nil {
+					_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to wait for node deletions"))
 				}
 			}
 		}
 	}()
 
-	privateNodesTask, xerr := task.StartInSubtask(instance.taskCreateNodes, taskCreateNodesParameters{
+	privateNodesCreateTasks, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/nodes"))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	_, xerr = privateNodesCreateTasks.Start(instance.taskCreateNodes, taskCreateNodesParameters{
 		count:         initialNodeCount,
 		public:        false,
 		nodesDef:      nodesDef,
 		keepOnFailure: keepOnFailure,
 	})
 	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
+	if xerr != nil { // no need to abort and wait, the previous defer takes care of that
 		return xerr
 	}
 	startedTasks = append(startedTasks, privateNodesTask)
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Step 2: awaits gateway installation end and masters installation end
-	if _, gatewayInstallStatus = gwInstallTasks.WaitGroup(); gatewayInstallStatus != nil {
+	var gatewayInstallResult concurrency.TaskGroupResult
+	if gatewayInstallResult, gatewayInstallStatus = gwInstallTasks.WaitGroup(); gatewayInstallStatus != nil {
+		// no need to abort and wait, the previous defer takes care of that
 		return gatewayInstallStatus
 	}
+	logrus.Debugf("gateway install returned: %v", gatewayInstallResult)
 
-	if _, mastersStatus = mastersTask.Wait(); mastersStatus != nil {
+	var masterCreationResult concurrency.TaskGroupResult
+	if masterCreationResult, mastersStatus = mastersCreateTasks.WaitGroup(); mastersStatus != nil {
+		// no need to abort and wait, the previous defer takes care of that
 		return mastersStatus
 	}
+	logrus.Debugf("master creation returned: %v", masterCreationResult)
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Step 3: start gateway configuration (needs MasterIPs so masters must be installed first)
 	// Configure gateway(s) and waits for the result
 
-	gwCfgTasks, err := concurrency.NewTaskGroupWithParent(task)
-	if err != nil {
-		return err
-	}
-
-	_, xerr = gwCfgTasks.StartInSubtask(instance.taskConfigureGateway, taskConfigureGatewayParameters{Host: primaryGateway})
+	gwCfgTasks, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/configuregateways"))
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
+		// no need to abort and wait, the previous defer takes care of that
+		return xerr
+	}
+
+	_, xerr = gwCfgTasks.Start(instance.taskConfigureGateway, taskConfigureGatewayParameters{Host: primaryGateway}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/configure", primaryGateway.GetName())))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		// no need to abort and wait, the previous defer takes care of that
 		return xerr
 	}
 	startedTasks = append(startedTasks, gwCfgTasks)
 
 	if haveSecondaryGateway {
-		_, xerr = gwCfgTasks.StartInSubtask(instance.taskConfigureGateway, taskConfigureGatewayParameters{Host: secondaryGateway})
+		_, xerr = gwCfgTasks.Start(instance.taskConfigureGateway, taskConfigureGatewayParameters{Host: secondaryGateway}, concurrency.InheritParentIDOption)
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
+			// no need to abort and wait, the previous defer takes care of that
 			return xerr
 		}
 	}
 
-	if _, gatewayConfigurationStatus = gwCfgTasks.WaitGroup(); gatewayConfigurationStatus != nil {
+	var gatewayCfgResult concurrency.TaskGroupResult
+	gatewayCfgResult, gatewayConfigurationStatus = gwCfgTasks.WaitGroup()
+	if gatewayConfigurationStatus != nil {
 		return gatewayConfigurationStatus
 	}
+	logrus.Debugf("gateway cfg returned: %v", gatewayCfgResult)
 
 	// Step 4: configure masters (if masters created successfully and gateways configured successfully)
-	if _, mastersStatus = task.RunInSubtask(instance.taskConfigureMasters, nil); mastersStatus != nil {
+	mastersCfgTask, xerr := concurrency.NewTaskWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/masters"))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	_, mastersStatus = mastersCfgTask.Run(instance.taskConfigureMasters, nil, concurrency.InheritParentIDOption, concurrency.AmendID("/configure"))
+	if mastersStatus != nil {
 		return mastersStatus
 	}
 
 	// Step 5: awaits nodes creation
-	if _, privateNodesStatus = privateNodesTask.Wait(); privateNodesStatus != nil {
+	var privateNodesResult concurrency.TaskGroupResult
+	privateNodesResult, privateNodesStatus = privateNodesCreateTasks.WaitGroup()
+	if privateNodesStatus != nil {
 		return privateNodesStatus
 	}
+	logrus.Debugf("private node creation returned: %v", privateNodesResult)
 
 	if task.Aborted() {
-		return fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return fail.AbortedError(lerr, "parent task killed")
+		}
+		return fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Step 6: Starts nodes configuration, if all masters and nodes have been created and gateway has been configured with success
-	if _, privateNodesStatus = task.RunInSubtask(instance.taskConfigureNodes, nil); privateNodesStatus != nil {
+	privateNodesCfgTask, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/nodes"))
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return xerr
+	}
+
+	_, privateNodesStatus = privateNodesCfgTask.Run(instance.taskConfigureNodes, nil, concurrency.InheritParentIDOption, concurrency.AmendID("/configure"))
+	if privateNodesStatus != nil {
 		return privateNodesStatus
 	}
 
@@ -1056,8 +1193,10 @@ func complementSizingRequirements(req *abstract.HostSizingRequirements, def abst
 	return &finalDef
 }
 
-func (instance *Cluster) taskStartHost(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+// taskStartHost is the code called in a Task to start a Host
+func (instance *Cluster) taskStartHost(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1067,7 +1206,10 @@ func (instance *Cluster) taskStartHost(task concurrency.Task, params concurrency
 	}
 
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	id, ok := params.(string)
@@ -1092,8 +1234,9 @@ func (instance *Cluster) taskStartHost(task concurrency.Task, params concurrency
 	return nil, nil
 }
 
-func (instance *Cluster) taskStopHost(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskStopHost(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1102,7 +1245,10 @@ func (instance *Cluster) taskStopHost(task concurrency.Task, params concurrency.
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	id, ok := params.(string)
@@ -1128,9 +1274,9 @@ type taskInstallGatewayParameters struct {
 }
 
 // taskInstallGateway installs necessary components on one gateway
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskInstallGateway(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskInstallGateway(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1154,30 +1300,41 @@ func (instance *Cluster) taskInstallGateway(task concurrency.Task, params concur
 	}
 
 	hostLabel := p.Host.GetName()
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), params).WithStopwatch().Entering()
+	defer tracer.Exiting()
+
 	logrus.Debugf("[%s] starting installation...", hostLabel)
 
-	_, xerr = p.Host.WaitSSHReady(task.GetContext(), temporal.GetHostTimeout())
+	_, xerr = p.Host.WaitSSHReady(task.Context(), temporal.GetHostTimeout())
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
 	// Installs docker and docker-compose on gateway
-	xerr = instance.installDocker(task.GetContext(), p.Host, hostLabel)
+	xerr = instance.installDocker(task.Context(), p.Host, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	// Installs proxycache server on gateway (if not disabled)
-	xerr = instance.installProxyCacheServer(task.GetContext(), p.Host, hostLabel)
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		return nil, xerr
-	}
+	// // Installs proxycache server on gateway (if not disabled)
+	// xerr = instance.installProxyCacheServer(task.Context(), p.Host, hostLabel)
+	// xerr = debug.InjectPlannedFail(xerr)
+	// if xerr != nil {
+	// 	return nil, xerr
+	// }
 
 	// Installs requirements as defined by Cluster Flavor (if it exists)
-	xerr = instance.installNodeRequirements(task.GetContext(), clusternodetype.Gateway, p.Host, hostLabel)
+	xerr = instance.installNodeRequirements(task.Context(), clusternodetype.Gateway, p.Host, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -1192,9 +1349,9 @@ type taskConfigureGatewayParameters struct {
 }
 
 // taskConfigureGateway prepares one gateway
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskConfigureGateway(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskConfigureGateway(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1203,7 +1360,10 @@ func (instance *Cluster) taskConfigureGateway(task concurrency.Task, params conc
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	// validate and convert parameters
@@ -1214,6 +1374,8 @@ func (instance *Cluster) taskConfigureGateway(task concurrency.Task, params conc
 	if p.Host == nil {
 		return result, fail.InvalidParameterCannotBeNilError("params.Host")
 	}
+
+	hostLabel := p.Host.GetName()
 
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%v)", params).WithStopwatch().Entering()
 	defer tracer.Exiting()
@@ -1239,9 +1401,8 @@ type taskCreateMastersParameters struct {
 }
 
 // taskCreateMasters creates masters
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskCreateMasters(toc concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskCreateMasters(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	task, err := concurrency.NewTaskGroupWithParent(toc)
 	if err != nil {
@@ -1255,8 +1416,17 @@ func (instance *Cluster) taskCreateMasters(toc concurrency.Task, params concurre
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 
+	tg, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, xerr
+	}
+
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%v)", params).WithStopwatch().Entering()
@@ -1280,26 +1450,48 @@ func (instance *Cluster) taskCreateMasters(toc concurrency.Task, params concurre
 
 	logrus.Debugf("[Cluster %s] creating %d master%s...", clusterName, p.count, strprocess.Plural(p.count))
 
-	timeout := temporal.GetContextTimeout() + time.Duration(p.count)*time.Minute
-	var i uint
-	for ; i < p.count; i++ {
-		_, xerr := task.StartInSubtask(instance.taskCreateMaster, taskCreateMasterParameters{
-			index:         i + 1,
+	timeout := 2 * temporal.GetHostCreationTimeout()
+	var collectedErs []error
+
+	for i := uint(1); i <= p.count; i++ {
+		captured := i
+		taskParams := taskCreateMasterParameters{
 			masterDef:     p.mastersDef,
 			timeout:       timeout,
+			index:         captured,
 			keepOnFailure: p.keepOnFailure,
-		})
-		xerr = debug.InjectPlannedFail(xerr)
-		if xerr != nil {
-			return nil, xerr
+		}
+		_, ierr := tg.StartWithTimeout(instance.taskCreateMaster, taskParams, timeout, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%d/create", captured)))
+		ierr = debug.InjectPlannedFail(ierr)
+		if ierr != nil {
+			collectedErs = append(collectedErs, ierr)
+			logrus.Warnf("Aborting master creations because one master task didn't start: %v", ierr)
+			abErr := tg.Abort()
+			if abErr != nil {
+				logrus.Errorf("there was an error trying to abort TaskGroup: %s", spew.Sdump(abErr))
+			}
+			break
 		}
 	}
-	tr, err := task.WaitGroup()
-	if err != nil {
-		return nil, fail.NewError("[Cluster %s] failed to create master(s): %s", clusterName, err.Error())
+
+	var tr concurrency.TaskGroupResult
+	tr, xerr = tg.WaitGroup()
+	if xerr != nil {
+		if withTimeout(xerr) {
+			logrus.Warnf("TBR: Timeouts !!")
+		}
+		rerr := fail.NewError("[Cluster %s] failed to create master(s): %s", clusterName, xerr)
+		if len(collectedErs) != 0 {
+			_ = rerr.AddConsequence(fail.NewErrorList(collectedErs))
+		}
+		return nil, rerr
 	}
 
-	logrus.Debugf("[Cluster %s] masters creation successful.", clusterName)
+	if len(collectedErs) != 0 {
+		return nil, fail.NewError("[Cluster %s] failed to create master(s): %s", clusterName, fail.NewErrorList(collectedErs))
+	}
+
+	logrus.Debugf("[Cluster %s] masters creation successful: %v", clusterName, tr)
 	return tr, nil
 }
 
@@ -1311,9 +1503,9 @@ type taskCreateMasterParameters struct {
 }
 
 // taskCreateMaster creates one master
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1347,6 +1539,19 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 	if xerr != nil {
 		return nil, xerr
 	}
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%v)", params).Entering()
+	defer tracer.Exiting()
+
+	hostLabel := fmt.Sprintf("master #%d", p.index)
+	logrus.Debugf("[%s] starting master Host creation...", hostLabel)
 
 	// First creates master in metadata, to keep track of its tried creation, in case of failure
 	var nodeIdx uint
@@ -1394,7 +1599,10 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 	}()
 
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	netCfg, xerr := instance.GetNetworkConfig()
@@ -1432,14 +1640,20 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 
 	hostReq.PublicIP = false
 	hostReq.KeepOnFailure = p.keepOnFailure
+	if p.masterDef.Image != "" {
+		hostReq.ImageID = p.masterDef.Image
+	}
+	if p.masterDef.Template != "" {
+		hostReq.TemplateID = p.masterDef.Template
+	}
 
-	rh, xerr := NewHost(instance.GetService())
+	hostInstance, xerr := NewHost(instance.GetService())
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	_, xerr = rh.Create(task.GetContext(), hostReq, p.masterDef)
+	_, xerr = hostInstance.Create(task.Context(), hostReq, p.masterDef)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -1447,7 +1661,7 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 
 	defer func() {
 		if xerr != nil && !p.keepOnFailure {
-			if derr := rh.Delete(context.Background()); derr != nil {
+			if derr := hostInstance.Delete(context.Background()); derr != nil {
 				switch derr.(type) {
 				case *fail.ErrNotFound:
 					// missing Host is considered as a successful deletion, continue
@@ -1467,10 +1681,10 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 			}
 
 			node := nodesV3.ByNumericalID[nodeIdx]
-			node.ID = rh.GetID()
+			node.ID = hostInstance.GetID()
 
 			// Recover public IP of the master if it exists
-			node.PublicIP, innerXErr = rh.GetPublicIP()
+			node.PublicIP, innerXErr = hostInstance.GetPublicIP()
 			if innerXErr != nil {
 				switch innerXErr.(type) {
 				case *fail.ErrNotFound:
@@ -1481,7 +1695,7 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 			}
 
 			// Recover the private IP of the master that MUST exist
-			node.PrivateIP, innerXErr = rh.GetPrivateIP()
+			node.PrivateIP, innerXErr = hostInstance.GetPrivateIP()
 			if innerXErr != nil {
 				return innerXErr
 			}
@@ -1499,28 +1713,46 @@ func (instance *Cluster) taskCreateMaster(task concurrency.Task, params concurre
 		return nil, fail.Wrap(xerr, "[%s] creation failed", hostLabel)
 	}
 
-	hostLabel = fmt.Sprintf("master #%d (%s)", p.index, rh.GetName())
+	hostLabel = fmt.Sprintf("master #%d (%s)", p.index, hostInstance.GetName())
 
-	xerr = instance.installProxyCacheClient(task.GetContext(), rh, hostLabel)
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		return nil, xerr
-	}
+	// xerr = instance.installProxyCacheClient(task.Context(), hostInstance, hostLabel)
+	// xerr = debug.InjectPlannedFail(xerr)
+	// if xerr != nil {
+	// 	return nil, xerr
+	// }
 
-	xerr = instance.installNodeRequirements(task.GetContext(), clusternodetype.Master, rh, hostLabel)
+	xerr = instance.installNodeRequirements(task.Context(), clusternodetype.Master, hostInstance, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
 	logrus.Debugf("[%s] Host creation successful.", hostLabel)
-	return rh, nil
+	return hostInstance, nil
+}
+
+func withTimeout(xerr fail.Error) bool {
+	if _, ok := xerr.(*fail.ErrTimeout); ok {
+		return true
+	}
+
+	result := false
+	if elist, ok := xerr.(*fail.ErrorList); ok {
+		for _, each := range elist.ToErrorSlice() {
+			if ato, isTout := each.(*fail.ErrTimeout); isTout {
+				logrus.Warnf("Found a tg timeout: %v", ato)
+				result = true
+			}
+		}
+	}
+
+	return result
 }
 
 // taskConfigureMasters configure masters
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskConfigureMasters(task concurrency.Task, _ concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskConfigureMasters(task concurrency.Task, _ concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1529,45 +1761,67 @@ func (instance *Cluster) taskConfigureMasters(task concurrency.Task, _ concurren
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 
+	started := time.Now()
+
+	defer func() {
+		if xerr != nil {
+			logrus.Debugf("[Cluster %s] Masters configuration FAILED with [%s] in [%s].", instance.GetName(), spew.Sdump(xerr), temporal.FormatDuration(time.Since(started)))
+		} else {
+			logrus.Debugf("[Cluster %s] Masters configuration successful in [%s].", instance.GetName(), temporal.FormatDuration(time.Since(started)))
+		}
+	}()
+
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster")).WithStopwatch().Entering()
 	defer tracer.Exiting()
 
 	logrus.Debugf("[Cluster %s] Configuring masters...", instance.GetName())
-	started := time.Now()
 
-	// var subtasks []concurrency.Task
 	masters, xerr := instance.UnsafeListMasters()
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 	if len(masters) == 0 {
-		return nil, nil
+		return nil, fail.NewError("[Cluster %s] master list cannot be empty.", instance.GetName())
 	}
 
-	tg, xerr := concurrency.NewTaskGroupWithParent(task)
+	tg, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	var loadErrors []error
-	var taskErrors []error
-	for i, master := range masters {
-		if master.ID == "" {
-			continue
-		}
+	var (
+		loadErrors []error
+		taskErrors []error
+	)
 
-		host, xerr := LoadHost(instance.GetService(), master.ID)
+	for _, master := range masters {
+		if master.ID == "" {
+			return nil, fail.InvalidParameterError("masters", "cannot contain items with empty ID")
+		}
+	}
+
+	for i, master := range masters {
+		captured := i
+		capturedMaster := master
+		host, xerr := LoadHost(instance.GetService(), capturedMaster.ID)
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			logrus.Warnf("failed to get metadata of Host: %s", xerr.Error())
 			loadErrors = append(loadErrors, xerr)
-			continue
+			abErr := tg.Abort()
+			if abErr != nil {
+				logrus.Errorf("there was an error trying to abort TaskGroup: %s", spew.Sdump(abErr))
+			}
+			break
 		}
 
 		//goland:noinspection ALL
@@ -1576,31 +1830,47 @@ func (instance *Cluster) taskConfigureMasters(task concurrency.Task, _ concurren
 		}(host)
 
 		_, xerr = tg.Start(instance.taskConfigureMaster, taskConfigureMasterParameters{
-			Index: i + 1,
+			Index: captured + 1,
 			Host:  host,
-		})
+		}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/configure", host.GetName())))
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
+			// a return here (unless is the first for iteration) will likely leave unchecked started tasks
+			logrus.Warnf("Aborting because of %v", xerr)
 			taskErrors = append(taskErrors, xerr)
+			abErr := tg.Abort()
+			if abErr != nil {
+				logrus.Errorf("there was an error trying to abort TaskGroup: %s", spew.Sdump(abErr))
+			}
+			break
 		}
 	}
 
-	if len(loadErrors) != 0 {
-		logrus.Warnf("there were error reading master's metadata")
-		return nil, fail.NewErrorList(loadErrors)
-	}
-
-	if len(taskErrors) != 0 {
-		return nil, fail.NewErrorList(taskErrors)
-	}
-
-	tr, xerr := tg.WaitGroup()
+	var tr concurrency.TaskGroupResult
+	tr, xerr = tg.WaitGroup()
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return nil, xerr
+		if withTimeout(xerr) {
+			logrus.Warnf("TBR: Timeouts !!")
+		}
+		rerr := fail.NewError("[Cluster %s] failed to configure master(s): %s", instance.GetName(), xerr)
+		if len(loadErrors) != 0 {
+			_ = rerr.AddConsequence(fail.NewErrorList(loadErrors))
+		}
+		if len(taskErrors) != 0 {
+			_ = rerr.AddConsequence(fail.NewErrorList(taskErrors))
+		}
+		return nil, rerr
 	}
 
-	logrus.Debugf("[Cluster %s] Masters configuration successful in [%s].", instance.GetName(), temporal.FormatDuration(time.Since(started)))
+	if len(loadErrors) != 0 || len(taskErrors) != 0 {
+		var allErrors []error
+		allErrors = append(allErrors, loadErrors...)
+		allErrors = append(allErrors, taskErrors...)
+		return nil, fail.NewErrorList(allErrors)
+	}
+
+	logrus.Debugf("[Cluster %s] masters configuration successful: %v", instance.GetName(), tr)
 	return tr, nil
 }
 
@@ -1610,9 +1880,9 @@ type taskConfigureMasterParameters struct {
 }
 
 // taskConfigureMaster configures one master
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskConfigureMaster(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskConfigureMaster(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1640,13 +1910,23 @@ func (instance *Cluster) taskConfigureMaster(task concurrency.Task, params concu
 		return nil, fail.InvalidParameterCannotBeNilError("params.Host")
 	}
 
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%v)", params).WithStopwatch().Entering()
+	defer tracer.Exiting()
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
 	started := time.Now()
 
 	hostLabel := fmt.Sprintf("master #%d (%s)", p.Index, p.Host.GetName())
 	logrus.Debugf("[%s] starting configuration...", hostLabel)
 
 	// install docker feature (including docker-compose)
-	xerr = instance.installDocker(task.GetContext(), p.Host, hostLabel)
+	xerr = instance.installDocker(task.Context(), p.Host, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -1676,9 +1956,8 @@ type taskCreateNodesParameters struct {
 }
 
 // taskCreateNodes creates nodes
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskCreateNodes(toc concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskCreateNodes(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	task, err := concurrency.NewTaskGroupWithParent(toc)
 	if err != nil {
@@ -1705,6 +1984,13 @@ func (instance *Cluster) taskCreateNodes(toc concurrency.Task, params concurrenc
 		return nil, fail.InvalidParameterError("params.count", "cannot be an integer less than 1")
 	}
 
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
 	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%d, %v)", p.count, p.public).WithStopwatch().Entering()
 	defer tracer.Exiting()
 
@@ -1716,23 +2002,39 @@ func (instance *Cluster) taskCreateNodes(toc concurrency.Task, params concurrenc
 	}
 	logrus.Debugf("[Cluster %s] creating %d node%s...", clusterName, p.count, strprocess.Plural(p.count))
 
-	timeout := temporal.GetContextTimeout() + time.Duration(p.count)*time.Minute
+	tg, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, xerr
+	}
+
+	timeout := 2 * temporal.GetHostCreationTimeout()
 	for i := uint(1); i <= p.count; i++ {
-		_, xerr := task.StartInSubtask(instance.taskCreateNode, taskCreateNodeParameters{
-			index:         i,
+		captured := i
+		_, xerr := tg.StartWithTimeout(instance.taskCreateNode, taskCreateNodeParameters{
+			index:         captured,
 			nodeDef:       p.nodesDef,
 			timeout:       timeout,
 			keepOnFailure: p.keepOnFailure,
-		})
+		}, timeout, concurrency.InheritParentIDOption)
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
-			return nil, xerr
+			logrus.Warnf("aborting because of %s", xerr.Error())
+			abErr := tg.Abort()
+			if abErr != nil {
+				logrus.Errorf("there was an error trying to abort TaskGroup: %s", spew.Sdump(abErr))
+			}
+			break
 		}
 	}
 
 	tr, err := task.WaitGroup()
 	if err != nil {
-		return nil, err
+		if withTimeout(xerr) {
+			logrus.Warnf("TBR: Timeouts !!")
+		}
+		rerr := fail.NewError("[Cluster %s] failed to create nodes(s): %s", instance.GetName(), err)
+		return nil, rerr
 	}
 
 	logrus.Debugf("[Cluster %s] %d node%s creation successful.", clusterName, p.count, strprocess.Plural(p.count))
@@ -1747,9 +2049,9 @@ type taskCreateNodeParameters struct {
 }
 
 // taskCreateNode creates a node in the Cluster
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrency.TaskParameters) (result concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1783,6 +2085,19 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 	if xerr != nil {
 		return nil, xerr
 	}
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%d)", p.index).WithStopwatch().Entering()
+	defer tracer.Exiting()
+
+	hostLabel := fmt.Sprintf("node #%d", p.index)
+	logrus.Debugf(tracer.TraceMessage("[%s] starting Host creation...", hostLabel))
 
 	// First creates node in metadata, to keep track of its tried creation, in case of failure
 	var nodeIdx uint
@@ -1826,7 +2141,7 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 				})
 			})
 			if derr != nil {
-				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to remove master from Cluster metadata", ActionFromError(xerr)))
+				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on %s, failed to remove node from Cluster metadata", ActionFromError(xerr)))
 			}
 		}
 	}()
@@ -1867,13 +2182,20 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 	hostReq.PublicIP = false
 	hostReq.KeepOnFailure = p.keepOnFailure
 
-	rh, xerr := NewHost(instance.GetService())
+	if p.nodeDef.Image != "" {
+		hostReq.ImageID = p.nodeDef.Image
+	}
+	if p.nodeDef.Template != "" {
+		hostReq.TemplateID = p.nodeDef.Template
+	}
+
+	hostInstance, xerr := NewHost(instance.GetService())
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
-	_, xerr = rh.Create(task.GetContext(), hostReq, p.nodeDef)
+	_, xerr = hostInstance.Create(task.Context(), hostReq, p.nodeDef)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -1893,6 +2215,7 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 		}
 	}()
 
+	var node *propertiesv3.ClusterNode
 	xerr = instance.Alter(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
 		return props.Alter(clusterproperty.NodesV3, func(clonable data.Clonable) (innerXErr fail.Error) {
 			nodesV3, ok := clonable.(*propertiesv3.ClusterNodes)
@@ -1900,9 +2223,9 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 				return fail.InconsistentError("'*propertiesv3.ClusterNodes' expected, '%s' provided", reflect.TypeOf(clonable).String())
 			}
 
-			node := nodesV3.ByNumericalID[nodeIdx]
-			node.ID = rh.GetID()
-			node.PublicIP, innerXErr = rh.GetPublicIP()
+			node = nodesV3.ByNumericalID[nodeIdx]
+			node.ID = hostInstance.GetID()
+			node.PublicIP, innerXErr = hostInstance.GetPublicIP()
 			if innerXErr != nil {
 				switch innerXErr.(type) {
 				case *fail.ErrNotFound:
@@ -1930,26 +2253,26 @@ func (instance *Cluster) taskCreateNode(task concurrency.Task, params concurrenc
 
 	hostLabel = fmt.Sprintf("node #%d (%s)", p.index, rh.GetName())
 
-	xerr = instance.installProxyCacheClient(task.GetContext(), rh, hostLabel)
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		return nil, xerr
-	}
+	// xerr = instance.installProxyCacheClient(task.Context(), hostInstance, hostLabel)
+	// xerr = debug.InjectPlannedFail(xerr)
+	// if xerr != nil {
+	// 	return nil, xerr
+	// }
 
-	xerr = instance.installNodeRequirements(task.GetContext(), clusternodetype.Node, rh, hostLabel)
+	xerr = instance.installNodeRequirements(task.Context(), clusternodetype.Node, hostInstance, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
 	}
 
 	logrus.Debugf("[%s] Host creation successful.", hostLabel)
-	return rh, nil
+	return node, nil
 }
 
 // taskConfigureNodes configures nodes
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskConfigureNodes(task concurrency.Task, _ concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskConfigureNodes(task concurrency.Task, _ concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -1958,8 +2281,21 @@ func (instance *Cluster) taskConfigureNodes(task concurrency.Task, _ concurrency
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 
+	started := time.Now()
+
+	defer func() {
+		if xerr != nil {
+			logrus.Debugf("[Cluster %s] Nodes configuration FAILED with [%s] in [%s].", instance.GetName(), spew.Sdump(xerr), temporal.FormatDuration(time.Since(started)))
+		} else {
+			logrus.Debugf("[Cluster %s] Nodes configuration successful in [%s].", instance.GetName(), temporal.FormatDuration(time.Since(started)))
+		}
+	}()
+
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	clusterName := instance.GetName()
@@ -1973,15 +2309,13 @@ func (instance *Cluster) taskConfigureNodes(task concurrency.Task, _ concurrency
 		return nil, err
 	}
 	if len(list) == 0 {
-		logrus.Debugf("[Cluster %s] no nodes to configure.", clusterName)
-		return nil, nil
+		return nil, fail.NewError("[Cluster %s] node list cannot be empty.", instance.GetName())
 	}
 
 	logrus.Debugf("[Cluster %s] configuring nodes...", clusterName)
 
 	var (
-		// i    uint
-		errs []error
+		startErrs []error
 	)
 
 	svc := instance.GetService()
@@ -1991,56 +2325,64 @@ func (instance *Cluster) taskConfigureNodes(task concurrency.Task, _ concurrency
 		return nil, xerr
 	}
 
-	// var subtasks []concurrency.Task
-	for i, node := range list {
+	for _, node := range list {
 		if node.ID == "" {
-			continue
+			return nil, fail.InvalidParameterError("list", "cannot contain items with empty ID")
 		}
+	}
 
-		host, xerr := LoadHost(svc, node.ID)
-		xerr = debug.InjectPlannedFail(xerr)
-		if xerr != nil {
-			errs = append(errs, fail.Wrap(xerr, "failed to get metadata of Host '%s'", node.Name))
-			continue
-		}
-
-		//goland:noinspection ALL
-		defer func(hostInstance resources.Host) {
-			hostInstance.Released()
-		}(host)
-
+	for i, node := range list {
+		captured := i
+		capturedNode := node
 		_, xerr = tg.Start(instance.taskConfigureNode, taskConfigureNodeParameters{
-			Index: i + 1,
-			Host:  host,
-		})
+			Index: captured + 1,
+			Node:  capturedNode,
+		}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/configure", capturedNode.Name)))
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
-			return nil, xerr
+			// a return here (unless is the first for iteration) will likely leave unchecked started tasks, which is bad
+			startErrs = append(startErrs, xerr)
+			logrus.Warnf("aborting because of %v", xerr)
+			abErr := tg.Abort()
+			if abErr != nil {
+				logrus.Errorf("there was an error trying to abort TaskGroup: %s", spew.Sdump(abErr))
+			}
+			break
 		}
 	}
 
-	_, xerr = tg.WaitGroup()
+	var tgr concurrency.TaskGroupResult
+	tgr, xerr = tg.WaitGroup()
 	xerr = debug.InjectPlannedFail(xerr)
-	if len(errs) > 0 {
-		return nil, fail.NewErrorList(errs)
-	}
 	if xerr != nil {
-		return nil, xerr
+		if withTimeout(xerr) {
+			logrus.Warnf("TBR: Timeouts !!")
+		}
+		rerr := fail.NewError("[Cluster %s] failed to configure nodes(s): %s", instance.GetName(), xerr)
+		if len(startErrs) > 0 {
+			_ = rerr.AddConsequence(fail.NewErrorList(startErrs)) // not actually a consequence, but a temporary patch until the logic of this function is fixed
+		}
+		return nil, rerr
 	}
 
-	logrus.Debugf("[Cluster %s] nodes configuration successful.", clusterName)
-	return nil, nil
+	if len(startErrs) != 0 {
+		var allErrors []error
+		allErrors = append(allErrors, startErrs...)
+		return nil, fail.NewError("[Cluster %s] failed to configure nodes(s): %s", instance.GetName(), fail.NewErrorList(allErrors))
+	}
+
+	logrus.Debugf("[Cluster %s] nodes configuration successful: %v", clusterName, tgr)
+	return tgr, nil
 }
 
 type taskConfigureNodeParameters struct {
 	Index uint
-	Host  resources.Host
+	Node  *propertiesv3.ClusterNode
 }
 
 // taskConfigureNode configure one node
-// This function is intended to be call as a goroutine
-func (instance *Cluster) taskConfigureNode(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskConfigureNode(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -2061,18 +2403,36 @@ func (instance *Cluster) taskConfigureNode(task concurrency.Task, params concurr
 	if p.Index < 1 {
 		return nil, fail.InvalidParameterError("params.indexindex", "cannot be an integer less than 1")
 	}
-	if p.Host == nil {
-		return nil, fail.InvalidParameterCannotBeNilError("params.Host")
+	if p.Node == nil {
+		return nil, fail.InvalidParameterCannotBeNilError("params.Node")
 	}
 
-	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%d, %s)", p.Index, p.Host.GetName()).WithStopwatch().Entering()
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
+
+	tracer := debug.NewTracer(task, tracing.ShouldTrace("resources.cluster"), "(%d, %s)", p.Index, p.Node.Name).WithStopwatch().Entering()
 	defer tracer.Exiting()
 
-	hostLabel := fmt.Sprintf("node #%d (%s)", p.Index, p.Host.GetName())
+	hostLabel := fmt.Sprintf("node #%d (%s)", p.Index, p.Node.Name)
 	logrus.Debugf("[%s] starting configuration...", hostLabel)
 
+	hostInstance, xerr := LoadHost(instance.GetService(), p.Node.ID)
+	xerr = debug.InjectPlannedFail(xerr)
+	if xerr != nil {
+		return nil, fail.Wrap(xerr, "failed to get metadata of node '%s'", p.Node.Name)
+	}
+
+	//goland:noinspection ALL
+	defer func(item resources.Host) {
+		item.Released()
+	}(hostInstance)
+
 	// Docker and docker-compose installation is mandatory on all nodes
-	xerr = instance.installDocker(task.GetContext(), p.Host, hostLabel)
+	xerr = instance.installDocker(task.Context(), hostInstance, hostLabel)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		return nil, xerr
@@ -2082,12 +2442,13 @@ func (instance *Cluster) taskConfigureNode(task concurrency.Task, params concurr
 	if instance.makers.ConfigureNode == nil {
 		return nil, nil
 	}
-	xerr = instance.makers.ConfigureNode(instance, p.Index, p.Host)
+	xerr = instance.makers.ConfigureNode(instance, p.Index, hostInstance)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		logrus.Error(xerr.Error())
 		return nil, xerr
 	}
+
 	logrus.Debugf("[%s] configuration successful.", hostLabel)
 	return nil, nil
 }
@@ -2096,9 +2457,9 @@ type taskDeleteNodeOnFailureParameters struct {
 	node *propertiesv3.ClusterNode
 }
 
-// taskDeleteNodeOnFailure deletes a host
-func (instance *Cluster) taskDeleteNodeOnFailure(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+// taskDeleteNodeOnFailure deletes a node when a failure occurred
+func (instance *Cluster) taskDeleteNodeOnFailure(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -2107,8 +2468,19 @@ func (instance *Cluster) taskDeleteNodeOnFailure(task concurrency.Task, params c
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
 
+	// Convert and validate params
+	casted, ok := params.(taskDeleteNodeOnFailureParameters)
+	if !ok {
+		return nil, fail.InvalidParameterError("params", "must be a 'taskDeleteNodeOnFailureParameters'")
+	}
+
+	node := casted.node
+
 	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 
 	// Convert and validate params
@@ -2147,22 +2519,21 @@ func (instance *Cluster) taskDeleteNodeOnFailure(task concurrency.Task, params c
 }
 
 type taskDeleteNodeParameters struct {
-	node   *propertiesv3.ClusterNode
-	master *Host
+	node           *propertiesv3.ClusterNode
+	nodeLoadMethod data.ImmutableKeyValue
+	master         *Host
 }
 
-func (instance *Cluster) taskDeleteNode(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+// taskDeleteNode deletes one node
+func (instance *Cluster) taskDeleteNode(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
+	var xerr fail.Error
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
 	}
 	if task == nil {
 		return nil, fail.InvalidParameterCannotBeNilError("task")
-	}
-
-	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
 	}
 
 	// Convert and validate params
@@ -2179,6 +2550,20 @@ func (instance *Cluster) taskDeleteNode(task concurrency.Task, params concurrenc
 	if p.node.ID == "" && p.node.Name == "" {
 		return nil, fail.InvalidParameterError("params.node.ID|params.node.Name", "ID or Name must be set")
 	}
+	if p.nodeLoadMethod != HostLightOption && p.nodeLoadMethod != HostFullOption {
+		return nil, fail.InvalidParameterError("params.nodeLoadMethod", "must be 'HostLightOption' or 'HostFullOption'")
+	}
+	nodeName := p.node.Name
+	if nodeName == "" {
+		nodeName = p.node.ID
+	}
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
+	}
 
 	defer func() {
 		xerr = debug.InjectPlannedFail(xerr)
@@ -2192,7 +2577,7 @@ func (instance *Cluster) taskDeleteNode(task concurrency.Task, params concurrenc
 		nodeName = p.node.ID
 	}
 	logrus.Debugf("Deleting Node '%s'", nodeName)
-	xerr = instance.deleteNode(task.GetContext(), p.node, p.master)
+	xerr = instance.deleteNode(task.Context(), p.node, p.master, p.nodeLoadMethod)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		switch xerr.(type) {
@@ -2208,8 +2593,9 @@ func (instance *Cluster) taskDeleteNode(task concurrency.Task, params concurrenc
 	return nil, nil
 }
 
-func (instance *Cluster) taskDeleteMaster(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+// taskDeleteMaster deletes one master
+func (instance *Cluster) taskDeleteMaster(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -2230,14 +2616,20 @@ func (instance *Cluster) taskDeleteMaster(task concurrency.Task, params concurre
 	if p.node == nil {
 		return nil, fail.InvalidParameterError("params.node", "cannot be nil")
 	}
+	if p.node.ID == "" && p.node.Name == "" {
+		return nil, fail.InvalidParameterError("params.node.ID|params.node.Name", "ID or Name must be set")
+	}
 
-	var host resources.Host
-	if p.node.ID != "" { //nolint
-		host, xerr = LoadHost(instance.GetService(), p.node.ID)
-	} else if p.node.Name != "" {
-		host, xerr = LoadHost(instance.GetService(), p.node.Name)
-	} else {
-		return nil, fail.InvalidParameterError("p.node", "must have a non-empty string in either field ID or Name")
+	nodeName := p.node.Name
+	if nodeName == "" {
+		nodeName = p.node.ID
+	}
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "parent task killed")
+		}
+		return nil, fail.AbortedError(nil, "parent task killed")
 	}
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -2251,7 +2643,7 @@ func (instance *Cluster) taskDeleteMaster(task concurrency.Task, params concurre
 	}
 
 	logrus.Debugf("Deleting Master '%s'", p.node.Name)
-	xerr = instance.deleteMaster(task.GetContext(), host)
+	xerr = instance.deleteMaster(task.Context(), host)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		switch xerr.(type) {
@@ -2272,8 +2664,8 @@ type taskDeleteHostOnFailureParameters struct {
 }
 
 // taskDeleteHostOnFailure deletes a host
-func (instance *Cluster) taskDeleteHostOnFailure(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, xerr fail.Error) {
-	defer fail.OnPanic(&xerr)
+func (instance *Cluster) taskDeleteHostOnFailure(task concurrency.Task, params concurrency.TaskParameters) (_ concurrency.TaskResult, ferr fail.Error) {
+	defer fail.OnPanic(&ferr)
 
 	if instance == nil || instance.IsNull() {
 		return nil, fail.InvalidInstanceError()
@@ -2285,6 +2677,11 @@ func (instance *Cluster) taskDeleteHostOnFailure(task concurrency.Task, params c
 	// Convert and validate params
 	hostInstance := params.(taskDeleteHostOnFailureParameters).host
 
+	return nil, deleteHostOnFailure(hostInstance)
+}
+
+// deleteHostOnFailure deletes a Host with appropriate logs
+func deleteHostOnFailure(instance resources.Host) fail.Error {
 	prefix := "Cleaning up on failure, "
 	hostName := hostInstance.GetName()
 	logrus.Debugf(prefix + fmt.Sprintf("deleting Host '%s'", hostName))

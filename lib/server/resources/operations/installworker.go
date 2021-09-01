@@ -517,6 +517,7 @@ func (w *worker) Proceed(ctx context.Context, v data.Map, s resources.FeatureSet
 		if len(steps) == 0 {
 			return nil, fail.InvalidRequestError("nothing to do")
 		}
+
 		order = strings.Split(pace, ",")
 	}
 
@@ -565,12 +566,17 @@ func (w *worker) Proceed(ctx context.Context, v data.Map, s resources.FeatureSet
 			return outcomes, fail.SyntaxError(msg, w.feature.GetName(), w.feature.GetDisplayFilename(), stepKey)
 		}
 
-		subtask, xerr := task.StartInSubtask(w.taskLaunchStep, taskLaunchStepParameters{
+		subtask, xerr := concurrency.NewTaskWithParent(task)
+		xerr = debug.InjectPlannedFail(xerr)
+		if xerr != nil {
+			return outcomes, xerr
+		}
+		_, xerr = subtask.Start(w.taskLaunchStep, taskLaunchStepParameters{
 			stepName:  k,
 			stepKey:   stepKey,
 			stepMap:   stepMap,
 			variables: v,
-		})
+		}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/feature/%s/%s/target/%s/step/%s", w.feature.GetName(), strings.ToLower(w.action.String()), strings.ToLower(w.target.TargetType().String()), k)))
 		xerr = debug.InjectPlannedFail(xerr)
 		if xerr != nil {
 			return outcomes, xerr
@@ -638,10 +644,17 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 		return nil, fail.InvalidParameterCannotBeNilError("params[variables]")
 	}
 
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "aborted")
+		}
+		return nil, fail.AbortedError(nil, "aborted")
+	}
+
 	defer fail.OnExitLogError(&xerr, fmt.Sprintf("executed step '%s::%s'", w.action.String(), p.stepName))
 	defer temporal.NewStopwatch().OnExitLogWithLevel(
 		fmt.Sprintf("Starting execution of step '%s::%s'...", w.action.String(), p.stepName),
-		fmt.Sprintf("Ending execution of step '%s::%s'", w.action.String(), p.stepName),
+		fmt.Sprintf("Ending execution of step '%s::%s' with error '%s'", w.action.String(), p.stepName, xerr),
 		logrus.DebugLevel,
 	)
 
@@ -654,7 +667,7 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 	// Determine list of hosts concerned by the step
 	var hostsList []resources.Host
 	if w.target.TargetType() == featuretargettype.Host {
-		hostsList, xerr = w.identifyHosts(task.GetContext(), map[string]string{"hosts": "1"})
+		hostsList, xerr = w.identifyHosts(task.Context(), map[string]string{"hosts": "1"})
 	} else {
 		anon, ok = p.stepMap[yamlTargetsKeyword]
 		if ok {
@@ -675,7 +688,7 @@ func (w *worker) taskLaunchStep(task concurrency.Task, params concurrency.TaskPa
 			return nil, fail.SyntaxError(msg, w.feature.GetName(), w.feature.GetDisplayFilename(), p.stepKey, yamlTargetsKeyword)
 		}
 
-		hostsList, xerr = w.identifyHosts(task.GetContext(), stepT)
+		hostsList, xerr = w.identifyHosts(task.Context(), stepT)
 	}
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
@@ -1055,17 +1068,36 @@ func (w *worker) setReverseProxy(ctx context.Context) (xerr fail.Error) {
 
 			primaryGatewayVariables["Hostname"] = h.GetName() + domain
 
-			tP, xerr := task.StartInSubtask(taskApplyProxyRule, taskApplyProxyRuleParameters{
+			tg, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID("/proxy/rule/"))
+			if xerr != nil {
+				return xerr
+			}
+
+			_, xerr = tg.Start(taskApplyProxyRule, taskApplyProxyRuleParameters{
 				controller: primaryKongController,
 				rule:       r.(map[interface{}]interface{}),
 				variables:  &primaryGatewayVariables,
-			})
+			}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/apply", primaryKongController.GetHostname())))
 			xerr = debug.InjectPlannedFail(xerr)
 			if xerr != nil {
 				return fail.Wrap(xerr, "failed to apply proxy rules")
 			}
 
-			var errS fail.Error
+			defer func() {
+				if xerr != nil {
+					logrus.Warnf("aborting because of %s", xerr.Error())
+					derr := tg.Abort()
+					if derr != nil {
+						_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to abort TaskGroup"))
+					} else {
+						_, derr = tg.WaitGroup()
+						if derr != nil {
+							_ = xerr.AddConsequence(derr)
+						}
+					}
+				}
+			}()
+
 			if secondaryKongController != nil {
 				secondaryGatewayVariables["HostIP"], xerr = h.GetPrivateIP()
 				xerr = debug.InjectPlannedFail(xerr)
@@ -1096,23 +1128,19 @@ func (w *worker) setReverseProxy(ctx context.Context) (xerr fail.Error) {
 
 				secondaryGatewayVariables["Hostname"] = h.GetName() + domain
 
-				tS, errOp := task.StartInSubtask(taskApplyProxyRule, taskApplyProxyRuleParameters{
+				_, xerr = tg.Start(taskApplyProxyRule, taskApplyProxyRuleParameters{
 					controller: secondaryKongController,
 					rule:       rule,
 					variables:  &secondaryGatewayVariables,
-				})
-				if errOp == nil {
-					_, errOp = tS.Wait()
+				}, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/apply", secondaryKongController.GetHostname())))
+				if xerr != nil {
+					return xerr
 				}
-				errS = errOp
 			}
 
-			_, errP := tP.Wait()
-			if errP != nil {
-				return errP
-			}
-			if errS != nil {
-				return errS
+			_, xerr = tg.WaitGroup()
+			if xerr != nil {
+				return xerr
 			}
 		}
 	}
@@ -1131,14 +1159,18 @@ func taskApplyProxyRule(task concurrency.Task, params concurrency.TaskParameters
 	if task == nil {
 		return nil, fail.InvalidParameterCannotBeNilError("task")
 	}
-	if task.Aborted() {
-		return nil, fail.AbortedError(nil, "aborted")
-	}
 
 	p := params.(taskApplyProxyRuleParameters)
 	hostName, ok := (*p.variables)["Hostname"].(string)
 	if !ok {
 		return nil, fail.InvalidParameterError("variables['Hostname']", "is not a string")
+	}
+
+	if task.Aborted() {
+		if lerr, err := task.LastError(); err == nil {
+			return nil, fail.AbortedError(lerr, "aborted")
+		}
+		return nil, fail.AbortedError(nil, "aborted")
 	}
 
 	ruleName, xerr := p.controller.Apply(p.rule, p.variables)
@@ -1337,6 +1369,9 @@ func (w *worker) setNetworkingSecurity(ctx context.Context) (xerr fail.Error) {
 
 	for k, rule := range rules {
 		if task.Aborted() {
+			if lerr, err := task.LastError(); err == nil {
+				return fail.AbortedError(lerr, "aborted")
+			}
 			return fail.AbortedError(nil, "aborted")
 		}
 

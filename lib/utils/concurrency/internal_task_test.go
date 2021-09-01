@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-package main
+package concurrency
 
-// appTrace contains the default parts that we want to trace
-var appTrace = `{
-    "concurrency": {
-        "lock": false,
-        "task": true
-    },
-    "ssh": {},
-    "resources": {
-        "cluster": true
-    }
-}`
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestInvalidInternalTaskCtx(t *testing.T) {
+	ta, xerr := newTask(nil, nil)
+	require.Nil(t, ta)
+	require.NotNil(t, xerr)
+}
+
+func TestInternalChecks(t *testing.T) {
+	ta, xerr := newTaskGroup(nil, nil) // It doesn't behave the same way newTask does, it should
+	require.Nil(t, ta)
+	require.NotNil(t, xerr)
+}

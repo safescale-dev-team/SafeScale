@@ -56,7 +56,15 @@ func (instance *Host) AddFeature(ctx context.Context, name string, vars data.Map
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return nil, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return nil, xerr
+			}
+		default:
+			return nil, xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -122,7 +130,15 @@ func (instance *Host) CheckFeature(ctx context.Context, name string, vars data.M
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return nil, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return nil, xerr
+			}
+		default:
+			return nil, xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -158,7 +174,15 @@ func (instance *Host) DeleteFeature(ctx context.Context, name string, vars data.
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return nil, xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return nil, xerr
+			}
+		default:
+			return nil, xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -218,7 +242,7 @@ func (instance *Host) InstallMethods() map[uint8]installmethod.Enum {
 		logrus.Error(fail.InvalidInstanceError().Error())
 		return map[uint8]installmethod.Enum{}
 	}
-	
+
 	out := make(map[uint8]installmethod.Enum)
 	instance.installMethods.Range(func(k, v interface{}) bool {
 		out[k.(uint8)] = v.(installmethod.Enum)
@@ -295,8 +319,30 @@ func (instance *Host) UnregisterFeature(feat string) (xerr fail.Error) {
 // InstalledFeatures returns a list of installed features
 // satisfies interface install.Targetable
 func (instance *Host) InstalledFeatures() []string {
-	var list []string
-	return list
+	if instance == nil {
+		return []string{}
+	}
+
+	var out []string
+	xerr := instance.Review(func(clonable data.Clonable, props *serialize.JSONProperties) fail.Error {
+		return props.Inspect(hostproperty.FeaturesV1, func(clonable data.Clonable) fail.Error {
+			featuresV1, ok := clonable.(*propertiesv1.HostFeatures)
+			if !ok {
+				return fail.InconsistentError("'*propertiesv1.HostFeatures' expected, '%s' provided", reflect.TypeOf(clonable).String())
+			}
+
+			for k := range featuresV1.Installed {
+				out = append(out, k)
+			}
+			return nil
+		})
+	})
+	if xerr != nil {
+		logrus.Error(xerr.Error())
+		return []string{}
+	}
+	return out
+
 }
 
 // ComplementFeatureParameters configures parameters that are appropriate for the target

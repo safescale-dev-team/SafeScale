@@ -17,13 +17,18 @@
 package client
 
 import (
+	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/sirupsen/logrus"
 
 	"github.com/CS-SI/SafeScale/lib/protocol"
@@ -45,6 +50,7 @@ type ssh struct {
 
 // Run executes the command
 func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout, executionTimeout time.Duration) (int, string, string, fail.Error) {
+	const invalid = -1
 	var (
 		retcode        int
 		stdout, stderr string
@@ -52,7 +58,7 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 
 	sshCfg, err := s.getHostSSHConfig(hostName)
 	if err != nil {
-		return -1, "", "", err
+		return invalid, "", "", err
 	}
 
 	if connectionTimeout < DefaultConnectionTimeout {
@@ -64,12 +70,12 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 
 	ctx, xerr := utils.GetContext(true)
 	if xerr != nil {
-		return -1, "", "", xerr
+		return invalid, "", "", xerr
 	}
 
 	// Create the command
-	retryErr := retry.WhileUnsuccessfulDelay1SecondWithNotify(
-		func() error {
+	retryErr := retry.WhileUnsuccessfulWithNotify(
+		func() (innerErr error) {
 			sshCmd, innerXErr := sshCfg.NewCommand(ctx, command)
 			if innerXErr != nil {
 				return innerXErr
@@ -77,7 +83,7 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 
 			defer func() { _ = sshCmd.Close() }()
 
-			retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(ctx, outs, executionTimeout)
+			retcode, stdout, stderr, innerXErr = sshCmd.RunWithTimeout(ctx, outs, executionTimeout) // FIXME: What if ssh never returns ?
 			if innerXErr != nil {
 				switch innerXErr.(type) {
 				case *fail.ErrNotAvailable:
@@ -98,6 +104,7 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 			}
 			return nil
 		},
+		temporal.GetMinDelay(),
 		connectionTimeout,
 		func(t retry.Try, v verdict.Enum) {
 			if v == verdict.Retry {
@@ -108,9 +115,11 @@ func (s ssh) Run(hostName, command string, outs outputs.Enum, connectionTimeout,
 	if retryErr != nil {
 		switch retryErr.(type) {
 		case *retry.ErrStopRetry:
-			return -1, "", "", fail.ConvertError(retryErr.Cause())
+			return invalid, "", "", fail.Wrap(fail.Cause(retryErr))
+		case *retry.ErrTimeout:
+			return invalid, "", "", fail.Wrap(retryErr)
 		default:
-			return -1, "", "", retryErr
+			return invalid, "", "", retryErr
 		}
 	}
 	return retcode, stdout, stderr, nil
@@ -161,13 +170,20 @@ func extractPath(in string) (string, fail.Error) {
 	return strings.TrimSpace(parts[1]), nil
 }
 
+func getMD5Hash(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
 // Copy ...
 func (s ssh) Copy(from, to string, connectionTimeout, executionTimeout time.Duration) (int, string, string, fail.Error) {
+	const invalid = -1
 	if from == "" {
-		return -1, "", "", fail.InvalidParameterCannotBeEmptyStringError("from")
+		return invalid, "", "", fail.InvalidParameterCannotBeEmptyStringError("from")
 	}
 	if to == "" {
-		return -1, "", "", fail.InvalidParameterCannotBeEmptyStringError("to")
+		return invalid, "", "", fail.InvalidParameterCannotBeEmptyStringError("to")
 	}
 
 	hostName := ""
@@ -176,28 +192,28 @@ func (s ssh) Copy(from, to string, connectionTimeout, executionTimeout time.Dura
 	// Try extract host
 	hostFrom, xerr := extracthostName(from)
 	if xerr != nil {
-		return -1, "", "", xerr
+		return invalid, "", "", xerr
 	}
 	hostTo, xerr := extracthostName(to)
 	if xerr != nil {
-		return -1, "", "", xerr
+		return invalid, "", "", xerr
 	}
 
 	// IPAddress checks
 	if hostFrom != "" && hostTo != "" {
-		return -1, "", "", fail.NotImplementedError("copy between 2 hosts is not supported yet")
+		return invalid, "", "", fail.NotImplementedError("copy between 2 hosts is not supported yet")
 	}
 	if hostFrom == "" && hostTo == "" {
-		return -1, "", "", fail.NotImplementedError("no host name specified neither in from nor to")
+		return invalid, "", "", fail.NotImplementedError("no host name specified neither in from nor to")
 	}
 
 	fromPath, rerr := extractPath(from)
 	if rerr != nil {
-		return -1, "", "", rerr
+		return invalid, "", "", rerr
 	}
 	toPath, rerr := extractPath(to)
 	if rerr != nil {
-		return -1, "", "", rerr
+		return invalid, "", "", rerr
 	}
 
 	if hostFrom != "" {
@@ -214,7 +230,7 @@ func (s ssh) Copy(from, to string, connectionTimeout, executionTimeout time.Dura
 
 	sshCfg, xerr := s.getHostSSHConfig(hostName)
 	if xerr != nil {
-		return -1, "", "", xerr
+		return invalid, "", "", xerr
 	}
 
 	if executionTimeout < temporal.GetHostTimeout() {
@@ -229,36 +245,135 @@ func (s ssh) Copy(from, to string, connectionTimeout, executionTimeout time.Dura
 
 	task, xerr := s.session.GetTask()
 	if xerr != nil {
-		return -1, "", "", xerr
+		return invalid, "", "", xerr
 	}
-	ctx := task.GetContext()
+	ctx := task.Context()
 
 	var (
-		retcode        int
 		stdout, stderr string
 	)
+
+	retcode := -1
 	retryErr := retry.WhileUnsuccessful(
 		func() error {
-			retcode, stdout, stderr, xerr = sshCfg.CopyWithTimeout(ctx, remotePath, localPath, upload, executionTimeout)
-			// If an error occurred, stop the loop and propagates this error
+			iretcode, istdout, istderr, xerr := sshCfg.CopyWithTimeout(ctx, remotePath, localPath, upload, executionTimeout)
+			xerr = debug.InjectPlannedFail(xerr)
+			// logrus.Warningf("'%d', '%s', '%s', '%s'", iretcode, istdout, istderr, spew.Sdump(xerr))
 			if xerr != nil {
-				retcode = -1
-				return nil
-			}
-			// If retcode == 255, ssh connection failed, retry
-			if retcode == 255 {
-				xerr = fail.NewError("failed to connect")
 				return xerr
 			}
+
+			if iretcode == 1 {
+				deleteThere := func() fail.Error {
+					crcCtx, cancelCrc := context.WithTimeout(ctx, executionTimeout)
+					defer cancelCrc()
+
+					crcCmd, finnerXerr := sshCfg.NewCommand(crcCtx, fmt.Sprintf("sudo rm %s", remotePath))
+					if finnerXerr != nil {
+						return finnerXerr
+					}
+
+					fretcode, fstdout, fstderr, finnerXerr := crcCmd.RunWithTimeout(crcCtx, outputs.COLLECT, executionTimeout)
+					finnerXerr = debug.InjectPlannedFail(finnerXerr)
+					if finnerXerr != nil {
+						_ = finnerXerr.Annotate("retcode", fretcode)
+						_ = finnerXerr.Annotate("stdout", fstdout)
+						_ = finnerXerr.Annotate("stderr", fstderr)
+						return finnerXerr
+					}
+					if fretcode != 0 {
+						finnerXerr = fail.NewError("failed to remove file")
+						_ = finnerXerr.Annotate("retcode", fretcode)
+						_ = finnerXerr.Annotate("stdout", fstdout)
+						_ = finnerXerr.Annotate("stderr", fstderr)
+						return finnerXerr
+					}
+
+					return nil
+				}
+
+				if strings.Contains(istdout, "Permission denied") || strings.Contains(istderr, "Permission denied") {
+					derr := deleteThere()
+					if derr != nil {
+						logrus.Debugf("there was an error trying to delete the file: %s", derr)
+					}
+					return fmt.Errorf("Permission denied")
+				}
+			}
+
+			if iretcode != 0 {
+				xerr = fail.NewError("failure copying '%s' to '%s': scp error code %d", toPath, hostTo, iretcode)
+				if iretcode == 255 {
+					xerr = fail.NewError("failure copying '%s' to '%s': failed to connect to '%s'", toPath, hostTo, hostTo)
+				}
+
+				_ = xerr.Annotate("stdout", istdout)
+				_ = xerr.Annotate("stderr", istderr)
+				_ = xerr.Annotate("retcode", iretcode)
+
+				return xerr
+			}
+
+			// FIXME: Test md5
+			if upload {
+				md5hash := ""
+				if localPath != "" {
+					if content, err := ioutil.ReadFile(localPath); err == nil {
+						md5hash = getMD5Hash(string(content))
+					}
+				}
+
+				crcCheck := func() fail.Error {
+					crcCtx, cancelCrc := context.WithTimeout(ctx, executionTimeout)
+					defer cancelCrc()
+
+					crcCmd, finnerXerr := sshCfg.NewCommand(crcCtx, fmt.Sprintf("/usr/bin/md5sum %s", remotePath))
+					if finnerXerr != nil {
+						return finnerXerr
+					}
+
+					fretcode, fstdout, fstderr, finnerXerr := crcCmd.RunWithTimeout(crcCtx, outputs.COLLECT, executionTimeout)
+					finnerXerr = debug.InjectPlannedFail(finnerXerr)
+					if finnerXerr != nil {
+						_ = finnerXerr.Annotate("retcode", fretcode)
+						_ = finnerXerr.Annotate("stdout", fstdout)
+						_ = finnerXerr.Annotate("stderr", fstderr)
+						return finnerXerr
+					}
+					if fretcode != 0 {
+						finnerXerr = fail.NewError("failed to check md5")
+						_ = finnerXerr.Annotate("retcode", fretcode)
+						_ = finnerXerr.Annotate("stdout", fstdout)
+						_ = finnerXerr.Annotate("stderr", fstderr)
+						return finnerXerr
+					}
+					if !strings.Contains(fstdout, md5hash) {
+						logrus.Warnf("TBR: WRONG MD5, Tried 'md5sum %s' We got '%s' and '%s', the original was '%s'", remotePath, fstdout, fstderr, md5hash)
+						return fail.NewError("wrong md5 of '%s'", remotePath)
+					}
+					return nil
+				}
+
+				if xerr = crcCheck(); xerr != nil {
+					return xerr
+				}
+			}
+
+			retcode = iretcode
+			stdout = istdout
+			stderr = istderr
+
 			return nil
 		},
 		temporal.GetMinDelay(),
-		connectionTimeout,
+		connectionTimeout+2*executionTimeout,
 	)
 	if retryErr != nil {
 		switch cErr := retryErr.(type) { // nolint
+		case *retry.ErrStopRetry:
+			return invalid, "", "", fail.Wrap(fail.Cause(retryErr))
 		case *retry.ErrTimeout:
-			return -1, "", "", cErr
+			return invalid, "", "", cErr
 		}
 	}
 	return retcode, stdout, stderr, retryErr
@@ -290,10 +405,11 @@ func (s ssh) Connect(hostname, username, shell string, timeout time.Duration) er
 		return xerr
 	}
 
-	return retry.WhileUnsuccessfulWhereRetcode255Delay5SecondsWithNotify(
+	return retry.WhileUnsuccessfulWhereRetcode255WithNotify(
 		func() error {
 			return sshCfg.Enter(username, shell)
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetConnectSSHTimeout(),
 		func(t retry.Try, v verdict.Enum) {
 			if v == verdict.Retry {
@@ -323,7 +439,7 @@ func (s ssh) CreateTunnel(name string, localPort int, remotePort int, timeout ti
 	sshCfg.Port = remotePort
 	sshCfg.LocalPort = localPort
 
-	return retry.WhileUnsuccessfulWhereRetcode255Delay5SecondsWithNotify(
+	return retry.WhileUnsuccessfulWhereRetcode255WithNotify(
 		func() error {
 			tunnels, _, err := sshCfg.CreateTunneling()
 			if err != nil {
@@ -336,6 +452,7 @@ func (s ssh) CreateTunnel(name string, localPort int, remotePort int, timeout ti
 			}
 			return nil
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetConnectSSHTimeout(),
 		func(t retry.Try, v verdict.Enum) {
 			if v == verdict.Retry {
@@ -391,7 +508,7 @@ func (s ssh) WaitReady( /*ctx context.Context, */ hostName string, timeout time.
 	if xerr != nil {
 		return xerr
 	}
-	ctx := task.GetContext()
+	ctx := task.Context()
 
 	if task.Aborted() {
 		return fail.AbortedError(nil, "aborted")

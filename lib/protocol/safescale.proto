@@ -65,6 +65,7 @@ message TenantCleanupRequest {
 message TenantUpgradeRequest {
 	string name = 1;
 	bool force = 2;
+	bool dry_run = 3;
 }
 
 message TenantScanRequest {
@@ -771,6 +772,7 @@ message ClusterResizeRequest {
 	string image_id = 4;
 	bool dry_run = 5;
 	string tenant_id = 6;
+	bool keep_on_failure = 7;
 }
 
 message ClusterDeleteRequest  {
@@ -865,10 +867,13 @@ service ClusterService {
 	rpc DeleteNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
 	rpc StopNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
 	rpc StartNode(ClusterNodeRequest) returns (google.protobuf.Empty){}
-	rpc StateNode(ClusterNodeRequest) returns (ClusterStateResponse){}
+	rpc StateNode(ClusterNodeRequest) returns (HostStatus){}
 	rpc ListMasters(Reference) returns (ClusterNodeListResponse){}
-	rpc FindAvailableMaster(Reference) returns (Host){}
 	rpc InspectMaster(ClusterNodeRequest) returns (Host){}
+	rpc StopMaster(ClusterNodeRequest) returns (google.protobuf.Empty){}
+	rpc StartMaster(ClusterNodeRequest) returns (google.protobuf.Empty){}
+	rpc StateMaster(ClusterNodeRequest) returns (HostStatus){}
+	rpc FindAvailableMaster(Reference) returns (Host){}
 }
 
 // Feature services

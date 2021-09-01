@@ -492,7 +492,7 @@ func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Durati
 // WaitHostState wait for host to be in the specified state
 // On exit, xerr may be of type:
 // - *retry.ErrTimeout: when the timeout is reached
-// - *retry.ErrStopRetry: when a breaking error arises; xerr.Cause() contains the real error encountered
+// - *retry.ErrStopRetry: when a breaking error arises; fail.Cause(xerr) contains the real error encountered
 // - fail.Error: any other errors
 func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enum, timeout time.Duration) (_ *abstract.HostCore, xerr fail.Error) {
 	nullAHC := abstract.NewHostCore()
@@ -508,7 +508,7 @@ func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enu
 	tracer := debug.NewTracer(nil, true /*tracing.ShouldTrace("stacks.compute") || tracing.ShouldTrace("stack.outscale")*/, "(%s, %s, %v)", hostLabel, state.String(), timeout).WithStopwatch().Entering()
 	defer tracer.Exiting()
 
-	xerr = retry.WhileUnsuccessfulDelay5SecondsTimeout(
+	xerr = retry.WhileUnsuccessfulWithHardTimeout(
 		func() error {
 			st, innerXErr := s.hostState(ahf.Core.ID)
 			if innerXErr != nil {
@@ -535,14 +535,15 @@ func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enu
 				return fail.NewError("wrong state: %s", st)
 			}
 		},
+		temporal.GetDefaultDelay(),
 		timeout,
 	)
 	if xerr != nil {
 		switch xerr.(type) {
-		case *retry.ErrTimeout:
-			return nullAHC, fail.ConvertError(xerr.Cause())
+		case *fail.ErrTimeout:
+			return nullAHC, fail.Wrap(fail.Cause(xerr), "timeout")
 		case *retry.ErrStopRetry:
-			return nullAHC, fail.NotFoundError("failed to find Host %s", hostLabel)
+			return nullAHC, fail.Wrap(fail.Cause(xerr), "stopping retries")
 		default:
 			return nullAHC, xerr
 		}
@@ -885,7 +886,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	}
 
 	var vm osc.Vm
-	xerr = retry.WhileUnsuccessfulDelay5Seconds(
+	xerr = retry.WhileUnsuccessful(
 		func() error {
 			resp, innerXErr := s.rpcCreateVMs(vmsRequest)
 			if innerXErr != nil {
@@ -920,17 +921,18 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 			_, innerXErr = s.WaitHostState(vm.VmId, hoststate.Started, temporal.GetHostTimeout())
 			return innerXErr
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetLongOperationTimeout(),
 	)
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrStopRetry:
-			xerr = fail.ConvertError(xerr.Cause())
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "stopping retries")
+		case *retry.ErrTimeout:
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "timeout")
 		default:
+			return nullAHF, nullUDC, xerr
 		}
-	}
-	if xerr != nil {
-		return nullAHF, nullUDC, xerr
 	}
 
 	// -- Retrieve default Nic use to create public ip --

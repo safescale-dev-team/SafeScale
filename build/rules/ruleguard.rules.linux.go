@@ -1,4 +1,4 @@
-// +build windows,ignore
+// +build ignore, !windows
 
 /*
  * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
@@ -16,22 +16,11 @@
  * limitations under the License.
  */
 
-package concurrency
+package gorules
 
-import (
-	"fmt"
-	"runtime"
-	"strconv"
-	"strings"
-)
+import "github.com/quasilyte/go-ruleguard/dsl"
 
-func goid() int {
-	var buf [64]byte
-	n := runtime.Stack(buf[:], false)
-	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-	id, err := strconv.Atoi(idField)
-	if err != nil {
-		panic(fmt.Sprintf("cannot get goroutine id: %v", err))
-	}
-	return id
+// Remove not releasable code
+func notReleasable(m dsl.Matcher) {
+	m.MatchComment(`// TBR:`).Report(`CANNOT be released until all the debug code is gone`)
 }

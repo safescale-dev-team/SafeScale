@@ -55,11 +55,11 @@ func PrepareJob(ctx context.Context, tenantID string, jobDescription string) (_ 
 		}
 	}
 	newctx, cancel := context.WithCancel(ctx)
-
 	job, xerr := server.NewJob(newctx, cancel, tenant.Service, jobDescription)
 	if xerr != nil {
 		return nil, xerr
 	}
+
 	return job, nil
 }
 
@@ -155,7 +155,7 @@ func (s *JobManagerListener) List(ctx context.Context, in *googleprotobuf.Empty)
 	jobMap := server.ListJobs()
 	var pbProcessList []*protocol.JobDefinition
 	for uuid, info := range jobMap {
-		status, _ := task.GetStatus()
+		status, _ := task.Status()
 		if status == concurrency.ABORTED {
 			return nil, fail.AbortedError(nil)
 		}

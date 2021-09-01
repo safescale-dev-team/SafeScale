@@ -44,7 +44,15 @@ func (instance *SecurityGroup) unsafeDelete(ctx context.Context, force bool) fai
 	task, xerr := concurrency.TaskFromContext(ctx)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return xerr
+		switch xerr.(type) {
+		case *fail.ErrNotAvailable:
+			task, xerr = concurrency.VoidTask()
+			if xerr != nil {
+				return xerr
+			}
+		default:
+			return xerr
+		}
 	}
 
 	if task.Aborted() {
@@ -135,6 +143,7 @@ func (instance *SecurityGroup) unsafeDelete(ctx context.Context, force bool) fai
 			if !ok {
 				return fail.InconsistentError("'*propertiesv1.SecurityGroupSubnets' expected, '%s' provided", reflect.TypeOf(clonable).String())
 			}
+
 			return instance.unbindFromSubnets(ctx, sgnV1)
 		})
 		if innerXErr != nil {
@@ -173,17 +182,25 @@ func (instance *SecurityGroup) unsafeDelete(ctx context.Context, force bool) fai
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
 		switch xerr.(type) {
-		case *retry.ErrStopRetry:
-			xerr = fail.ConvertError(xerr.Cause())
-		default:
-		}
-	}
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// consider a Security Group not found as a successful deletion
-			fail.Ignore(xerr)
+			debug.IgnoreError(xerr)
+		case *fail.ErrTimeout:
+			// consider a Security Group not found as a successful deletion
+			cause := fail.Cause(xerr)
+			if _, ok := cause.(*fail.ErrNotFound); ok {
+				debug.IgnoreError(cause)
+			} else {
+				return fail.Wrap(cause, "timeout")
+			}
+		case *retry.ErrStopRetry:
+			// consider a Security Group not found as a successful deletion
+			cause := fail.Cause(xerr)
+			if _, ok := cause.(*fail.ErrNotFound); ok {
+				debug.IgnoreError(cause)
+			} else {
+				return fail.Wrap(cause, "stopping retries")
+			}
 		default:
 			return xerr
 		}
@@ -200,8 +217,7 @@ func (instance *SecurityGroup) unsafeDelete(ctx context.Context, force bool) fai
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			logrus.Tracef("core not found, deletion considered as a success")
-			fail.Ignore(xerr)
-			// continue
+			debug.IgnoreError(xerr)
 		default:
 			return xerr
 		}
@@ -225,7 +241,7 @@ func (instance *SecurityGroup) unsafeClear(task concurrency.Task) fail.Error {
 }
 
 // unsafeAddRule adds a rule to a security group
-func (instance *SecurityGroup) unsafeAddRule(task concurrency.Task, rule *abstract.SecurityGroupRule) (xerr fail.Error) {
+func (instance *SecurityGroup) unsafeAddRule(rule *abstract.SecurityGroupRule) (xerr fail.Error) {
 	defer fail.OnPanic(&xerr)
 
 	if rule.IsNull() {
@@ -238,12 +254,12 @@ func (instance *SecurityGroup) unsafeAddRule(task concurrency.Task, rule *abstra
 			return fail.InconsistentError("'*abstract.SecurityGroup' expected, '%s' provided", reflect.TypeOf(clonable).String())
 		}
 
-		newAsg, innerXErr := instance.GetService().AddRuleToSecurityGroup(asg, rule)
+		_, innerXErr := instance.GetService().AddRuleToSecurityGroup(asg, rule)
 		if innerXErr != nil {
 			return innerXErr
 		}
 
-		asg.Replace(newAsg)
+		// asg.Replace(newAsg)
 		return nil
 	})
 }

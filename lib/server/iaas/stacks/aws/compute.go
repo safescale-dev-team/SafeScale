@@ -382,7 +382,7 @@ func toAbstractHostTemplate(in ec2.InstanceTypeInfo) abstract.HostTemplate {
 	return out
 }
 
-// WaitHostReady waits an host achieve ready state
+// WaitHostReady waits until a host achieves ready state
 // hostParam can be an ID of host, or an instance of *resources.Host; any other type will panic
 func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Duration) (_ *abstract.HostCore, xerr fail.Error) {
 	nullAHC := abstract.NewHostCore()
@@ -429,9 +429,9 @@ func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Durati
 	if retryErr != nil {
 		switch retryErr.(type) {
 		case *retry.ErrStopRetry:
-			return nullAHC, fail.ConvertError(retryErr.Cause())
+			return nullAHC, fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return nullAHC, fail.Wrap(retryErr.Cause(), "timeout waiting to get host '%s' information after %v", ahf.GetID(), timeout)
+			return nullAHC, fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", ahf.GetID(), timeout)
 		default:
 			return nullAHC, retryErr
 		}
@@ -459,7 +459,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, fail.InvalidRequestError("the Host '%s' must be on at least one Subnet (even if public)", resourceName)
 	}
 
-	// If no credentials (KeyPair and/or Password) are  supplied create ones
+	// If no credentials (KeyPair and/or Password) are supplied create ones
 	if xerr = stacks.ProvideCredentialsIfNeeded(&request); xerr != nil {
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to provide credentials for Host")
 	}
@@ -490,7 +490,6 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to prepare user data content")
 	}
 
-	// Determine system disk size based on vcpus count
 	template, xerr := s.InspectTemplate(request.TemplateID)
 	if xerr != nil {
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to get host template '%s'", request.TemplateID)
@@ -550,7 +549,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	logrus.Debugf("requesting host resource creation...")
 
 	// Retry creation until success, for 10 minutes
-	xerr = retry.WhileUnsuccessfulDelay5Seconds(
+	xerr = retry.WhileUnsuccessful(
 		func() error {
 			var (
 				server    *abstract.HostCore
@@ -596,14 +595,15 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 
 			return nil
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetLongOperationTimeout(),
 	)
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrStopRetry:
-			return nullAHF, nullUDC, fail.ConvertError(xerr.Cause())
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "failed to create Host, stopping retries")
 		case *fail.ErrTimeout:
-			return nullAHF, nullUDC, fail.Wrap(xerr.Cause(), "failed to create Host because of timeout")
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "failed to create Host because of timeout")
 		default:
 			return nullAHF, nullUDC, xerr
 		}
@@ -1039,8 +1039,10 @@ func (s stack) StopHost(hostParam stacks.HostParameter, gracefully bool) (xerr f
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.Wrap(retryErr.Cause(), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
 		default:
 			return retryErr
 		}
@@ -1084,8 +1086,10 @@ func (s stack) StartHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.Wrap(retryErr.Cause(), "timeout waiting to get information of host '%s' after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get information of host '%s' after %v", hostRef, temporal.GetHostCleanupTimeout())
 		default:
 			return retryErr
 		}
@@ -1128,8 +1132,10 @@ func (s stack) RebootHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.NewError("timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
 		default:
 			return retryErr
 		}

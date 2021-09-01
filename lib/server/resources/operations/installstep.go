@@ -300,10 +300,11 @@ func (is *step) Run(ctx context.Context, hosts []resources.Host, v data.Map, s r
 			if xerr != nil {
 				return nil, xerr
 			}
-			subtask, err := concurrency.NewTaskWithParent(task)
-			err = debug.InjectPlannedFail(err)
-			if err != nil {
-				return nil, err
+
+			subtask, xerr := concurrency.NewTaskWithParent(task, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s", h.GetName())))
+			xerr = debug.InjectPlannedFail(xerr)
+			if xerr != nil {
+				return nil, xerr
 			}
 
 			outcome, xerr := subtask.Run(is.taskRunOnHost, runOnHostParameters{Host: h, Variables: cloneV})
@@ -393,7 +394,9 @@ func (is *step) Run(ctx context.Context, hosts []resources.Host, v data.Map, s r
 					is.Worker.action.String(), is.Worker.feature.GetName(), is.Name, k, temporal.FormatDuration(time.Since(is.Worker.startTime))))
 				continue
 			}
-			outcomes.AddOne(k, outcome.(resources.UnitResult))
+			if outcome != nil {
+				outcomes.AddOne(k, outcome.(resources.UnitResult))
+			}
 
 			if !outcomes.Successful() {
 				if is.Worker.action == installaction.Check { // Checks can fail and it's ok
@@ -446,7 +449,7 @@ func (is *step) taskRunOnHost(task concurrency.Task, params concurrency.TaskPara
 	command, xerr := replaceVariablesInString(is.Script, p.Variables)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return stepResult{err: fail.Wrap(xerr, "failed to finalize installer script for step '%s'", is.Name)}, nil
+		return stepResult{err: fail.Wrap(xerr, "failed to finalize installer script for step '%s'", is.Name)}, xerr
 	}
 
 	// If options file is defined, upload it to the remote rh
@@ -456,11 +459,11 @@ func (is *step) taskRunOnHost(task concurrency.Task, params concurrency.TaskPara
 			RemoteOwner:  "cladm:safescale", // FIXME: group 'safescale' must be replaced with OperatorUsername here, and why cladm is being used ?
 			RemoteRights: "ug+rw-x,o-rwx",
 		}
-		xerr = rfcItem.UploadString(task.GetContext(), is.OptionsFileContent, p.Host)
-		_ = os.Remove(rfcItem.Local)
+		xerr = rfcItem.UploadString(task.Context(), is.OptionsFileContent, p.Host)
 		xerr = debug.InjectPlannedFail(xerr)
+		_ = os.Remove(rfcItem.Local)
 		if xerr != nil {
-			return stepResult{err: xerr}, nil
+			return stepResult{err: xerr}, xerr
 		}
 	}
 
@@ -477,11 +480,11 @@ func (is *step) taskRunOnHost(task concurrency.Task, params concurrency.TaskPara
 	rfcItem := remotefile.Item{
 		Remote: filename,
 	}
-	xerr = rfcItem.UploadString(task.GetContext(), command, p.Host)
+	xerr = rfcItem.UploadString(task.Context(), command, p.Host)
 	_ = os.Remove(rfcItem.Local)
 	xerr = debug.InjectPlannedFail(xerr)
 	if xerr != nil {
-		return stepResult{err: xerr}, nil
+		return stepResult{err: xerr}, xerr
 	}
 
 	if !hidesOutput {
@@ -490,12 +493,59 @@ func (is *step) taskRunOnHost(task concurrency.Task, params concurrency.TaskPara
 		command = fmt.Sprintf("sudo -- bash -x -c 'sync; chmod u+rx %s; captf=$(mktemp); bash -x -c \"BASH_XTRACEFD=7 %s 7>$captf 2>&7\"; rc=${PIPESTATUS};cat $captf; rm $captf; exit ${rc}'", filename, filename)
 	}
 
-	// Executes the script on the remote host
-	retcode, outrun, _, xerr := p.Host.Run(task.GetContext(), command, outputs.COLLECT, temporal.GetConnectionTimeout(), is.WallTime)
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		_ = xerr.Annotate("stdout", outrun)
-		return stepResult{err: xerr, retcode: retcode, output: outrun}, nil
+	// If retcode is 126, iterate a few times...
+	rounds := 10
+	var retcode int
+	var outrun string
+	var outerr string
+	for {
+		retcode, outrun, outerr, xerr = p.Host.Run(task.Context(), command, outputs.COLLECT, temporal.GetConnectionTimeout(), is.WallTime)
+		if retcode == 126 {
+			logrus.Debugf("Text busy happened")
+		}
+
+		// Executes the script on the remote host
+		if retcode != 126 || rounds == 0 {
+			if retcode == 126 {
+				logrus.Warnf("Text busy killed the script")
+			}
+			xerr = debug.InjectPlannedFail(xerr)
+			if xerr != nil {
+				_ = xerr.Annotate("retcode", retcode)
+				_ = xerr.Annotate("stdout", outrun)
+				_ = xerr.Annotate("stderr", outerr)
+				return stepResult{err: xerr, retcode: retcode, output: outrun}, xerr
+			}
+			break
+		}
+
+		if !(strings.Contains(outrun, "bad interpreter") || strings.Contains(outerr, "bad interpreter")) {
+			if xerr == nil {
+				xerr = debug.InjectPlannedFail(xerr)
+				if xerr != nil {
+					_ = xerr.Annotate("retcode", retcode)
+					_ = xerr.Annotate("stdout", outrun)
+					_ = xerr.Annotate("stderr", outerr)
+					return stepResult{err: xerr, retcode: retcode, output: outrun}, xerr
+				}
+				break
+			}
+
+			if !strings.Contains(xerr.Error(), "bad interpreter") {
+				xerr = debug.InjectPlannedFail(xerr)
+				if xerr != nil {
+					_ = xerr.Annotate("retcode", retcode)
+					_ = xerr.Annotate("stdout", outrun)
+					_ = xerr.Annotate("stderr", outerr)
+					return stepResult{err: xerr, retcode: retcode, output: outrun}, xerr
+				} else {
+					break
+				}
+			}
+		}
+
+		rounds--
+		time.Sleep(temporal.GetMinDelay())
 	}
 
 	return stepResult{success: retcode == 0, completed: true, err: nil, retcode: retcode, output: outrun}, nil

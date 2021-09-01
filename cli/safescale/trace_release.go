@@ -1,4 +1,4 @@
-// +build darwin,ignore
+// +build release
 
 /*
  * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
@@ -16,22 +16,19 @@
  * limitations under the License.
  */
 
-package concurrency
+package main
 
-import (
-	"fmt"
-	"runtime"
-	"strconv"
-	"strings"
-)
-
-func goid() int {
-	var buf [64]byte
-	n := runtime.Stack(buf[:], false)
-	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-	id, err := strconv.Atoi(idField)
-	if err != nil {
-		panic(fmt.Sprintf("cannot get goroutine id: %v", err))
-	}
-	return id
+// appTrace contains the default parts that we want to trace
+func appTrace() string {
+	return `
+{
+    "concurrency": {
+        "lock": false,
+        "task": false
+    },
+    "ssh": {},
+    "resources": {
+        "cluster": true
+    }
+}`
 }

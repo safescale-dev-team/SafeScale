@@ -36,7 +36,7 @@ import (
 
 var (
 	cloudferroIdentityEndpoint = "https://cf2.cloudferro.com:5000/v3"
-	cloudferroDefaultImage     = "Ubuntu 18.04"
+	cloudferroDefaultImage     = "Ubuntu 20.04"
 	cloudferroDNSServers       = []string{"185.48.234.234", "185.48.234.238"}
 )
 
@@ -135,11 +135,12 @@ func (p *provider) Build(params map[string]interface{}) (providers.Provider, fai
 			"Hdd": volumespeed.Hdd,
 			"Ssd": volumespeed.Ssd,
 		},
-		MetadataBucket:   metadataBucketName,
-		DNSList:          cloudferroDNSServers,
-		DefaultImage:     defaultImage,
-		OperatorUsername: operatorUsername,
-		ProviderName:     providerName,
+		MetadataBucket:           metadataBucketName,
+		DNSList:                  cloudferroDNSServers,
+		DefaultImage:             defaultImage,
+		OperatorUsername:         operatorUsername,
+		ProviderName:             providerName,
+		DefaultSecurityGroupName: "default",
 	}
 
 	stack, xerr := openstack.New(authOptions, nil, cfgOptions, nil)

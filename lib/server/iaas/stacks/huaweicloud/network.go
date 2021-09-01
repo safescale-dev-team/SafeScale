@@ -350,11 +350,12 @@ func (s stack) CreateSubnet(req abstract.SubnetRequest) (subnet *abstract.Subnet
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			an, xerr = s.InspectNetworkByName(req.NetworkID)
+			if xerr != nil {
+				return nullAS, xerr
+			}
 		default:
+			return nullAS, xerr
 		}
-	}
-	if xerr != nil {
-		return nullAS, xerr
 	}
 
 	// Checks if CIDR is valid for huaweicloud
@@ -709,7 +710,7 @@ func (s stack) createSubnet(req abstract.SubnetRequest) (*subnets.Subnet, fail.E
 	opts.JSONResponse = &respGet.Body
 	opts.JSONBody = nil
 
-	retryErr := retry.WhileUnsuccessfulDelay1SecondWithNotify(
+	retryErr := retry.WhileUnsuccessfulWithNotify(
 		func() error {
 			innerXErr := stacks.RetryableRemoteCall(
 				func() error {
@@ -726,6 +727,7 @@ func (s stack) createSubnet(req abstract.SubnetRequest) (*subnets.Subnet, fail.E
 			}
 			return normalizeError(err)
 		},
+		temporal.GetMinDelay(),
 		temporal.GetContextTimeout(),
 		func(try retry.Try, v verdict.Enum) {
 			if v != verdict.Done {
@@ -733,7 +735,18 @@ func (s stack) createSubnet(req abstract.SubnetRequest) (*subnets.Subnet, fail.E
 			}
 		},
 	)
-	return &subnet.Subnet, retryErr
+	if retryErr != nil {
+		switch retryErr.(type) {
+		case *retry.ErrStopRetry: // here it should never happen
+			return nil, fail.Wrap(fail.Cause(retryErr), "stopping retries")
+		case *retry.ErrTimeout:
+			return nil, fail.Wrap(fail.Cause(retryErr), "timeout")
+		default:
+			return nil, retryErr
+		}
+	}
+
+	return &subnet.Subnet, nil
 }
 
 func fromIntIPVersion(v int) ipversion.Enum {

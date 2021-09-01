@@ -1,4 +1,4 @@
-// +build !windows,!darwin,ignore
+// +build !release
 
 /*
  * Copyright 2018-2021, CS Systemes d'Information, http://csgroup.eu
@@ -16,12 +16,21 @@
  * limitations under the License.
  */
 
-package concurrency
+package main
 
-import (
-	"golang.org/x/sys/unix"
-)
-
-func goid() int { // nolint
-	return unix.Gettid()
+// appTrace contains the default parts that we want to trace
+func appTrace() string {
+	return `
+{
+    "concurrency": {
+        "lock": false,
+        "task": false
+    },
+    "ssh": {},
+    "listeners": {},
+    "handlers": {},
+    "resources": {
+        "cluster": true
+    }
+}`
 }
