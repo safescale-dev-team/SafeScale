@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-VERSION=21.05.0-rc1
-=======
 VERSION=21.05.0-rc3
->>>>>>> e2aaadf8ef87fcdddb6a3c150f711e0d2a7dda9b
 export VERSION
 
 ifeq ($(MAKE_LEVEL),)

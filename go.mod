@@ -57,16 +57,6 @@ require (
 	github.com/vmware/go-vcloud-director v2.0.0+incompatible
 	github.com/xrash/smetrics v0.0.0-20170218160415-a3153f7040e9
 	golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670
-<<<<<<< HEAD
-	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4
-	golang.org/x/oauth2 v0.0.0-20210313182246-cd4f82c27b84
-	golang.org/x/sys v0.0.0-20210601080250-7ecdf8ef093b
-	gomodules.xyz/stow v0.2.4
-	google.golang.org/api v0.30.0
-	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/grpc v1.31.0
-	google.golang.org/protobuf v1.25.0
-=======
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
 	golang.org/x/oauth2 v0.0.0-20210313182246-cd4f82c27b84
@@ -78,7 +68,6 @@ require (
 	google.golang.org/grpc v1.39.1
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
->>>>>>> e2aaadf8ef87fcdddb6a3c150f711e0d2a7dda9b
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

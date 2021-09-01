@@ -108,10 +108,7 @@ lib/server/iaas/userdata/version.go
 .run/
 
 .DS_Store
-<<<<<<< HEAD
-=======
 
 *.pprof
 
 *.tar.gz
->>>>>>> e2aaadf8ef87fcdddb6a3c150f711e0d2a7dda9b
