@@ -307,7 +307,7 @@ func writeChunk(container stow.Container, objectName string, source io.Reader, n
 
 // Delete deletes the object from Object Storage
 func (o *object) Delete() fail.Error {
-	if o.IsNull() {
+	if o == nil || o.IsNull() {
 		return fail.InvalidInstanceError()
 	}
 	if o.item == nil {
