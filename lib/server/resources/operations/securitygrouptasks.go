@@ -107,53 +107,35 @@ func (instance *SecurityGroup) taskUnbindFromHostsAttachedToSubnet(task concurre
 	sgID := instance.GetID()
 	svc := instance.GetService()
 
-	rs, xerr := LoadNetwork(svc, subnetID)
-	xerr = debug.InjectPlannedFail(xerr)
-	if xerr != nil {
-		switch xerr.(type) {
-		case *fail.ErrNotFound:
-			// subnet does not exist anymore ? considered as a success and continue
-			debug.IgnoreError(xerr)
-		default:
-			return nil, xerr
+	if len(p.subnetHosts.ByID) > 0 {
+		tg, xerr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption)
+		if xerr != nil {
+			return nil, fail.Wrap(xerr, "failed to start new task group to remove Security Group '%s' from Hosts attached to the Subnet '%s'", instance.GetName(), p.subnetName)
 		}
-	} else {
-		// Unbinds security group from hosts attached to subnet
-		xerr = rs.Alter(func(_ data.Clonable, props *serialize.JSONProperties) fail.Error {
-			innerXErr := props.Alter(subnetproperty.SecurityGroupsV1, func(clonable data.Clonable) fail.Error {
-				nsgV1, ok := clonable.(*propertiesv1.SubnetHosts)
-				if !ok {
-					return fail.InconsistentError("'*propertiesv1.NetworkHosts' expected, '%s' provided", reflect.TypeOf(clonable).String())
-				}
-				tg, innerXErr := concurrency.NewTaskGroupWithParent(task, concurrency.InheritParentIDOption)
-				if innerXErr != nil {
-					return fail.Wrap(innerXErr, "failed to start new task group to remove Security Group '%s' from Hosts attached to the Subnet '%s'", instance.GetName(), rs.GetName())
-				}
 
-				for _, v := range nsgV1.ByName {
-					_, innerXErr = tg.Start(instance.taskUnbindFromHost, v, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/unbind", v)))
-					if innerXErr != nil {
-						break
-					}
-				}
-				_, innerXErr = tg.WaitGroup()
-				return innerXErr
-			})
-			if innerXErr != nil {
-				return innerXErr
+		svc := instance.GetService()
+		for k, v := range p.subnetHosts.ByID {
+			hostInstance, xerr := LoadHost(svc, k)
+			if xerr != nil {
+				return nil, xerr
 			}
+			defer func(in resources.Host) {
+				in.Released()
+			}(hostInstance)
 
-			return props.Alter(subnetproperty.SecurityGroupsV1, func(clonable data.Clonable) fail.Error {
-				ssgV1, ok := clonable.(*propertiesv1.SubnetSecurityGroups)
-				if !ok {
-					return fail.InconsistentError("'*propertiesv1.SubnetSecurityGroups' expected, '%s' provided", reflect.TypeOf(clonable).String())
-				}
-
-				delete(ssgV1.ByID, sgID)
-				delete(ssgV1.ByName, sgName)
-				return nil
-			})
-		})
+			_, xerr = tg.Start(instance.taskUnbindFromHost, hostInstance, concurrency.InheritParentIDOption, concurrency.AmendID(fmt.Sprintf("/host/%s/unbind", v)))
+			if xerr != nil {
+				break
+			}
+		}
+		_, werr := tg.WaitGroup()
+		if werr != nil {
+			if xerr != nil {
+				_ = xerr.AddConsequence(werr)
+			} else {
+				xerr = werr
+			}
+		}
 
 		return nil, xerr
 	}
