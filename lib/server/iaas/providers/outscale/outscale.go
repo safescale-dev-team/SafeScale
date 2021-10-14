@@ -30,6 +30,10 @@ import (
 	"github.com/CS-SI/SafeScale/lib/utils/fail"
 )
 
+const (
+	outscaleDefaultImage = "Ubuntu 20.04"
+)
+
 // provider is integration of outscale IaaS API
 // see https://docs.outscale.com/api
 type provider struct {
@@ -123,13 +127,13 @@ func (p *provider) Build(opt map[string]interface{}) (_ providers.Provider, xerr
 			SecretKey: get(identity, "SecretKey"),
 		},
 		Compute: outscale.ComputeConfiguration{
-			URL:                get(compute, "URL", "outscale.com/api/latest"),
+			URL:                get(compute, "URL", fmt.Sprintf("https://api.%s.outscale.com/api/v1", region)),
 			Service:            get(compute, "Service", "api"),
 			Region:             region,
 			Subregion:          get(compute, "Subregion"),
 			DNSList:            getList(compute, "DNSList"),
 			DefaultTenancy:     get(compute, "DefaultTenancy", "default"),
-			DefaultImage:       get(compute, "DefaultImage"),
+			DefaultImage:       get(compute, "DefaultImage", outscaleDefaultImage),
 			DefaultVolumeSpeed: volumeSpeed(get(compute, "DefaultVolumeSpeed", "Hdd")),
 			OperatorUsername:   get(compute, "OperatorUsername", "safescale"),
 		},
@@ -140,13 +144,13 @@ func (p *provider) Build(opt map[string]interface{}) (_ providers.Provider, xerr
 		ObjectStorage: outscale.StorageConfiguration{
 			AccessKey: get(objstorage, "AccessKey", get(identity, "AccessKey")),
 			SecretKey: get(objstorage, "SecretKey", get(identity, "SecretKey")),
-			Endpoint:  get(objstorage, "Endpoint", fmt.Sprintf("https://osu.%s.outscale.com", get(compute, "Region"))),
+			Endpoint:  get(objstorage, "Endpoint", fmt.Sprintf("https://oos.%s.outscale.com", get(compute, "Region"))),
 			Type:      get(objstorage, "Type", "s3"),
 		},
 		Metadata: outscale.MetadataConfiguration{
 			AccessKey: get(metadata, "AccessKey", get(objstorage, "AccessKey", get(identity, "AccessKey"))),
 			SecretKey: get(metadata, "SecretKey", get(objstorage, "SecretKey", get(identity, "SecretKey"))),
-			Endpoint:  get(metadata, "Endpoint", get(objstorage, "Endpoint", fmt.Sprintf("https://osu.%s.outscale.com", get(compute, "Region")))),
+			Endpoint:  get(metadata, "Endpoint", get(objstorage, "Endpoint", fmt.Sprintf("https://oos.%s.outscale.com", get(compute, "Region")))),
 			Type:      get(metadata, "Type", get(objstorage, "Type", "s3")),
 			Bucket:    get(metadata, "Bucket", "0.safescale"),
 			CryptKey:  get(metadata, "CryptKey", "safescale"),

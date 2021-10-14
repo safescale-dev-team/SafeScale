@@ -22,12 +22,11 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/sirupsen/logrus"
 
-	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks/api"
-
 	"github.com/CS-SI/SafeScale/lib/server/iaas"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/objectstorage"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/providers"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks"
+	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks/api"
 	"github.com/CS-SI/SafeScale/lib/server/iaas/stacks/openstack"
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
 	"github.com/CS-SI/SafeScale/lib/server/resources/enums/volumespeed"
@@ -135,11 +134,12 @@ func (p *provider) Build(params map[string]interface{}) (providers.Provider, fai
 			"Hdd": volumespeed.Hdd,
 			"Ssd": volumespeed.Ssd,
 		},
-		MetadataBucket:   metadataBucketName,
-		DNSList:          cloudferroDNSServers,
-		DefaultImage:     defaultImage,
-		OperatorUsername: operatorUsername,
-		ProviderName:     providerName,
+		MetadataBucket:           metadataBucketName,
+		DNSList:                  cloudferroDNSServers,
+		DefaultImage:             defaultImage,
+		OperatorUsername:         operatorUsername,
+		ProviderName:             providerName,
+		DefaultSecurityGroupName: "default",
 	}
 
 	stack, xerr := openstack.New(authOptions, nil, cfgOptions, nil)

@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/CS-SI/SafeScale/lib/server/resources/abstract"
+	"github.com/CS-SI/SafeScale/lib/utils/debug"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 
@@ -208,32 +209,36 @@ func New(auth stacks.AuthenticationOptions, authScope *gophercloud.AuthScope, cf
 		}
 	}
 
-	validRegions, xerr := s.ListRegions()
-	if xerr != nil {
-		switch xerr.(type) {
-		case *fail.ErrNotFound:
-			// continue
-		default:
-			return nil, xerr
-		}
-	} else if len(validRegions) != 0 {
-		regionIsValidInput := false
-		for _, vr := range validRegions {
-			if auth.Region == vr {
-				regionIsValidInput = true
-			}
-		}
-		if !regionIsValidInput {
-			return nil, fail.InvalidRequestError("invalid Region '%s'", auth.Region)
-		}
+	// VPL: Moved in iaas.factory.go to be applied on all providers
+	// PS: did not work anyway, ListRegions returns nothing with OVH
+	// validRegions, xerr := s.ListRegions()
+	// if xerr != nil {
+	// 	switch xerr.(type) {
+	// 	case *fail.ErrNotFound:
+	// 		// continue
+	// 		debug.IgnoreError(xerr)
+	// 	default:
+	// 		return nil, xerr
+	// 	}
+	// } else if len(validRegions) != 0 {
+	// 	regionIsValidInput := false
+	// 	for _, vr := range validRegions {
+	// 		if auth.Region == vr {
+	// 			regionIsValidInput = true
+	// 		}
+	// 	}
+	// 	if !regionIsValidInput {
+	// 		return nil, fail.InvalidRequestError("invalid Region '%s'", auth.Region)
+	// 	}
+	// }
 
-	}
-
+	// FIXME: should be moved on iaas.factory.go to apply on all providers (if the provider proposes AZ)
 	validAvailabilityZones, xerr := s.ListAvailabilityZones()
 	if xerr != nil {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
+			debug.IgnoreError(xerr)
 		default:
 			return nil, xerr
 		}

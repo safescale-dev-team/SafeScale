@@ -67,7 +67,8 @@ func (s Stack) GetDefaultNetwork() (*abstract.Network, fail.Error) {
 }
 
 // CreateNetwork creates a network named name
-func (s Stack) CreateNetwork(req abstract.NetworkRequest) (newNet *abstract.Network, xerr fail.Error) {
+func (s Stack) CreateNetwork(req abstract.NetworkRequest) (newNet *abstract.Network, ferr fail.Error) {
+	var xerr fail.Error
 	nullAN := abstract.NewNetwork()
 	if s.IsNull() {
 		return nullAN, fail.InvalidInstanceError()
@@ -110,7 +111,7 @@ func (s Stack) CreateNetwork(req abstract.NetworkRequest) (newNet *abstract.Netw
 
 	// Starting from here, delete network if exit with error
 	defer func() {
-		if xerr != nil {
+		if ferr != nil {
 			derr := stacks.RetryableRemoteCall(
 				func() error {
 					return networks.Delete(s.NetworkClient, network.ID).ExtractErr()
@@ -119,7 +120,7 @@ func (s Stack) CreateNetwork(req abstract.NetworkRequest) (newNet *abstract.Netw
 			)
 			if derr != nil {
 				logrus.Errorf("failed to delete Network '%s': %v", req.Name, derr)
-				_ = xerr.AddConsequence(derr)
+				_ = ferr.AddConsequence(derr)
 			}
 		}
 	}()
@@ -204,6 +205,7 @@ func (s Stack) InspectNetwork(id string) (*abstract.Network, fail.Error) {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
+			debug.IgnoreError(xerr)
 		default:
 			return nullAN, xerr
 		}
@@ -342,7 +344,7 @@ func ToAbstractIPVersion(v int) ipversion.Enum {
 }
 
 // CreateSubnet creates a subnet
-func (s Stack) CreateSubnet(req abstract.SubnetRequest) (newNet *abstract.Subnet, xerr fail.Error) {
+func (s Stack) CreateSubnet(req abstract.SubnetRequest) (newNet *abstract.Subnet, ferr fail.Error) {
 	nullAS := abstract.NewSubnet()
 	if s.IsNull() {
 		return nullAS, fail.InvalidInstanceError()
@@ -387,6 +389,7 @@ func (s Stack) CreateSubnet(req abstract.SubnetRequest) (newNet *abstract.Subnet
 	}
 
 	var subnet *subnets.Subnet
+	var xerr fail.Error
 	// Execute the operation and get back a subnets.Subnet struct
 	xerr = stacks.RetryableRemoteCall(
 		func() (innerErr error) {
@@ -401,12 +404,12 @@ func (s Stack) CreateSubnet(req abstract.SubnetRequest) (newNet *abstract.Subnet
 
 	// Starting from here, delete subnet if exit with error
 	defer func() {
-		if xerr != nil {
+		if ferr != nil {
 			derr := s.DeleteSubnet(subnet.ID)
 			if derr != nil {
 				wrapErr := fail.Wrap(derr, "cleaning up on failure, failed to delete Subnet '%s'", subnet.Name)
 				logrus.Error(wrapErr.Error())
-				_ = xerr.AddConsequence(wrapErr)
+				_ = ferr.AddConsequence(wrapErr)
 			}
 		}
 	}()
@@ -514,11 +517,14 @@ func (s Stack) InspectSubnetByName(networkRef, name string) (subnet *abstract.Su
 			switch xerr.(type) { //nolint
 			case *fail.ErrNotFound:
 				an, xerr = s.InspectNetworkByName(networkRef)
+				if xerr != nil {
+					return nullAS, xerr
+				}
+			default:
+				return nullAS, xerr
 			}
 		}
-		if xerr != nil {
-			return nullAS, xerr
-		}
+
 		listOpts.NetworkID = an.ID
 	}
 
@@ -620,6 +626,7 @@ func (s Stack) DeleteSubnet(id string) fail.Error {
 	routerList, _ := s.ListRouters()
 	var router *Router
 	for _, r := range routerList {
+		r := r
 		if r.Name == id {
 			router = &r
 			break
@@ -634,7 +641,7 @@ func (s Stack) DeleteSubnet(id string) fail.Error {
 		}
 	}
 
-	retryErr := retry.WhileUnsuccessfulDelay5Seconds(
+	retryErr := retry.WhileUnsuccessful(
 		func() error {
 			innerXErr := stacks.RetryableRemoteCall(
 				func() error {
@@ -644,24 +651,27 @@ func (s Stack) DeleteSubnet(id string) fail.Error {
 			)
 			if innerXErr != nil {
 				switch innerXErr.(type) {
-				case *fail.ErrInvalidRequest:
+				case *fail.ErrInvalidRequest, *fail.ErrDuplicate:
 					msg := "hosts or services are still attached"
-					logrus.Warnf(strprocess.Capitalize(msg))
-					return retry.StopRetryError(abstract.ResourceNotAvailableError("subnet", id), msg)
+					return retry.StopRetryError(fail.Wrap(innerXErr, msg))
+				case *fail.ErrNotFound:
+					// consider a missing Subnet as a successful deletion
+					debug.IgnoreError(innerXErr)
 				default:
 					return innerXErr
 				}
 			}
 			return nil
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetContextTimeout(),
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
 		case *retry.ErrTimeout:
-			return abstract.ResourceTimeoutError("network", id, temporal.GetContextTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout")
 		case *retry.ErrStopRetry:
-			return fail.Wrap(retryErr.Cause(), "failed to delete subnet after %v", temporal.GetContextTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		default:
 			return retryErr
 		}
@@ -894,6 +904,7 @@ func (s Stack) BindHostToVIP(vip *abstract.VirtualIP, hostID string) fail.Error 
 		IPAddress:  vip.PrivateIP,
 	}
 	for _, p := range hostPorts {
+		p := p
 		p.AllowedAddressPairs = append(p.AllowedAddressPairs, addressPair)
 		xerr = stacks.RetryableRemoteCall(
 			func() error {

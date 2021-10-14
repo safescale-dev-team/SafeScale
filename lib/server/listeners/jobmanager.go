@@ -18,6 +18,7 @@ package listeners
 
 import (
 	"context"
+
 	"github.com/CS-SI/SafeScale/lib/server/resources/operations"
 
 	"github.com/CS-SI/SafeScale/lib/protocol"
@@ -54,11 +55,11 @@ func PrepareJob(ctx context.Context, tenantID string, jobDescription string) (_ 
 		}
 	}
 	newctx, cancel := context.WithCancel(ctx)
-
 	job, xerr := server.NewJob(newctx, cancel, tenant.Service, jobDescription)
 	if xerr != nil {
 		return nil, xerr
 	}
+
 	return job, nil
 }
 
@@ -81,7 +82,12 @@ func PrepareJobWithoutService(ctx context.Context, jobDescription string) (_ ser
 }
 
 // JobManagerListener service server gRPC
-type JobManagerListener struct{}
+type JobManagerListener struct {
+	protocol.UnimplementedJobServiceServer
+}
+
+// // VPL: workaround to make SafeScale compile with recent gRPC changes, before understanding the scope of these changes
+// func (s *JobManagerListener) mustEmbedUnimplementedJobServiceServer() {}
 
 // Stop specified process
 func (s *JobManagerListener) Stop(ctx context.Context, in *protocol.JobDefinition) (empty *googleprotobuf.Empty, err error) {
@@ -154,7 +160,7 @@ func (s *JobManagerListener) List(ctx context.Context, in *googleprotobuf.Empty)
 	jobMap := server.ListJobs()
 	var pbProcessList []*protocol.JobDefinition
 	for uuid, info := range jobMap {
-		status, _ := task.GetStatus()
+		status, _ := task.Status()
 		if status == concurrency.ABORTED {
 			return nil, fail.AbortedError(nil)
 		}

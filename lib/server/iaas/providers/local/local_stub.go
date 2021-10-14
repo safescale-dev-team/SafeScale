@@ -1,3 +1,4 @@
+//go:build !libvirt
 // +build !libvirt
 
 /*
@@ -193,7 +194,7 @@ func (provider *provider) DeleteHost(hostParam stacks.HostParameter) fail.Error 
 func (provider *provider) StartHost(hostParam stacks.HostParameter) fail.Error {
 	return gReport
 }
-func (provider *provider) StopHost(hostParam stacks.HostParameter) fail.Error {
+func (provider *provider) StopHost(hostParam stacks.HostParameter, gracefully bool) fail.Error {
 	return gReport
 }
 func (provider *provider) RebootHost(hostParam stacks.HostParameter) fail.Error {

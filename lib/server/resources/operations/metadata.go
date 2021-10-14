@@ -48,7 +48,7 @@ func CheckMetadataVersion(svc iaas.Service) (string, fail.Error) {
 		return "", xerr
 	}
 
-	xerr = folder.Read("", "version", func(data []byte) fail.Error {
+	xerr = folder.Read("/", "version", func(data []byte) fail.Error {
 		currentMetadataVersion = string(data)
 		return nil
 	}, data.NewImmutableKeyValue("doNotCrypt", true),
@@ -58,6 +58,7 @@ func CheckMetadataVersion(svc iaas.Service) (string, fail.Error) {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// continue
+			debug.IgnoreError(xerr)
 		default:
 			return "", fail.Wrap(xerr, "failed to read content of 'version' file in metadata bucket")
 		}

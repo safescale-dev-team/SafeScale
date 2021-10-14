@@ -318,7 +318,7 @@ func (s stack) ListTemplates() (_ []abstract.HostTemplate, xerr fail.Error) {
 }
 
 // InspectImage returns the Image referenced by id
-func (s stack) InspectImage(id string) (_ abstract.Image, xerr fail.Error) {
+func (s stack) InspectImage(id string) (_ abstract.Image, ferr fail.Error) {
 	nullImage := abstract.Image{}
 	if s.IsNull() {
 		return nullImage, fail.InvalidInstanceError()
@@ -331,8 +331,8 @@ func (s stack) InspectImage(id string) (_ abstract.Image, xerr fail.Error) {
 	defer tracer.Exiting()
 
 	defer func() {
-		if xerr != nil {
-			xerr = fail.Wrap(xerr, fmt.Sprintf("failed to get image '%s'", id))
+		if ferr != nil {
+			ferr = fail.Wrap(ferr, fmt.Sprintf("failed to get image '%s'", id))
 		}
 	}()
 
@@ -492,7 +492,7 @@ func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Durati
 // WaitHostState wait for host to be in the specified state
 // On exit, xerr may be of type:
 // - *retry.ErrTimeout: when the timeout is reached
-// - *retry.ErrStopRetry: when a breaking error arises; xerr.Cause() contains the real error encountered
+// - *retry.ErrStopRetry: when a breaking error arises; fail.Cause(xerr) contains the real error encountered
 // - fail.Error: any other errors
 func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enum, timeout time.Duration) (_ *abstract.HostCore, xerr fail.Error) {
 	nullAHC := abstract.NewHostCore()
@@ -508,7 +508,7 @@ func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enu
 	tracer := debug.NewTracer(nil, true /*tracing.ShouldTrace("stacks.compute") || tracing.ShouldTrace("stack.outscale")*/, "(%s, %s, %v)", hostLabel, state.String(), timeout).WithStopwatch().Entering()
 	defer tracer.Exiting()
 
-	xerr = retry.WhileUnsuccessfulDelay5SecondsTimeout(
+	xerr = retry.WhileUnsuccessfulWithHardTimeout(
 		func() error {
 			st, innerXErr := s.hostState(ahf.Core.ID)
 			if innerXErr != nil {
@@ -518,6 +518,7 @@ func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enu
 					if state != hoststate.Terminated {
 						return innerXErr
 					}
+					debug.IgnoreError(innerXErr)
 					st = hoststate.Terminated
 				default:
 					return innerXErr
@@ -531,17 +532,18 @@ func (s stack) WaitHostState(hostParam stacks.HostParameter, state hoststate.Enu
 				ahf.CurrentState, ahf.Core.LastState = st, st
 				return nil
 			default:
-				return fail.NewError("wrong state")
+				return fail.NewError("wrong state: %s", st)
 			}
 		},
+		temporal.GetDefaultDelay(),
 		timeout,
 	)
 	if xerr != nil {
 		switch xerr.(type) {
-		case *retry.ErrTimeout:
-			return nullAHC, fail.ConvertError(xerr.Cause())
+		case *fail.ErrTimeout:
+			return nullAHC, fail.Wrap(fail.Cause(xerr), "timeout")
 		case *retry.ErrStopRetry:
-			return nullAHC, fail.NotFoundError("failed to find Host %s", hostLabel)
+			return nullAHC, fail.Wrap(fail.Cause(xerr), "stopping retries")
 		default:
 			return nullAHC, xerr
 		}
@@ -611,7 +613,7 @@ func (s stack) addGPUs(request *abstract.HostRequest, tpl abstract.HostTemplate,
 	return createErr
 }
 
-func (s stack) addVolume(request *abstract.HostRequest, vmID string) (xerr fail.Error) {
+func (s stack) addVolume(request *abstract.HostRequest, vmID string) (ferr fail.Error) {
 	if request.DiskSize == 0 {
 		return nil
 	}
@@ -625,10 +627,10 @@ func (s stack) addVolume(request *abstract.HostRequest, vmID string) (xerr fail.
 		return xerr
 	}
 	defer func() {
-		if xerr != nil {
+		if ferr != nil {
 			derr := s.DeleteVolume(v.ID)
 			if derr != nil {
-				_ = xerr.AddConsequence(derr)
+				_ = ferr.AddConsequence(derr)
 			}
 		}
 	}()
@@ -647,7 +649,7 @@ func (s stack) addVolume(request *abstract.HostRequest, vmID string) (xerr fail.
 	return xerr
 }
 
-func (s stack) addPublicIP(nic osc.Nic) (osc.PublicIp, fail.Error) {
+func (s stack) addPublicIP(nic osc.Nic) (_ osc.PublicIp, ferr fail.Error) {
 	// Allocate public IP
 	resp, xerr := s.rpcCreatePublicIP()
 	if xerr != nil {
@@ -655,9 +657,9 @@ func (s stack) addPublicIP(nic osc.Nic) (osc.PublicIp, fail.Error) {
 	}
 
 	defer func() {
-		if xerr != nil {
+		if ferr != nil {
 			if derr := s.rpcDeletePublicIPByID(resp.PublicIpId); derr != nil {
-				_ = xerr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete public IP with ID %s", resp.PublicIpId))
+				_ = ferr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete public IP with ID %s", resp.PublicIpId))
 			}
 		}
 	}()
@@ -820,7 +822,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, xerr
 	}
 
-	defer func() {
+	defer func() { // FIXME: This should trigger a failure
 		if derr := s.DeleteKeyPair(creationKeyPair.Name); derr != nil {
 			logrus.Errorf("Cleaning up on failure, failed to delete creation keypair: %v", derr)
 		}
@@ -884,15 +886,16 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	}
 
 	var vm osc.Vm
-	xerr = retry.WhileUnsuccessfulDelay5Seconds(
-		func() error {
+	xerr = retry.WhileUnsuccessful(
+		func() (ferr error) {
 			resp, innerXErr := s.rpcCreateVMs(vmsRequest)
 			if innerXErr != nil {
-				switch innerXErr.(type) {
-				case *fail.ErrOverload:
-					return retry.StopRetryError(innerXErr)
+				casted := normalizeError(innerXErr)
+				switch casted.(type) {
+				case *fail.ErrNotFound, *fail.ErrDuplicate, *fail.ErrInvalidRequest, *fail.ErrNotAuthenticated, *fail.ErrForbidden, *fail.ErrOverflow, *fail.ErrSyntax, *fail.ErrInconsistent, *fail.ErrInvalidInstance, *fail.ErrInvalidInstanceContent, *fail.ErrInvalidParameter, *fail.ErrRuntimePanic: // Do not retry if it's going to fail anyway
+					return retry.StopRetryError(casted)
 				default:
-					return innerXErr
+					return casted
 				}
 			}
 
@@ -903,12 +906,12 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 
 			// Delete instance if created to be in good shape to retry in case of error
 			defer func() {
-				if innerXErr != nil {
+				if ferr != nil {
 					logrus.Debugf("Cleaning up on failure, deleting Host '%s'", request.HostName)
 					if derr := s.DeleteHost(vm.VmId); derr != nil {
 						msg := fmt.Sprintf("cleaning up on failure, failed to delete Host '%s'", request.HostName)
 						logrus.Errorf(strprocess.Capitalize(msg))
-						_ = innerXErr.AddConsequence(fail.Wrap(derr, msg))
+						ferr = fail.AddConsequence(ferr, fail.Wrap(derr, msg))
 					} else {
 						logrus.Debugf("Cleaning up on failure, deleted Host '%s' successfully.", request.HostName)
 					}
@@ -918,17 +921,18 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 			_, innerXErr = s.WaitHostState(vm.VmId, hoststate.Started, temporal.GetHostTimeout())
 			return innerXErr
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetLongOperationTimeout(),
 	)
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrStopRetry:
-			xerr = fail.ConvertError(xerr.Cause())
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "stopping retries")
+		case *retry.ErrTimeout:
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "timeout")
 		default:
+			return nullAHF, nullUDC, xerr
 		}
-	}
-	if xerr != nil {
-		return nullAHF, nullUDC, xerr
 	}
 
 	// -- Retrieve default Nic use to create public ip --
@@ -1167,7 +1171,7 @@ func (s stack) ListHosts(details bool) (_ abstract.HostList, xerr fail.Error) {
 }
 
 // StopHost stops the host identified by id
-func (s stack) StopHost(hostParam stacks.HostParameter) (xerr fail.Error) {
+func (s stack) StopHost(hostParam stacks.HostParameter, gracefully bool) (xerr fail.Error) {
 	if s.IsNull() {
 		return fail.InvalidInstanceError()
 	}
@@ -1317,6 +1321,7 @@ func (s stack) UnbindSecurityGroupFromHost(sgParam stacks.SecurityGroupParameter
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// if host is not found, consider operation as a success; continue
+			debug.IgnoreError(xerr)
 			return fail.Wrap(xerr, "failed to query information of Host %s", hostLabel)
 		default:
 			return fail.Wrap(xerr, "failed to query information of Host %s", hostLabel)

@@ -382,7 +382,7 @@ func toAbstractHostTemplate(in ec2.InstanceTypeInfo) abstract.HostTemplate {
 	return out
 }
 
-// WaitHostReady waits an host achieve ready state
+// WaitHostReady waits until a host achieves ready state
 // hostParam can be an ID of host, or an instance of *resources.Host; any other type will panic
 func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Duration) (_ *abstract.HostCore, xerr fail.Error) {
 	nullAHC := abstract.NewHostCore()
@@ -429,9 +429,9 @@ func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Durati
 	if retryErr != nil {
 		switch retryErr.(type) {
 		case *retry.ErrStopRetry:
-			return nullAHC, fail.ConvertError(retryErr.Cause())
+			return nullAHC, fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return nullAHC, fail.Wrap(retryErr.Cause(), "timeout waiting to get host '%s' information after %v", ahf.GetID(), timeout)
+			return nullAHC, fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", ahf.GetID(), timeout)
 		default:
 			return nullAHC, retryErr
 		}
@@ -440,7 +440,7 @@ func (s stack) WaitHostReady(hostParam stacks.HostParameter, timeout time.Durati
 }
 
 // CreateHost creates a host
-func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull, userData *userdata.Content, xerr fail.Error) {
+func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull, userData *userdata.Content, ferr fail.Error) {
 	nullAHF := abstract.NewHostFull()
 	nullUDC := userdata.NewContent()
 	if s.IsNull() {
@@ -448,8 +448,8 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	}
 
 	defer debug.NewTracer(nil, tracing.ShouldTrace("stack.aws") || tracing.ShouldTrace("stacks.compute"), "(%v)", request).WithStopwatch().Entering().Exiting()
-	defer fail.OnPanic(&xerr)
-	defer fail.OnExitTraceError(&xerr)
+	defer fail.OnPanic(&ferr)
+	defer fail.OnExitTraceError(&ferr)
 
 	resourceName := request.ResourceName
 	subnets := request.Subnets
@@ -459,7 +459,8 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, fail.InvalidRequestError("the Host '%s' must be on at least one Subnet (even if public)", resourceName)
 	}
 
-	// If no credentials (KeyPair and/or Password) are  supplied create ones
+	// If no credentials (KeyPair and/or Password) are supplied create ones
+	var xerr fail.Error
 	if xerr = stacks.ProvideCredentialsIfNeeded(&request); xerr != nil {
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to provide credentials for Host")
 	}
@@ -490,7 +491,6 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to prepare user data content")
 	}
 
-	// Determine system disk size based on vcpus count
 	template, xerr := s.InspectTemplate(request.TemplateID)
 	if xerr != nil {
 		return nullAHF, nullUDC, fail.Wrap(xerr, "failed to get host template '%s'", request.TemplateID)
@@ -550,7 +550,7 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 	logrus.Debugf("requesting host resource creation...")
 
 	// Retry creation until success, for 10 minutes
-	xerr = retry.WhileUnsuccessfulDelay5Seconds(
+	xerr = retry.WhileUnsuccessful(
 		func() error {
 			var (
 				server    *abstract.HostCore
@@ -562,18 +562,20 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 				server, innerXErr = s.buildAwsMachine(keyPairName, request.ResourceName, rim.ID, s.AwsConfig.Zone, defaultSubnet.ID, string(userDataPhase1), publicIP, template)
 			}
 			if innerXErr != nil {
-				switch innerXErr.(type) {
-				case *fail.ErrOverload:
-					return retry.StopRetryError(innerXErr)
+				captured := normalizeError(innerXErr)
+
+				switch captured.(type) {
+				case *fail.ErrNotFound, *fail.ErrDuplicate, *fail.ErrInvalidRequest, *fail.ErrNotAuthenticated, *fail.ErrForbidden, *fail.ErrOverflow, *fail.ErrSyntax, *fail.ErrInconsistent, *fail.ErrInvalidInstance, *fail.ErrInvalidInstanceContent, *fail.ErrInvalidParameter, *fail.ErrRuntimePanic: // Do not retry if it's going to fail anyway
+					return retry.StopRetryError(captured)
 				default:
-					logrus.Warnf("error creating Host: %+v", innerXErr)
+					logrus.Warnf("error creating Host: %+v", captured)
 
 					if server != nil && server.ID != "" {
 						if derr := s.DeleteHost(server.ID); derr != nil {
 							_ = innerXErr.AddConsequence(fail.Wrap(derr, "cleaning up on failure, failed to delete Host '%s'", server.Name))
 						}
 					}
-					return innerXErr
+					return captured
 				}
 			}
 
@@ -594,14 +596,15 @@ func (s stack) CreateHost(request abstract.HostRequest) (ahf *abstract.HostFull,
 
 			return nil
 		},
+		temporal.GetDefaultDelay(),
 		temporal.GetLongOperationTimeout(),
 	)
 	if xerr != nil {
 		switch xerr.(type) {
 		case *retry.ErrStopRetry:
-			return nullAHF, nullUDC, fail.ConvertError(xerr.Cause())
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "failed to create Host, stopping retries")
 		case *fail.ErrTimeout:
-			return nullAHF, nullUDC, fail.Wrap(xerr.Cause(), "failed to create Host because of timeout")
+			return nullAHF, nullUDC, fail.Wrap(fail.Cause(xerr), "failed to create Host because of timeout")
 		default:
 			return nullAHF, nullUDC, xerr
 		}
@@ -916,31 +919,12 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 	defer debug.NewTracer(nil, tracing.ShouldTrace("stack.aws") || tracing.ShouldTrace("stacks.compute"), "(%s)", hostRef).WithStopwatch().Entering().Exiting()
 	defer fail.OnExitTraceError(&xerr)
 
-	ips, xerr := s.rpcDescribeAddresses([]*string{aws.String(ahf.Core.ID)})
-	if xerr != nil {
-		switch xerr.(type) {
-		case *fail.ErrNotFound:
-			// continue
-		default:
-			return xerr
-		}
-	}
-	var errors []error
-	for _, ip := range ips {
-		if derr := s.rpcReleaseAddress(ip.AllocationId); derr != nil {
-			errors = append(errors, fail.Wrap(derr, "cleaning up on failure, failed to delete IP address"))
-		}
-	}
-	if len(errors) > 0 {
-		return fail.NewErrorList(errors)
-	}
-
 	vm, xerr := s.rpcDescribeInstanceByID(aws.String(ahf.GetID()))
 	if xerr != nil {
 		switch xerr.(type) {
 		case *fail.ErrNotFound:
 			// a host not found is considered as a successful deletion, continue
-			logrus.Tracef("host not found, deletion considered as a success")
+			debug.IgnoreError(xerr)
 		default:
 			return xerr
 		}
@@ -951,59 +935,33 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 			attachedVolumes []string
 		)
 
-		// register attached volumes
+		// inventory attached volumes
 		for _, attVol := range vm.BlockDeviceMappings {
-			if attVol != nil {
-				if attVol.Ebs != nil {
-					if attVol.Ebs.VolumeId != nil {
-						volume := aws.StringValue(attVol.Ebs.VolumeId)
-						if volume != "" {
-							attachedVolumes = append(attachedVolumes, volume)
-						}
-					}
+			if attVol != nil && attVol.Ebs != nil && attVol.Ebs.VolumeId != nil {
+				volume := aws.StringValue(attVol.Ebs.VolumeId)
+				if volume != "" {
+					attachedVolumes = append(attachedVolumes, volume)
 				}
 			}
 		}
 
 		keyPairName = aws.StringValue(vm.KeyName)
 
+		// Stop instance forcibly
+		xerr := s.StopHost(ahf, false)
+		if xerr != nil {
+			return fail.Wrap(xerr, "failed to stop Host '%s'", ahf.Core.Name)
+		}
+
 		// Terminate instance
-		if xerr = s.rpcTerminateInstance(aws.String(ahf.GetID())); xerr != nil {
+		xerr = s.rpcTerminateInstance(vm)
+		if xerr != nil {
 			switch xerr.(type) {
 			case *fail.ErrNotFound:
+				debug.IgnoreError(xerr)
 				// continue
 			default:
 				return xerr
-			}
-		}
-
-		retryErr := retry.WhileUnsuccessful(
-			func() error {
-				hostTmp, innerXErr := s.InspectHost(ahf)
-				if innerXErr != nil {
-					switch innerXErr.(type) {
-					case *fail.ErrNotFound:
-						// if IPAddress is not found, consider operation as successful
-						return nil
-					default:
-						return innerXErr
-					}
-				}
-
-				if hostTmp.CurrentState != hoststate.Terminated {
-					return fail.NewError(innerXErr, "not in stopped or terminated state (current state: %s)", hostTmp.CurrentState.String())
-				}
-				return nil
-			},
-			temporal.GetDefaultDelay(),
-			temporal.GetHostCleanupTimeout(),
-		)
-		if retryErr != nil {
-			switch retryErr.(type) {
-			case *retry.ErrTimeout:
-				return fail.Wrap(retryErr.Cause(), "timeout waiting to get host '%s' information after %v", ahf.GetID(), temporal.GetHostCleanupTimeout())
-			default:
-				return retryErr
 			}
 		}
 
@@ -1023,7 +981,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// A missing volume is considered as a successful deletion
-					logrus.Tracef("volume not found, deletion considered as a success")
+					debug.IgnoreError(xerr)
 				default:
 					logrus.Warnf("failed to delete volume %s", volume)
 				}
@@ -1032,23 +990,14 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 
 		// Remove keypair
 		if keyPairName != "" {
-			// FIXME: move this in rpc.go and call it rpcDeleteKeyPair()
-			xerr = stacks.RetryableRemoteCall(
-				func() error {
-					_, err := s.EC2Service.DeleteKeyPair(&ec2.DeleteKeyPairInput{
-						KeyName: aws.String(keyPairName),
-					})
-					return err
-				},
-				normalizeError,
-			)
+			xerr = s.rpcDeleteKeyPair(aws.String(keyPairName))
 			if xerr != nil {
 				switch xerr.(type) {
 				case *fail.ErrNotFound:
 					// A missing keypair is considered as a successful deletion
-					logrus.Tracef("keypair not found, deletion considered as a success")
+					debug.IgnoreError(xerr)
 				default:
-					return fail.Wrap(xerr, "error deleting keypair")
+					return fail.Wrap(xerr, "error deleting keypair '%s'", keyPairName)
 				}
 			}
 		}
@@ -1058,7 +1007,7 @@ func (s stack) DeleteHost(hostParam stacks.HostParameter) fail.Error {
 }
 
 // StopHost stops a running host
-func (s stack) StopHost(hostParam stacks.HostParameter) (xerr fail.Error) {
+func (s stack) StopHost(hostParam stacks.HostParameter, gracefully bool) (xerr fail.Error) {
 	if s.IsNull() {
 		return fail.InvalidInstanceError()
 	}
@@ -1070,8 +1019,7 @@ func (s stack) StopHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 	defer debug.NewTracer(nil, tracing.ShouldTrace("stack.aws") || tracing.ShouldTrace("stacks.compute"), "(%s)", hostRef).WithStopwatch().Entering().Exiting()
 	defer fail.OnExitTraceError(&xerr)
 
-	// FIXME: forcing
-	if xerr = s.rpcStopInstances([]*string{aws.String(ahf.Core.ID)}, aws.Bool(true)); xerr != nil {
+	if xerr = s.rpcStopInstances([]*string{aws.String(ahf.Core.ID)}, aws.Bool(gracefully)); xerr != nil {
 		return xerr
 	}
 
@@ -1091,11 +1039,14 @@ func (s stack) StopHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 		temporal.GetHostCleanupTimeout(),
 	)
 	if retryErr != nil {
-		switch retryErr.(type) { //nolint
+		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.Wrap(retryErr.Cause(), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
+		default:
+			return retryErr
 		}
-		return retryErr
 	}
 
 	return nil
@@ -1136,8 +1087,10 @@ func (s stack) StartHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.Wrap(retryErr.Cause(), "timeout waiting to get information of host '%s' after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get information of host '%s' after %v", hostRef, temporal.GetHostCleanupTimeout())
 		default:
 			return retryErr
 		}
@@ -1180,8 +1133,10 @@ func (s stack) RebootHost(hostParam stacks.HostParameter) (xerr fail.Error) {
 	)
 	if retryErr != nil {
 		switch retryErr.(type) {
+		case *retry.ErrStopRetry:
+			return fail.Wrap(fail.Cause(retryErr), "stopping retries")
 		case *retry.ErrTimeout:
-			return fail.NewError("timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
+			return fail.Wrap(fail.Cause(retryErr), "timeout waiting to get host '%s' information after %v", hostRef, temporal.GetHostCleanupTimeout())
 		default:
 			return retryErr
 		}

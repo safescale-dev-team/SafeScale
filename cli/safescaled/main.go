@@ -27,7 +27,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/dlespiau/covertool/pkg/exit"
+	"github.com/makholm/covertool/pkg/exit"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
@@ -68,7 +68,8 @@ func work(c *cli.Context) {
 
 	// NOTE: is it the good behavior ? Shouldn't we fail ?
 	// If trace settings cannot be registered, report it but do not fail
-	err := tracing.RegisterTraceSettings(appTrace)
+	// FIXME: introduce use of configuration file with autoreload on change
+	err := tracing.RegisterTraceSettings(appTrace())
 	if err != nil {
 		logrus.Errorf(err.Error())
 	}
@@ -165,11 +166,13 @@ func assembleListenString(c *cli.Context) string {
 				listen = defaultDaemonHost + ":" + port
 			}
 		}
+
+		// At last, if listen is empty, build it from defaults
+		if listen == "" {
+			listen = defaultDaemonHost + ":" + defaultDaemonPort
+		}
 	}
-	// At last, if listen is empty, build it from defaults
-	if listen == "" {
-		listen = defaultDaemonHost + ":" + defaultDaemonPort
-	}
+
 	return listen
 }
 
